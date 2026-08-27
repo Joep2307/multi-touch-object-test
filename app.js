@@ -593,25 +593,45 @@ addEventListener("pointerup",e=>{
   // Leeg stuk tafel: notitie dicht, graafselectie weg, pucks van tafel.
   closeNote(); closeKgInfo(); clearPucks();
 });
+/* De hoogte van het venster staat niet vooraf vast: eerst komt de lijst met
+   nabije documenten binnen, daarna groeit het antwoord token voor token. Dus
+   meten en dan pas plaatsen.
+
+   `recentre` scheidt de twee gevallen. Bij openen wordt het venster op de
+   markering gecentreerd; groeit het daarna, dan blijft het staan waar het
+   staat en schuift het alleen omhoog zodra het anders van het scherm zou
+   lopen. Zonder dat onderscheid zou het bij elk binnengekomen woord
+   verspringen. */
+function positionNote(recentre=true){
+  const n=el("note");
+  if(n.style.display!=="block") return;
+  const y=+n.dataset.anchorY||innerHeight/2;
+  const h=n.offsetHeight;
+  const max=Math.max(12,innerHeight-h-12);
+  const wanted=recentre?y-h/2:(parseFloat(n.style.top)||y-h/2);
+  const top=Math.max(12,Math.min(max,wanted));
+  n.style.top=top+"px";
+  n.style.setProperty("--stem-top",Math.max(20,Math.min(h-20,y-top))+"px");
+}
+// Eén waarnemer voor de hele levensduur van de pagina: elke hoogtewijziging
+// trekt het venster zo nodig terug binnen beeld.
+if(typeof ResizeObserver!=="undefined")
+  new ResizeObserver(()=>positionNote(false)).observe(el("note"));
+
 function openNote(pin,x,y,fromPuck=false){
   selected=pin; const n=el("note");
   n.style.display="block";
-  // Hoger dan vroeger: onder de titel/beschrijving hangt nu ook het
-  // kennisblok. Alleen gebruikt om het venster netjes op het scherm te
-  // houden, dus een ruwe schatting volstaat.
-  const width=310, estimatedHeight=470;
+  const width=310;
   const puckReach=fromPuck?CFG.puckRadiusMM*pxPerMM+46:34;
   const opensRight=x+width+puckReach<innerWidth-12;
   const left=opensRight?x+puckReach:x-puckReach-width;
-  const top=Math.min(innerHeight-estimatedHeight-12,Math.max(12,y-estimatedHeight/2));
   n.style.left=Math.max(12,Math.min(innerWidth-width-12,left))+"px";
-  n.style.top=top+"px";
-  n.style.setProperty("--stem-top",Math.max(20,Math.min(estimatedHeight-20,y-top))+"px");
   n.style.setProperty("--stem-width",Math.max(26,puckReach-4)+"px");
   n.style.setProperty("--note-color",vColor(pin.verdict));
   n.style.setProperty("--origin-x",opensRight?"0":"100%");
   n.style.setProperty("--enter-x",opensRight?"-28px":"28px");
   n.dataset.anchorY=String(y);
+  positionNote();
   n.classList.toggle("from-left",opensRight);
   n.classList.toggle("from-right",!opensRight);
   n.classList.remove("opening");
@@ -649,6 +669,7 @@ function renderNearby(pin){
     `<span class="kg-near-dist mono">${formatDistance(r.dist)}</span></div>`).join("");
   // Labels via textContent, zodat een titel uit de graaf geen HTML kan worden.
   [...box.querySelectorAll(".kg-near-label")].forEach((n,i)=>{ n.textContent=near[i].node.label; });
+  positionNote();
 }
 /* Het antwoord komt als markdown terug. Een volledige parser is hier
    overdreven; dit dekt wat er in de praktijk uit komt — koppen, vet,

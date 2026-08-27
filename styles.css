@@ -169,12 +169,17 @@ body.keyboard-open #note{z-index:45}
 .kg-near.match .kg-near-label::before{content:"● ";color:#7aa2f7;font-size:9px;vertical-align:2px}
 .kg-near-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kg-near-dist{flex:none;font-size:10px;color:rgba(232,237,244,.4)}
-#noteAnswer{display:none;margin-top:10px;max-height:170px;overflow-y:auto;
-            padding:10px 11px;border-radius:8px;background:rgba(122,162,247,.09);
+#noteAnswer{display:none;margin-top:10px;padding:10px 11px;border-radius:8px;background:rgba(122,162,247,.09);
             font:400 12.5px/1.5 'Space Grotesk',system-ui,sans-serif;color:#e8edf4;
             white-space:pre-wrap}
 #noteSources{display:none;margin-top:7px;font:400 10px/1.4 'JetBrains Mono',ui-monospace,monospace;
              color:rgba(232,237,244,.4)}
+/* Scrollen binnen een paneel. De body staat op touch-action:none omdat
+   elke veeg daar een kaartgebaar of een puck is; in een paneel moet een
+   verticale veeg juist gewoon scrollen. overscroll-behavior houdt die veeg
+   binnen het paneel zodra het einde bereikt is. */
+#note,#controls,#recent,#tally{touch-action:pan-y;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch}
 #note{max-height:calc(100vh - 24px);overflow-y:auto}
 #noteAnswer .kg-h{display:inline-block;margin-top:6px;color:#fff;font-weight:700}
 #noteAnswer .kg-li::before{content:"• ";color:rgba(122,162,247,.8)}
