@@ -1167,11 +1167,11 @@ async function showKgKnowledge(node){
 }
 function closeKgInfo(){ kg.selected=null; el("kgInfo").style.display="none"; }
 el("kgInfoClose").onclick=closeKgInfo;
-el("btnGaps").onclick=async()=>{
+async function toggleGaps(){
   kg.gaps=!kg.gaps;
-  el("btnGaps").classList.toggle("on",kg.gaps);
+  markLayerMenu();
   if(kg.gaps && !kg.loaded) await ensureKG(el("kgUrl").value.trim());
-};
+}
 el("noteAsk").onclick=askKnowledge;
 onKgChange(()=>{
   el("kgStatus").textContent=kg.status;
@@ -1220,6 +1220,30 @@ function layerButton(option){
 }
 function buildLayerMenu(){
   const box=el("layersMenu"); box.innerHTML="";
+
+  /* Bovenaan de lagen die óver de kaart heen liggen. Het kaartbeeld eronder
+     is een keuze uit één; dit zijn schakelaars, vandaar de scheiding. */
+  const overlayHead=document.createElement("p");
+  overlayHead.className="eyebrow"; overlayHead.textContent="Lagen";
+  box.appendChild(overlayHead);
+
+  const gaps=document.createElement("button");
+  gaps.type="button"; gaps.className="layer"; gaps.id="btnGaps";
+  gaps.textContent="Documentdichtheid";
+  gaps.onclick=toggleGaps;
+  box.appendChild(gaps);
+
+  const note=document.createElement("p");
+  note.className="hint"; note.style.margin="6px 0 0";
+  note.textContent="Warmtekaart over de kennisgraaf: rood waar niets is vastgelegd.";
+  box.appendChild(note);
+
+  const mapHead=document.createElement("p");
+  mapHead.className="eyebrow"; mapHead.textContent="Kaartbeeld";
+  mapHead.style.borderTop="1px solid var(--line)";
+  mapHead.style.paddingTop="14px";
+  box.appendChild(mapHead);
+
   for(const child of el("tiles").children){
     if(child.tagName==="OPTGROUP"){
       const h=document.createElement("p");
@@ -1231,8 +1255,10 @@ function buildLayerMenu(){
   markLayerMenu();
 }
 function markLayerMenu(){
-  [...el("layersMenu").querySelectorAll(".layer")]
+  [...el("layersMenu").querySelectorAll(".layer[data-set]")]
     .forEach(b=>b.classList.toggle("on",b.dataset.set===MV.set));
+  const g=el("btnGaps");
+  if(g){ g.classList.toggle("on",kg.gaps); g.setAttribute("aria-pressed",String(kg.gaps)); }
 }
 function openLayers(){
   el("layersMenu").style.display="block";

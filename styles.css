@@ -200,8 +200,9 @@ body.keyboard-open #note{z-index:45}
 #btnLayers.on{color:#cfe0ff}
 #layersMenu{left:18px;bottom:82px;width:242px;max-height:min(60vh,460px);
   overflow-y:auto;display:none;touch-action:pan-y;overscroll-behavior:contain}
-#layersMenu .eyebrow{margin:14px 0 6px}
+#layersMenu .eyebrow{margin:16px 0 8px}
 #layersMenu .eyebrow:first-child{margin-top:0}
+#layersMenu .hint{font-size:10.5px;line-height:1.45}
 #layersMenu .layer{display:block;width:100%;text-align:left;margin-bottom:5px}
 #layersMenu .layer:last-child{margin-bottom:0}
 
