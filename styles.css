@@ -150,3 +150,31 @@ body.keyboard-open #note{z-index:45}
         border-left:2px solid #7aa2f7}
 #kgInfo .kg-title{margin:4px 0 12px;font:600 15px/1.35 'Space Grotesk',system-ui,sans-serif;
                   color:#e8edf4}
+
+/* ── Kennisgraaf in het notitievenster: wat er over deze plek bekend is,
+   en het antwoord dat coco-biblio's RAG-chat eruit trekt. ── */
+.kg-block{margin-top:14px;padding-top:12px;border-top:1px solid rgba(232,237,244,.12)}
+.kg-block .eyebrow{margin:0 0 8px}
+#noteNearby{margin-bottom:10px}
+#noteNearby .empty{margin:0;font:400 12px/1.4 'Space Grotesk',system-ui,sans-serif;
+                   color:rgba(232,237,244,.45)}
+.kg-near{display:flex;gap:10px;align-items:baseline;justify-content:space-between;
+         padding:4px 0;font:400 12px/1.35 'Space Grotesk',system-ui,sans-serif;
+         color:rgba(232,237,244,.78);border-bottom:1px solid rgba(232,237,244,.06)}
+.kg-near:last-child{border-bottom:0}
+/* Een document dat óók het thema van de puck draagt staat bovenaan én
+   krijgt de themakleur, zodat de relevantie zichtbaar is en niet alleen
+   een kwestie van volgorde. */
+.kg-near.match{color:#e8edf4}
+.kg-near.match .kg-near-label::before{content:"● ";color:#7aa2f7;font-size:9px;vertical-align:2px}
+.kg-near-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kg-near-dist{flex:none;font-size:10px;color:rgba(232,237,244,.4)}
+#noteAnswer{display:none;margin-top:10px;max-height:170px;overflow-y:auto;
+            padding:10px 11px;border-radius:8px;background:rgba(122,162,247,.09);
+            font:400 12.5px/1.5 'Space Grotesk',system-ui,sans-serif;color:#e8edf4;
+            white-space:pre-wrap}
+#noteSources{display:none;margin-top:7px;font:400 10px/1.4 'JetBrains Mono',ui-monospace,monospace;
+             color:rgba(232,237,244,.4)}
+#note{max-height:calc(100vh - 24px);overflow-y:auto}
+#noteAnswer .kg-h{display:inline-block;margin-top:6px;color:#fff;font-weight:700}
+#noteAnswer .kg-li::before{content:"• ";color:rgba(122,162,247,.8)}

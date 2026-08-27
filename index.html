@@ -134,9 +134,19 @@
   <input id="noteTitle" placeholder="Geef deze bijdrage een titel" maxlength="80">
   <label class="field" for="noteText">Beschrijving</label>
   <textarea id="noteText" placeholder="Wat is hier aan de hand?" rows="4"></textarea>
-  <div class="row" style="margin-bottom:0">
+  <div class="row">
     <button id="noteDel" class="danger">Verwijderen</button>
     <button id="noteSave" class="primary">Bewaren</button>
+  </div>
+
+  <div class="kg-block">
+    <p class="eyebrow">Wat is hier al bekend</p>
+    <div id="noteNearby"><p class="empty">Kennisgraaf wordt geladen…</p></div>
+    <div class="row" style="margin-bottom:0">
+      <button id="noteAsk" class="primary">Vraag om een oplossing</button>
+    </div>
+    <div id="noteAnswer"></div>
+    <div id="noteSources"></div>
   </div>
 </div>
 

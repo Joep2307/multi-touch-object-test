@@ -1,4 +1,5 @@
-import { kg, loadKG, drawKG, kgAt, kgDescribe, onKgChange } from "./kg.js";
+import { kg, loadKG, ensureKG, drawKG, kgAt, kgDescribe, onKgChange,
+         nearby, formatDistance, buildQuestion, ask } from "./kg.js";
 
 /* ═══════════════════════════════════════════════════════════════
    0. FONTS — loaded from CSS, silently falls back to system faces
@@ -595,7 +596,10 @@ addEventListener("pointerup",e=>{
 function openNote(pin,x,y,fromPuck=false){
   selected=pin; const n=el("note");
   n.style.display="block";
-  const width=310, estimatedHeight=250;
+  // Hoger dan vroeger: onder de titel/beschrijving hangt nu ook het
+  // kennisblok. Alleen gebruikt om het venster netjes op het scherm te
+  // houden, dus een ruwe schatting volstaat.
+  const width=310, estimatedHeight=470;
   const puckReach=fromPuck?CFG.puckRadiusMM*pxPerMM+46:34;
   const opensRight=x+width+puckReach<innerWidth-12;
   const left=opensRight?x+puckReach:x-puckReach-width;
@@ -615,9 +619,77 @@ function openNote(pin,x,y,fromPuck=false){
   el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
   el("noteTitle").value=pin.title||"";
   el("noteText").value=pin.description||pin.note||"";
+  fillNoteKnowledge(pin);
   el("noteTitle").focus();
 }
+
+/* ── Wat de kennisgraaf over deze plek weet ──────────────────────────────
+   Los van de kaartlaag: het venster laadt de graaf desnoods zelf, ook als
+   "Graaf tonen" uit staat. */
+let askAbort=null;
+function fillNoteKnowledge(pin){
+  askAbort?.abort(); askAbort=null;
+  el("noteAnswer").textContent=""; el("noteAnswer").style.display="none";
+  el("noteSources").textContent=""; el("noteSources").style.display="none";
+  const box=el("noteNearby");
+  box.innerHTML='<p class="empty">Kennisgraaf wordt geladen…</p>';
+  ensureKG(el("kgUrl").value.trim()).then(()=>{
+    if(selected!==pin) return;
+    renderNearby(pin);
+  });
+}
+function renderNearby(pin){
+  const box=el("noteNearby");
+  if(!kg.loaded){ box.innerHTML='<p class="empty">Kennisgraaf niet bereikbaar.</p>'; return; }
+  const near=nearby(pin.lat,pin.lng,{theme:pin.topic,limit:4});
+  if(!near.length){ box.innerHTML='<p class="empty">Niets bekend binnen 1,5 km.</p>'; return; }
+  box.innerHTML=near.map(r=>
+    `<div class="kg-near${r.match?" match":""}">`+
+    `<span class="kg-near-label"></span>`+
+    `<span class="kg-near-dist mono">${formatDistance(r.dist)}</span></div>`).join("");
+  // Labels via textContent, zodat een titel uit de graaf geen HTML kan worden.
+  [...box.querySelectorAll(".kg-near-label")].forEach((n,i)=>{ n.textContent=near[i].node.label; });
+}
+/* Het antwoord komt als markdown terug. Een volledige parser is hier
+   overdreven; dit dekt wat er in de praktijk uit komt — koppen, vet,
+   cursief, opsommingen — en escapet eerst álles, zodat er geen HTML uit
+   het model in de pagina kan belanden. */
+function mdToHtml(md){
+  const esc=t=>t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  return esc(md)
+    .replace(/^#{1,6}\s*(.+)$/gm,'<b class="kg-h">$1</b>')
+    .replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<i>$2</i>")
+    .replace(/^\s*[-•]\s+(.+)$/gm,'<span class="kg-li">$1</span>');
+}
+
+async function askKnowledge(){
+  const pin=selected; if(!pin) return;
+  const near=kg.loaded?nearby(pin.lat,pin.lng,{theme:pin.topic,limit:4}):[];
+  const out=el("noteAnswer"), src=el("noteSources");
+  out.style.display="block"; out.textContent="Denkt na…";
+  src.style.display="none"; src.textContent="";
+  askAbort?.abort(); askAbort=new AbortController();
+  const question=buildQuestion({
+    title:pin.title, description:pin.description||pin.note, topic:pin.topic,
+    verdictName:vName(pin.verdict),
+    place:near[0]?near[0].node.label:`${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`,
+    near,
+  });
+  try{
+    await ask(question,{
+      signal:askAbort.signal,
+      onToken:t=>{ if(selected===pin) out.innerHTML=mdToHtml(t); },
+      onSources:list=>{ if(selected!==pin||!list.length) return;
+        src.style.display="block";
+        src.textContent="Op basis van: "+[...new Set(list.map(s=>s.title))].slice(0,4).join(" · "); },
+    });
+  }catch(e){
+    if(e.name!=="AbortError") out.textContent="Geen antwoord — draait de backend? ("+e.message+")";
+  }
+}
 function closeNote(){
+  askAbort?.abort(); askAbort=null;
   const n=el("note"); n.style.display="none"; n.classList.remove("opening"); selected=null;
   if(keyboardTarget===el("noteTitle")||keyboardTarget===el("noteText")) hideKeyboard(true);
 }
@@ -908,6 +980,7 @@ function openKgInfo(node,x,y){
 }
 function closeKgInfo(){ kg.selected=null; el("kgInfo").style.display="none"; }
 el("kgInfoClose").onclick=closeKgInfo;
+el("noteAsk").onclick=askKnowledge;
 onKgChange(()=>{
   el("kgStatus").textContent=kg.status;
   el("btnKg").classList.toggle("on",kg.enabled);
