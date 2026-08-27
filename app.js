@@ -1118,6 +1118,10 @@ function applyMode(mode){
   [...document.querySelectorAll(".puck-hint")].forEach(h=>
     h.textContent=mode==="touch"?L[lang].touchHint:L[lang].laptopHint);
   refreshKeyboardFields();
+  // Een venster dat op zijn kop staat hoort niet mee te verhuizen naar de
+  // laptopstand, dus dat gaat dicht bij het wisselen.
+  applySides();
+  closeNote();
   if(mode!=="touch") hideKeyboard();
   try{localStorage.setItem("pucktable-ui-mode",mode);}catch(e){}
   resize();
@@ -1224,8 +1228,11 @@ el("diag").oninput=resize;
    aanraking vandaan kwam. */
 let twoSided=false;
 try{ twoSided=localStorage.getItem("pucktable-two-sided")==="1"; }catch(e){}
+/* De keuze blijft bewaard, maar telt alleen op een touchscreen: op een laptop
+   staat er één iemand achter het scherm en is er maar één kijkrichting. */
+const sidesActive=()=>twoSided && uiMode==="touch";
 function applySides(){
-  document.body.classList.toggle("two-sided",twoSided);
+  document.body.classList.toggle("two-sided",sidesActive());
   el("btnSides").classList.toggle("on",twoSided);
   el("btnSides").setAttribute("aria-pressed",String(twoSided));
   try{ localStorage.setItem("pucktable-two-sided",twoSided?"1":"0"); }catch(e){}
@@ -1235,7 +1242,7 @@ applySides();
 
 /* Staat de aanraking in de bovenste helft, dan staat de persoon aan die kant
    en moet het venster 180° gedraaid. */
-const flippedFor=y=>twoSided && y<innerHeight/2;
+const flippedFor=y=>sidesActive() && y<innerHeight/2;
 
 /* De stengel wijst naar de puck. In een gedraaid venster loopt de lokale
    y-as andersom, dus wat op het scherm `d` vanaf de bovenkant is, is lokaal

@@ -74,6 +74,10 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
    leest daarmee rechtop voor wie aan de overkant van de tafel staat. */
 #puckDockTop{top:18px;transform:translateX(-50%) rotate(180deg);display:none}
 body.two-sided #puckDockTop{display:block}
+/* Twee zijden slaat op een tafel waar mensen omheen staan. Op een laptop is
+   er maar één kijkrichting, dus daar bestaat de keuze niet eens. */
+body:not(.mode-touch) #sidesRow,
+body:not(.mode-touch) #sidesHint{display:none}
 .puck-dock-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
 .puck-dock-head .eyebrow{margin-bottom:4px}
 .puck-dock-head .hint{margin:0;line-height:1.35;max-width:190px}
