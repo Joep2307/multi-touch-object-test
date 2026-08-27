@@ -14,7 +14,8 @@
 const CFG = {
   longestSideMM:60, puckRadiusMM:45,
   stableFrames:3, dropoutMS:180, smoothing:4,
-  dwellMS:1200, jitterPX:22, rearmPX:70, ringPX:110
+  dwellMS:1200, jitterPX:22, rearmPX:70, ringPX:110,
+  retina:1            // fetch one zoom level deeper and draw it at half size → twice the detail, no upscaling
 };
 const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
@@ -66,12 +67,18 @@ const MV = {
     this.lng=this.lngAt(cx); this.lat=Math.max(-85,Math.min(85,this.latAt(cy)));
   },
   zoomBy(dz,ax,ay){
-    const before=this.unproject(ax===undefined?W/2:ax, ay===undefined?H/2:ay);
-    this.zoom=Math.max(3,Math.min(19,this.zoom+dz));
-    const after=this.unproject(ax===undefined?W/2:ax, ay===undefined?H/2:ay);
-    this.lng+=before.lng-after.lng; this.lat+=before.lat-after.lat;
+    ax=ax===undefined?W/2:ax; ay=ay===undefined?H/2:ay;
+    const z=Math.max(3,Math.min(19,this.zoom+dz));
+    if(z===this.zoom) return;
+    const anchor=this.unproject(ax,ay);            // geo point under the cursor, at the old zoom
+    this.zoom=z;
+    const p=this.project(anchor.lng,anchor.lat);   // where that same point lands after zooming
+    const cx=this.wx(this.lng)+(p.x-ax), cy=this.wy(this.lat)+(p.y-ay);
+    this.lng=this.lngAt(cx);
+    this.lat=Math.max(-85,Math.min(85,this.latAt(cy)));  // correct the centre in world-pixel space
   }
 };
+window.MV = MV;   // handy for debugging from the console
 const tileCache=new Map(); let tilesTried=0, tilesFailed=0;
 function getTile(z,x,y){
   const tpl=TILE_SETS[MV.set]; if(!tpl) return null;
@@ -83,9 +90,33 @@ function getTile(z,x,y){
     img.onerror=()=>{ img.bad=true; tilesFailed++; };
     img.src=tpl.replace("{s}","abc"[(x+y)%3]).replace("{z}",z).replace("{x}",x).replace("{y}",y);
     tileCache.set(key,img); tilesTried++;
-    if(tileCache.size>900){ const k=tileCache.keys().next().value; tileCache.delete(k); }
+    if(tileCache.size>1600){ const k=tileCache.keys().next().value; tileCache.delete(k); }
   }
   return img.ok ? img : null;
+}
+function peekTile(z,x,y){                      // cache lookup only — never starts a download
+  if(z<0) return null;
+  const img=tileCache.get(MV.set+"/"+z+"/"+x+"/"+y);
+  return img && img.ok ? img : null;
+}
+/* Draw one tile slot. If its own tile isn't loaded yet, fill the slot from whatever
+   is already cached — a patch of a coarser parent tile (zoom-in) or the four finer
+   child tiles (zoom-out) — so the map never flashes empty while zooming. */
+function blitCovered(z,x,y,rx,ry,rw,rh){
+  const img=getTile(z,x,y);
+  if(img){ ctx.drawImage(img,rx,ry,rw,rh); return true; }
+  for(let d=1;d<=6 && z-d>=0;d++){
+    const f=1<<d, a=peekTile(z-d,Math.floor(x/f),Math.floor(y/f));
+    if(a){ const s=256/f; ctx.drawImage(a,(x%f)*s,(y%f)*s,s,s,rx,ry,rw,rh); return true; }
+  }
+  const kids=[peekTile(z+1,x*2,y*2),peekTile(z+1,x*2+1,y*2),
+              peekTile(z+1,x*2,y*2+1),peekTile(z+1,x*2+1,y*2+1)];
+  if(kids.some(Boolean)){
+    const hw=rw/2, hh=rh/2, off=[[0,0],[hw,0],[0,hh],[hw,hh]];
+    kids.forEach((k,i)=>{ if(k) ctx.drawImage(k,rx+off[i][0],ry+off[i][1],hw+1,hh+1); });
+    return kids.every(Boolean);
+  }
+  return false;
 }
 let bgImage=null;   // {img, west, east, north, south} — a map picture pinned to real coordinates
 function drawMap(){
@@ -98,17 +129,18 @@ function drawMap(){
     drawn=1;
   }
 
-  const z=Math.max(0,Math.min(19,Math.round(MV.zoom)));
+  const z=Math.max(0,Math.min(19,Math.round(MV.zoom)+CFG.retina));
   const scale=Math.pow(2,MV.zoom-z), ts=256*scale, n=Math.pow(2,z);
   const ox=MV.wx(MV.lng)-W/2, oy=MV.wy(MV.lat)-H/2;
   const x0=Math.floor(ox/ts), x1=Math.floor((ox+W)/ts);
   const y0=Math.max(0,Math.floor(oy/ts)), y1=Math.min(n-1,Math.floor((oy+H)/ts));
   for(let ty=y0;ty<=y1;ty++) for(let tx=x0;tx<=x1;tx++){
     const wrapped=((tx%n)+n)%n;
-    const img=getTile(z,wrapped,ty);
-    const sxp=tx*ts-ox, syp=ty*ts-oy;
-    if(img){ ctx.drawImage(img,sxp,syp,ts+1,ts+1); drawn++; }
-    else if(!bgImage){ ctx.strokeStyle="rgba(28,35,45,.9)"; ctx.lineWidth=1; ctx.strokeRect(sxp,syp,ts,ts); }
+    // snap every edge to a whole pixel so neighbouring tiles butt together with no seam and no half-pixel blur
+    const rx=Math.round(tx*ts-ox), ry=Math.round(ty*ts-oy);
+    const rw=Math.round((tx+1)*ts-ox)-rx, rh=Math.round((ty+1)*ts-oy)-ry;
+    if(blitCovered(z,wrapped,ty,rx,ry,rw,rh)) drawn++;
+    else if(!bgImage){ ctx.strokeStyle="rgba(28,35,45,.9)"; ctx.lineWidth=1; ctx.strokeRect(rx,ry,rw,rh); }
   }
 
   if(!drawn && MV.set!=="none"){
@@ -245,7 +277,13 @@ addEventListener("mouseup",()=>{ drag=null; mousePan=null; });
 addEventListener("wheel",e=>{
   const hit=simPucks.find(s=>Math.hypot(s.x-e.clientX,s.y-e.clientY)<CFG.puckRadiusMM*pxPerMM);
   if(hit){ e.preventDefault(); hit.rot+=e.deltaY*0.002; return; }
-  if(!mapLocked && !e.target.closest(".panel")){ e.preventDefault(); MV.zoomBy(-e.deltaY*0.002,e.clientX,e.clientY); }
+  if(!mapLocked && !e.target.closest(".panel")){
+    e.preventDefault();
+    // normalise the wheel across mice (pixels), trackpads (many small pixels) and Firefox (lines/pages)
+    const unit=e.deltaMode===1?16:e.deltaMode===2?H:1;
+    const dz=Math.max(-0.6,Math.min(0.6,-e.deltaY*unit/220));
+    MV.zoomBy(dz,e.clientX,e.clientY);
+  }
 },{passive:false});
 
 function recognise(points){
@@ -353,8 +391,9 @@ function closeNote(){ el("note").style.display="none"; selected=null; }
 const cv=el("c"), ctx=cv.getContext("2d");
 let W=0,H=0,lastUI=0;
 function resize(){
-  const dpr=Math.min(devicePixelRatio||1,2);
+  const dpr=Math.min(devicePixelRatio||1,3);
   W=innerWidth;H=innerHeight; cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.imageSmoothingQuality="high";
   pxPerMM=Math.hypot(W,H)/((parseFloat(el("diag").value)||43)*25.4);
 }
 addEventListener("resize",resize);
@@ -566,12 +605,12 @@ addEventListener("drop",e=>{
 let bakePending=false;
 function bakeMap(){
   const nw=MV.unproject(0,0), se=MV.unproject(W,H);
-  const scale=Math.min(1,2048/W);
+  const scale=Math.min(1,3072/cv.width);
   const off=document.createElement("canvas");
-  off.width=Math.round(W*scale); off.height=Math.round(H*scale);
+  off.width=Math.round(cv.width*scale); off.height=Math.round(cv.height*scale);
   off.getContext("2d").drawImage(cv,0,0,off.width,off.height);
   let data;
-  try{ data=off.toDataURL("image/jpeg",0.82); }
+  try{ data=off.toDataURL("image/jpeg",0.9); }
   catch(err){ el("bakeHint").innerHTML="<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw."; return; }
   const rec={data,west:nw.lng,north:nw.lat,east:se.lng,south:se.lat};
   const img=new Image();
