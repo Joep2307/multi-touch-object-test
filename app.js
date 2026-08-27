@@ -230,10 +230,11 @@ function drawMap(g){
   if(barM*2/mPerPx<160) barM*=2;
   const barPx=barM/mPerPx;
   g.strokeStyle="rgba(232,237,244,.6)"; g.lineWidth=2;
-  g.beginPath(); g.moveTo(20,H-26); g.lineTo(20+barPx,H-26);
-  g.moveTo(20,H-31); g.lineTo(20,H-21); g.moveTo(20+barPx,H-31); g.lineTo(20+barPx,H-21); g.stroke();
+  const barX=88;                               // rechts van de kaartlagen-knop
+  g.beginPath(); g.moveTo(barX,H-26); g.lineTo(barX+barPx,H-26);
+  g.moveTo(barX,H-31); g.lineTo(barX,H-21); g.moveTo(barX+barPx,H-31); g.lineTo(barX+barPx,H-21); g.stroke();
   g.fillStyle="rgba(232,237,244,.6)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace"; g.textAlign="left";
-  g.fillText(barM>=1000?(barM/1000)+" km":barM+" m", 20, H-36);
+  g.fillText(barM>=1000?(barM/1000)+" km":barM+" m", barX, H-36);
   g.textAlign="center"; g.fillStyle="rgba(127,139,155,.75)"; g.font="10px 'JetBrains Mono',ui-monospace,monospace";
   g.fillText(TILE_SETS[MV.set]?.credit || "", W/2, H-10);
 }
@@ -1081,7 +1082,62 @@ el("tiles").onchange=e=>{
   MV.set=e.target.value; tileCache.clear();
   tilesTried=0; tilesFailed=0;                 // de melding gaat over dít beeld
   el("bakeHint").textContent=BAKE_HINT;
+  markLayerMenu();
 };
+
+/* ── Kaartlagen-knop linksonder ─────────────────────────────────────────
+   Het menu wordt opgebouwd uit de <select> in het bedieningspaneel, zodat
+   er één bron van waarheid blijft: een kaartbeeld toevoegen doe je daar in
+   de HTML, en het verschijnt hier vanzelf. Klikken zet de select en vuurt
+   zijn change af, zodat beide altijd hetzelfde zeggen. */
+function layerButton(option){
+  const b=document.createElement("button");
+  b.type="button"; b.className="layer"; b.dataset.set=option.value;
+  b.textContent=option.textContent;
+  b.onclick=()=>{
+    el("tiles").value=option.value;
+    el("tiles").dispatchEvent(new Event("change"));
+    closeLayers();
+  };
+  return b;
+}
+function buildLayerMenu(){
+  const box=el("layersMenu"); box.innerHTML="";
+  for(const child of el("tiles").children){
+    if(child.tagName==="OPTGROUP"){
+      const h=document.createElement("p");
+      h.className="eyebrow"; h.textContent=child.label;
+      box.appendChild(h);
+      for(const o of child.children) box.appendChild(layerButton(o));
+    }else box.appendChild(layerButton(child));
+  }
+  markLayerMenu();
+}
+function markLayerMenu(){
+  [...el("layersMenu").querySelectorAll(".layer")]
+    .forEach(b=>b.classList.toggle("on",b.dataset.set===MV.set));
+}
+function openLayers(){
+  el("layersMenu").style.display="block";
+  el("btnLayers").classList.add("on");
+  el("btnLayers").setAttribute("aria-expanded","true");
+  markLayerMenu();
+}
+function closeLayers(){
+  el("layersMenu").style.display="none";
+  el("btnLayers").classList.remove("on");
+  el("btnLayers").setAttribute("aria-expanded","false");
+}
+el("btnLayers").onclick=()=>{
+  el("layersMenu").style.display==="block"?closeLayers():openLayers();
+};
+// Naast het menu tikken sluit het; erin tikken uiteraard niet.
+addEventListener("pointerdown",e=>{
+  if(el("layersMenu").style.display!=="block") return;
+  if(e.target.closest("#layersMenu")||e.target.closest("#btnLayers")) return;
+  closeLayers();
+});
+buildLayerMenu();
 el("sess").onchange=restore;
 el("zIn").onclick=()=>MV.zoomBy(1);
 el("zOut").onclick=()=>MV.zoomBy(-1);
@@ -1162,6 +1218,7 @@ el("sheet").addEventListener("pointerdown",e=>{ if(e.target===el("sheet")) close
 addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
   if(el("sheet").style.display==="block"){ closeSheet(); return; }
+  if(el("layersMenu").style.display==="block"){ closeLayers(); return; }
   if(el("note").style.display==="block"){ closeNote(); return; }
   closeKgInfo();
 });

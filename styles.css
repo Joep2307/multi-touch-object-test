@@ -188,3 +188,19 @@ body.keyboard-open #note{z-index:45}
 #note{max-height:calc(100vh - 24px);overflow-y:auto}
 #noteAnswer .kg-h{display:inline-block;margin-top:6px;color:#fff;font-weight:700}
 #noteAnswer .kg-li::before{content:"• ";color:rgba(122,162,247,.8)}
+
+/* ── Kaartlagen linksonder ──────────────────────────────────────────────
+   Het kaartbeeld zat verstopt in het ingeklapte bedieningspaneel. Aan een
+   tafel waar mensen omheen staan hoort zo'n keuze binnen handbereik, dus
+   staat hij nu als eigen knop in de hoek. */
+#btnLayers{left:18px;bottom:18px;width:52px;height:52px;padding:0;flex:none;
+  display:flex;align-items:center;justify-content:center;color:var(--ink)}
+#btnLayers svg{fill:none;stroke:currentColor;stroke-width:1.5;
+  stroke-linejoin:round;stroke-linecap:round}
+#btnLayers.on{color:#cfe0ff}
+#layersMenu{left:18px;bottom:82px;width:242px;max-height:min(60vh,460px);
+  overflow-y:auto;display:none;touch-action:pan-y;overscroll-behavior:contain}
+#layersMenu .eyebrow{margin:14px 0 6px}
+#layersMenu .eyebrow:first-child{margin-top:0}
+#layersMenu .layer{display:block;width:100%;text-align:left;margin-bottom:5px}
+#layersMenu .layer:last-child{margin-bottom:0}
