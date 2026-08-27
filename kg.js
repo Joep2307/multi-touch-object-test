@@ -30,10 +30,11 @@ export const kg = {
   loaded: false,
 };
 
-/* Rastercel voor de witte vlekken. 0.004° breedtegraad is ~445 m; op 51,6°
+/* Rastercel voor de kennisdichtheid. 0.002° breedtegraad is ~222 m; op 51,6°
    is een lengtegraad nog maar 62% van een breedtegraad, dus de lengte-stap
-   moet groter om vierkante cellen te krijgen. */
-const CELL_LAT = 0.004, CELL_LON = 0.004 / Math.cos(51.6 * Math.PI / 180);
+   moet groter om vierkante cellen te krijgen. Deze cellen zijn alleen de
+   meetkorrel — wat je ziet is een uitgesmeerd veld, geen hokjes. */
+const CELL_LAT = 0.002, CELL_LON = 0.002 / Math.cos(51.6 * Math.PI / 180);
 const cellOf = (lat, lon) => Math.floor(lat / CELL_LAT) + "," + Math.floor(lon / CELL_LON);
 
 let onChange = () => {};
@@ -107,6 +108,7 @@ export async function loadKG(baseUrl = "") {
       if (n.lon > mxLo) mxLo = n.lon;
     }
     kg.bounds = kg.nodes.length ? { mnLa, mxLa, mnLo, mxLo } : null;
+    heat = null;                                   // veld opnieuw laten bouwen
 
     kg.loaded = true;
     kg.status = kg.nodes.length
@@ -131,33 +133,119 @@ export function ensureKG(baseUrl = "") {
   return pending;
 }
 
-/* ── Witte vlekken ──────────────────────────────────────────────────────
+/* ── Witte vlekken als warmtekaart ─────────────────────────────────────
    Waar de stad veel over zichzelf heeft opgeschreven, en waar niets. Alleen
    binnen het gebied waarover de graaf iets zegt: daarbuiten betekent "geen
    documenten" niets meer dan dat het buiten Breda ligt.
 
-   De lege cellen krijgen de kleur, niet de volle. Dat is de omkering die de
-   kaart bruikbaar maakt aan tafel: je ziet in één oogopslag waar niemand
-   iets heeft vastgelegd, en dus waar je de vraag moet stellen. */
-export function drawGaps(ctx, MV, W, H) {
-  if (!kg.gaps || !kg.bounds) return;
-  const { mnLa, mxLa, mnLo, mxLo } = kg.bounds;
-  ctx.save();
-  for (let gy = Math.floor(mnLa / CELL_LAT); gy <= Math.floor(mxLa / CELL_LAT); gy++) {
-    for (let gx = Math.floor(mnLo / CELL_LON); gx <= Math.floor(mxLo / CELL_LON); gx++) {
-      const a = MV.project(gx * CELL_LON, (gy + 1) * CELL_LAT);      // linksboven
-      const b = MV.project((gx + 1) * CELL_LON, gy * CELL_LAT);      // rechtsonder
-      if (b.x < 0 || b.y < 0 || a.x > W || a.y > H) continue;
-      const n = kg.grid.get(gy + "," + gx) || 0;
-      if (n > 0) continue;
-      ctx.fillStyle = "rgba(255,209,102,.10)";
-      ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
-      ctx.strokeStyle = "rgba(255,209,102,.16)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(a.x + .5, a.y + .5, b.x - a.x - 1, b.y - a.y - 1);
+   Het is de schaarste die kleur krijgt, niet de dichtheid. Dat is de
+   omkering die de kaart bruikbaar maakt aan tafel: je ziet in één oogopslag
+   waar niemand iets heeft vastgelegd, en dus waar de vraag het meeste waard
+   is.
+
+   Techniek: het veld wordt één keer gebouwd als een piepklein canvas van één
+   pixel per rastercel, in geografische ruimte. Bij het tekenen wordt dat
+   beeld over de kaart geschaald; de browser interpoleert de pixels, en dat
+   levert vloeiende vlekken op in plaats van hokjes. Pannen en zoomen kosten
+   daardoor niets — het veld verandert immers niet mee. */
+let heat = null;
+
+function blurField(src, cols, rows, passes = 3, r = 2) {
+  let a = src, b = new Float32Array(cols * rows);
+  for (let p = 0; p < passes; p++) {
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {      // horizontaal
+      let sum = 0, n = 0;
+      for (let d = -r; d <= r; d++) {
+        const xx = x + d; if (xx < 0 || xx >= cols) continue;
+        sum += a[y * cols + xx]; n++;
+      }
+      b[y * cols + x] = sum / n;
+    }
+    for (let x = 0; x < cols; x++) for (let y = 0; y < rows; y++) {      // verticaal
+      let sum = 0, n = 0;
+      for (let d = -r; d <= r; d++) {
+        const yy = y + d; if (yy < 0 || yy >= rows) continue;
+        sum += b[yy * cols + x]; n++;
+      }
+      a[y * cols + x] = sum / n;
     }
   }
-  ctx.restore();
+  return a;
+}
+
+function buildHeat() {
+  if (!kg.bounds) return null;
+  const { mnLa, mxLa, mnLo, mxLo } = kg.bounds;
+  // Ruime marge: het draagvlak hieronder smeert ~12 cellen ver uit, dus het
+  // veld moet ver genoeg doorlopen om buiten de stad naar nul te kunnen
+  // zakken. Die buitenrand is volledig doorzichtig en kost dus niets.
+  const M = 18;
+  const gy0 = Math.floor(mnLa / CELL_LAT) - M, gy1 = Math.floor(mxLa / CELL_LAT) + M;
+  const gx0 = Math.floor(mnLo / CELL_LON) - M, gx1 = Math.floor(mxLo / CELL_LON) + M;
+  const cols = gx1 - gx0 + 1, rows = gy1 - gy0 + 1;
+  if (cols < 2 || rows < 2) return null;
+
+  const field = new Float32Array(cols * rows);
+  const seen = new Float32Array(cols * rows);
+  for (const [key, n] of kg.grid) {
+    const [gy, gx] = key.split(",").map(Number);
+    const x = gx - gx0, y = gy - gy0;
+    if (x < 0 || y < 0 || x >= cols || y >= rows) continue;
+    field[y * cols + x] += n;
+    seen[y * cols + x] = 1;
+  }
+  const dens = blurField(field, cols, rows, 3, 2);
+
+  /* Draagvlak: hoe dicht zit deze cel bij het gebied waar de dataset iets
+     zegt? Een veel wijdere uitsmering van "hier staat iets", los van hoevéél.
+     Daarmee vervaagt de warmte buiten de stad vanzelf, terwijl een gat midden
+     tussen de documenten juist volledig oplicht. Zonder dit krijg je een
+     gloeiende rechthoek om Breda heen — de rand van de dataset, niet een
+     gebrek aan kennis. */
+  const sup = blurField(seen, cols, rows, 3, 7);
+
+  let max = 0, smax = 0;
+  for (const v of dens) if (v > max) max = v;
+  for (const v of sup) if (v > smax) smax = v;
+  if (!max || !smax) return null;
+
+  const cv = document.createElement("canvas");
+  cv.width = cols; cv.height = rows;
+  const g = cv.getContext("2d");
+  const img = g.createImageData(cols, rows);
+  // Rij 0 van het veld is de zuidelijkste, rij 0 van een afbeelding de
+  // bovenste — dus spiegelen bij het wegschrijven, anders staat de kaart
+  // ondersteboven.
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const scarce = 1 - Math.min(1, dens[y * cols + x] / max);
+    // Onder de helft is er genoeg bekend; daarboven loopt de kleur van amber
+    // naar rood en wordt hij geleidelijk dekkender.
+    const t = Math.max(0, (scarce - 0.45) / 0.55);
+    const fade = Math.min(1, sup[y * cols + x] / (smax * 0.3));
+    const p = ((rows - 1 - y) * cols + x) * 4;
+    img.data[p]     = 255;
+    img.data[p + 1] = Math.round(209 - 114 * t);   // 209 → 95
+    img.data[p + 2] = Math.round(102 - 16 * t);    // 102 → 86
+    img.data[p + 3] = Math.round(Math.pow(t, 1.3) * 135 * fade);
+  }
+  g.putImageData(img, 0, 0);
+  // De y-as van het raster loopt naar het noorden, die van het beeld naar
+  // het zuiden: onthouden welke hoek waar hoort.
+  return { cv, gx0, gy0, gx1, gy1, cols, rows };
+}
+
+export function drawGaps(ctx, MV, W, H) {
+  if (!kg.gaps || !kg.bounds) return;
+  if (!heat) heat = buildHeat();
+  if (!heat) return;
+  const nw = MV.project(heat.gx0 * CELL_LON, (heat.gy1 + 1) * CELL_LAT);
+  const se = MV.project((heat.gx1 + 1) * CELL_LON, heat.gy0 * CELL_LAT);
+  if (se.x < 0 || se.y < 0 || nw.x > W || nw.y > H) return;
+  const prev = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(heat.cv, nw.x, nw.y, se.x - nw.x, se.y - nw.y);
+  ctx.imageSmoothingEnabled = prev;
 }
 
 /* ── Tekenen ────────────────────────────────────────────────────────────
