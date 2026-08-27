@@ -1,0 +1,65 @@
+{
+  "entity": {
+    "id": "ent:e5",
+    "label": "Gemeente Breda",
+    "etype": "ORG",
+    "aliases": ["gemeente Breda"]
+  },
+  "themes": [
+    { "name": "Water", "score": 0.58 },
+    { "name": "Klimaat", "score": 0.54 },
+    { "name": "Participatie", "score": 0.47 }
+  ],
+  "total": 7,
+  "chunks": [
+    {
+      "chunk_id": "a1b2c3d4e5f60001",
+      "doc_id": "d1",
+      "page": 3,
+      "excerpt": "Gemeente Breda werkt nauw samen met Waterschap Brabantse Delta aan de wateropgave in de binnenstad, met als doel de kwetsbaarheid voor wateroverlast in 2030 te halveren.",
+      "cnt": 4
+    },
+    {
+      "chunk_id": "a1b2c3d4e5f60002",
+      "doc_id": "d3",
+      "page": 1,
+      "excerpt": "De klimaatadaptatiestrategie van gemeente Breda benoemt hitte, droogte en wateroverlast als de drie grootste opgaven voor de komende tien jaar.",
+      "cnt": 5
+    },
+    {
+      "chunk_id": "a1b2c3d4e5f60003",
+      "doc_id": "d3",
+      "page": 6,
+      "excerpt": "Gemeente Breda investeert samen met woningcorporaties in groene daken en ontharding van binnentuinen om piekbuien beter op te vangen.",
+      "cnt": 2
+    },
+    {
+      "chunk_id": "a1b2c3d4e5f60004",
+      "doc_id": "d4",
+      "page": 2,
+      "excerpt": "De vestingwerken zijn eigendom van gemeente Breda en worden beheerd in samenwerking met de erfgoedvereniging.",
+      "cnt": 1
+    },
+    {
+      "chunk_id": "a1b2c3d4e5f60005",
+      "doc_id": "d6",
+      "page": 1,
+      "excerpt": "Gemeente Breda faciliteert het participatietraject in Doornbos-Linie met wijkbijeenkomsten en een digitaal burgerpanel.",
+      "cnt": 3
+    },
+    {
+      "chunk_id": "a1b2c3d4e5f60006",
+      "doc_id": "d8",
+      "page": 4,
+      "excerpt": "Het Chassépark is heringericht in opdracht van gemeente Breda als proeftuin voor hitte- en droogtebestendige inrichting.",
+      "cnt": 2
+    }
+  ],
+  "documents": [
+    { "id": "d1", "title": "Waterhuishouding binnenstad Breda 2020-2030", "year": 2021, "file_kind": "pdf" },
+    { "id": "d3", "title": "Klimaatadaptatiestrategie gemeente Breda", "year": 2022, "file_kind": "pdf" },
+    { "id": "d4", "title": "Erfgoedwijzer Bredase vestingwerken", "year": 2020, "file_kind": "html" },
+    { "id": "d6", "title": "Participatietraject Wijkvernieuwing Doornbos-Linie", "year": 2023, "file_kind": "pdf" },
+    { "id": "d8", "title": "Hitte- en droogtebestendige inrichting Chassépark", "year": 2022, "file_kind": "pdf" }
+  ]
+}

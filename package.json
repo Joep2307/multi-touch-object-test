@@ -1,0 +1,16 @@
+{
+  "name": "puck-table",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Multi-touch participatietafel — pucks plaatsen markeringen op een kaart, met de coco-biblio kennisgraaf als laag eronder.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.1.0"
+  }
+}

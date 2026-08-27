@@ -1,0 +1,27 @@
+# fixtures/chat.txt — canned demo conversation for chat.html's offline fallback.
+# Parsed by chat.js (parseFixtureText): a "### SOURCES" section of tab-separated
+# rows (index, chunk_id, doc_id, title, page, excerpt, score), then an
+# "### ANSWER" section of Dutch text with [n]-style citations, rendered through
+# chat.js's whitelist markdown renderer (same renderer the live SSE path uses)
+# — so this answer intentionally uses a heading, bold, italic and a list to
+# demo that path too. Any line outside the two "### SOURCES"/"### ANSWER"
+# marker lines (matched by exact equality, so a "### " heading INSIDE the
+# answer body is not mistaken for a section marker) is ignored, like this
+# comment block.
+#
+# Demo question this answers: "Wat zijn de plannen voor 't Zoet in Breda en hoe
+# past dat bij klimaatadaptatie?"
+
+### SOURCES
+1	demo-chunk-1	demo-doc-1	Gebiedsvisie 't Zoet Breda	12	't Zoet wordt de komende jaren herontwikkeld tot een klimaatadaptieve woonwijk, met veel ruimte voor water, groen en langzaam verkeer rond de voormalige suikerfabriek.	0.82
+2	demo-chunk-2	demo-doc-2	Klimaatadaptatie gebiedsontwikkeling Breda	4	De gemeente Breda hanteert bij nieuwe gebiedsontwikkelingen zoals 't Zoet een klimaatadaptieve inrichting als uitgangspunt: infiltratie, schaduw en hittebestendig groen.	0.77
+### ANSWER
+### Samenvatting
+'t Zoet is het gebied rond de voormalige suikerfabriek in Breda dat de komende jaren wordt herontwikkeld tot een nieuwe, **klimaatadaptieve woonwijk** [1]. De belangrijkste uitgangspunten zijn:
+- veel ruimte voor *water* en groen
+- langzaam verkeer krijgt voorrang boven autoverkeer
+- infiltratie van regenwater in plaats van directe afvoer
+
+Dit sluit aan bij het bredere beleid van de gemeente Breda, die bij gebiedsontwikkelingen standaard uitgaat van klimaatadaptieve inrichting: infiltratie, schaduw en hittebestendig groen [2]. Samen maken deze uitgangspunten 't Zoet tot een voorbeeldproject voor klimaatbestendig bouwen in de stad.
+
+(Dit is voorbeeldgegeven — de live chat-API op api/biblio/chat was niet bereikbaar.)

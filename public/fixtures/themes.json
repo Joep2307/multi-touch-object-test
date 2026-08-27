@@ -1,0 +1,10 @@
+{
+  "themes": [
+    { "name": "Water", "count": 3 },
+    { "name": "Ecologie", "count": 2 },
+    { "name": "Klimaat", "count": 3 },
+    { "name": "Erfgoedweb", "count": 3 },
+    { "name": "Geschiedenis", "count": 2 },
+    { "name": "Participatie", "count": 2 }
+  ]
+}

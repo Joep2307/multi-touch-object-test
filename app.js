@@ -1,3 +1,5 @@
+import { kg, loadKG, drawKG, kgAt, kgDescribe, onKgChange } from "./kg.js";
+
 /* ═══════════════════════════════════════════════════════════════
    0. FONTS — loaded from CSS, silently falls back to system faces
    ═══════════════════════════════════════════════════════════════ */
@@ -38,7 +40,8 @@ let uiMode=(()=>{ try{return localStorage.getItem("pucktable-ui-mode");}catch(e)
 if(uiMode!=="touch"&&uiMode!=="laptop") uiMode=matchMedia("(pointer:coarse)").matches?"touch":"laptop";
 const VERDICTS=[{key:"good",color:"#39d8a4"},{key:"bad",color:"#ff5f56"},
                 {key:"talk",color:"#c48cff"},{key:"idea",color:"#ffd166"}];
-const vName=k=>L[lang][k], topics=()=>L[lang].topics, vColor=k=>VERDICTS.find(v=>v.key===k).color;
+const vName=k=>L[lang][k], vColor=k=>VERDICTS.find(v=>v.key===k).color;
+const topics=()=>(kg.useThemes&&kg.themes.length?kg.themes:L[lang].topics);
 let templates=[
   {id:"puck-01",ratios:[0.62,0.81],verdict:"good"},
   {id:"puck-02",ratios:[0.48,0.76],verdict:"bad"},
@@ -582,8 +585,12 @@ addEventListener("pointerup",e=>{
     const s=MV.project(p.lng,p.lat);
     return Math.hypot(s.x-e.clientX,s.y-e.clientY)<24;
   });
-  // Tapping empty table closes the note and deselects: the pucks leave the table.
-  if(hit) openNote(hit,e.clientX,e.clientY); else { closeNote(); clearPucks(); }
+  if(hit){ openNote(hit,e.clientX,e.clientY); closeKgInfo(); return; }
+  // Geen eigen markering geraakt? Dan mag de kennisgraaf de tik hebben.
+  const node=kgAt(MV,e.clientX,e.clientY);
+  if(node){ closeNote(); openKgInfo(node,e.clientX,e.clientY); return; }
+  // Leeg stuk tafel: notitie dicht, graafselectie weg, pucks van tafel.
+  closeNote(); closeKgInfo(); clearPucks();
 });
 function openNote(pin,x,y,fromPuck=false){
   selected=pin; const n=el("note");
@@ -644,6 +651,7 @@ function frame(){
   const now=performance.now();
   paintMapLayer();
   if(bakePending){ bakePending=false; bakeMap(); }
+  drawKG(ctx,MV,W,H);
 
   syncSimPucksToMap();
   const points=[...realTouches.values(),...(simMode?simPads():[])];
@@ -886,6 +894,38 @@ el("modeLaptop").onclick=()=>applyMode("laptop");
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
 el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",debugMode);};
 el("btnClear").onclick=clearPucks;
+
+/* ── Kennisgraaf ───────────────────────────────────────────────── */
+function openKgInfo(node,x,y){
+  kg.selected=node;
+  const n=el("kgInfo");
+  n.style.display="block";
+  const width=280, height=120;
+  n.style.left=Math.max(12,Math.min(innerWidth-width-12,x+26))+"px";
+  n.style.top=Math.max(12,Math.min(innerHeight-height-12,y-height/2))+"px";
+  el("kgInfoType").textContent=kgDescribe(node);
+  el("kgInfoLabel").textContent=node.label;
+}
+function closeKgInfo(){ kg.selected=null; el("kgInfo").style.display="none"; }
+el("kgInfoClose").onclick=closeKgInfo;
+onKgChange(()=>{
+  el("kgStatus").textContent=kg.status;
+  el("btnKg").classList.toggle("on",kg.enabled);
+  el("btnKgThemes").classList.toggle("on",kg.useThemes);
+});
+el("btnKg").onclick=async()=>{
+  kg.enabled=!kg.enabled;
+  el("btnKg").classList.toggle("on",kg.enabled);
+  if(!kg.enabled){ closeKgInfo(); kg.status="uit"; el("kgStatus").textContent=kg.status; return; }
+  if(!kg.nodes.length) await loadKG(el("kgUrl").value.trim());
+  else el("kgStatus").textContent=kg.status;
+};
+el("btnKgThemes").onclick=async()=>{
+  kg.useThemes=!kg.useThemes;
+  el("btnKgThemes").classList.toggle("on",kg.useThemes);
+  if(kg.useThemes && !kg.themes.length) await loadKG(el("kgUrl").value.trim());
+};
+el("kgUrl").onchange=()=>{ kg.nodes.length=0; kg.themes.length=0; if(kg.enabled||kg.useThemes) loadKG(el("kgUrl").value.trim()); };
 el("dwell").oninput=e=>{CFG.dwellMS=parseFloat(e.target.value)*1000;el("dwellVal").textContent=(+e.target.value).toFixed(1)+" s";};
 el("tol").oninput=e=>{tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
 el("diag").oninput=resize;

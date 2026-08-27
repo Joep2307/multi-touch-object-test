@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Puck Table — participatie kaart</title>
 <link rel="stylesheet" href="styles.css">
-<script src="app.js" defer></script>
+<script type="module" src="./app.js"></script>
 </head>
 <body>
 
@@ -51,6 +51,16 @@
     </div>
     <div class="row"><button id="btnUnbake">Bewaarde kaart wissen</button></div>
     <p class="hint" id="bakeHint">Druk hierop terwijl je internet hebt. Het huidige kaartbeeld wordt opgeslagen en verschijnt daarna ook zonder verbinding.</p>
+
+
+    <p class="eyebrow" style="margin-top:20px">Kennisgraaf</p>
+    <div class="row">
+      <button id="btnKg">Graaf tonen</button>
+      <button id="btnKgThemes">Thema's uit graaf</button>
+    </div>
+    <label class="field" for="kgUrl">Adres van de backend</label>
+    <input id="kgUrl" placeholder="leeg = fixtures" autocomplete="off">
+    <p class="hint" id="kgStatus">uit</p>
 
     <p class="eyebrow" style="margin-top:20px">Sessie</p>
     <label class="field" for="sess">Naam van de sessie</label>
@@ -108,6 +118,14 @@
 <div class="panel" id="recent">
   <p class="eyebrow">Laatste markeringen</p>
   <div id="recentBody"><p class="empty">Leg een puck op een plek en houd hem stil om die plek vast te leggen.</p></div>
+</div>
+
+<div class="panel" id="kgInfo">
+  <p class="eyebrow" id="kgInfoType">document</p>
+  <p class="kg-title" id="kgInfoLabel"></p>
+  <div class="row" style="margin-bottom:0">
+    <button id="kgInfoClose">Sluiten</button>
+  </div>
 </div>
 
 <div class="panel" id="note">
