@@ -523,6 +523,7 @@ addEventListener("wheel",e=>{
   if(pinMoveMode){e.preventDefault();return;}
   const hit=simPuckAt(e.clientX,e.clientY);
   if(hit){ e.preventDefault(); hit.rot+=e.deltaY*0.002; return; }
+  if(e.target.closest("#sheet")) return;
   if(!mapLocked && !e.target.closest(".panel")){
     e.preventDefault();
     // normalise the wheel across mice (pixels), trackpads (many small pixels) and Firefox (lines/pages)
@@ -1151,7 +1152,19 @@ el("btnSheet").onclick=()=>{
   }).join("");
   el("sheet").style.display="block";
 };
-el("closeSheet").onclick=()=>el("sheet").style.display="none";
+/* Vier manieren om het overzicht te sluiten: de knop onderaan, het kruisje
+   bovenin, een tik naast het vel, en Escape. De knop onderaan alleen was te
+   weinig — bij vier of meer pucks staat die buiten beeld. */
+function closeSheet(){ el("sheet").style.display="none"; }
+el("closeSheet").onclick=closeSheet;
+el("closeSheetTop").onclick=closeSheet;
+el("sheet").addEventListener("pointerdown",e=>{ if(e.target===el("sheet")) closeSheet(); });
+addEventListener("keydown",e=>{
+  if(e.key!=="Escape") return;
+  if(el("sheet").style.display==="block"){ closeSheet(); return; }
+  if(el("note").style.display==="block"){ closeNote(); return; }
+  closeKgInfo();
+});
 
 /* Drop a map picture (PNG/JPG) to use it as the background. It is pinned to the
    coordinates currently on screen, so panning and zooming still work afterwards. */

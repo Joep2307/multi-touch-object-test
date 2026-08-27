@@ -126,6 +126,11 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
 .sheetcard td{padding:3px 0;color:var(--ink-dim)}
 .sheetcard td:first-child{color:var(--ink)}
 #closeSheet{max-width:160px;margin-top:26px}
+/* Het vel is langer dan het scherm, dus de sluitknop onderaan is bij vier
+   pucks al niet meer in beeld. Dit kruisje blijft meescrollen bovenin. */
+#sheet .inner{position:relative}
+#closeSheetTop{position:sticky;top:0;float:right;width:38px;height:38px;padding:0;
+  font-size:20px;line-height:1;border-radius:10px;z-index:1}
 .mode-touch #controls{width:310px}
 .mode-touch #puckDock{width:370px}
 .mode-touch button{min-height:44px;font-size:13px}
@@ -178,7 +183,7 @@ body.keyboard-open #note{z-index:45}
    elke veeg daar een kaartgebaar of een puck is; in een paneel moet een
    verticale veeg juist gewoon scrollen. overscroll-behavior houdt die veeg
    binnen het paneel zodra het einde bereikt is. */
-#note,#controls,#recent,#tally{touch-action:pan-y;overscroll-behavior:contain;
+#note,#controls,#recent,#tally,#sheet{touch-action:pan-y;overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch}
 #note{max-height:calc(100vh - 24px);overflow-y:auto}
 #noteAnswer .kg-h{display:inline-block;margin-top:6px;color:#fff;font-weight:700}
