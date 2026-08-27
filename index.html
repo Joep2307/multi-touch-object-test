@@ -14,7 +14,12 @@
 <div class="panel" id="controls">
   <div class="head" id="ctrlHead"><h1>Participatietafel</h1><span class="chev mono" id="chev">HIDE</span></div>
   <div class="body">
-    <p class="eyebrow">Kaart</p>
+    <p class="eyebrow">Pucks</p>
+    <p class="hint" style="margin:0 0 9px">Sleep een puck op de tafel. Draaien doet het onderwerp.</p>
+    <div id="trayPucks" class="row"></div>
+    <div class="row"><button id="btnClear" class="danger">Haal pucks weg</button></div>
+
+    <p class="eyebrow" style="margin-top:20px">Kaart</p>
     <div class="row">
       <button id="btnMove">Kaart verplaatsen</button>
       <button id="btnLang">EN</button>
@@ -55,14 +60,10 @@
     </div>
     <div class="row"><button id="btnWipe" class="danger">Alles wissen</button></div>
 
-    <p class="eyebrow" style="margin-top:20px">Invoer</p>
+    <p class="eyebrow" style="margin-top:20px">Simulatie</p>
     <div class="row">
       <button id="btnSim" class="on">Puck simuleren</button>
       <button id="btnDebug">Touch debug</button>
-    </div>
-    <div class="row">
-      <button id="btnAdd">Puck neerleggen</button>
-      <button id="btnClear">Tafel leegmaken</button>
     </div>
     <label class="field" for="dwell">Hoe lang stilhouden <span id="dwellVal" class="mono">1.2 s</span></label>
     <input type="range" id="dwell" min="0.4" max="3" step="0.1" value="1.2">
@@ -94,7 +95,7 @@
 
 <div class="panel" id="readout">
   <p class="eyebrow">Op tafel</p>
-  <div id="readoutBody"><p class="empty">Nog niets op tafel. Druk op <b>Puck neerleggen</b> en sleep hem. Draaien doet het onderwerp.</p></div>
+  <div id="readoutBody"><p class="empty">Nog niets op tafel. Sleep een puck vanaf de balk links. Draaien doet het onderwerp.</p></div>
 </div>
 
 <div class="panel" id="recent">

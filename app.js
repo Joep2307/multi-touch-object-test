@@ -237,12 +237,61 @@ addEventListener("pointercancel",endPointer);
 addEventListener("contextmenu",e=>e.preventDefault());
 
 const simPucks=[];
-function addSimPuck(){
-  const free=templates.filter(t=>!simPucks.some(s=>s.tpl.id===t.id));
-  if(!free.length) return;
-  simPucks.push({tpl:free[0],x:innerWidth*(.35+Math.random()*.3),y:innerHeight*(.35+Math.random()*.3),
-                 rot:Math.random()*Math.PI*2});
+
+/* ── Puck tray: drag a mini-puck off the left bar to drop it on the table ── */
+function renderTray(){
+  const box=el("trayPucks"); box.innerHTML="";
+  templates.forEach(tpl=>{
+    const d=document.createElement("div");
+    d.className="traypuck"; d.dataset.id=tpl.id;
+    d.style.borderColor=vColor(tpl.verdict);
+    d.style.color=vColor(tpl.verdict);
+    d.textContent=vName(tpl.verdict);
+    box.appendChild(d);
+  });
+  markTray();
 }
+function markTray(){
+  [...document.querySelectorAll(".traypuck")].forEach(d=>
+    d.classList.toggle("used",simPucks.some(s=>s.tpl.id===d.dataset.id)));
+}
+let trayDrag=null;
+function moveGhost(e){
+  if(!trayDrag) return;
+  trayDrag.ghost.style.left=(e.clientX-27)+"px";
+  trayDrag.ghost.style.top=(e.clientY-27)+"px";
+}
+function endTrayDrag(e){
+  if(!trayDrag) return;
+  const {tpl,ghost,node}=trayDrag;
+  ghost.remove();
+  node.removeEventListener("pointermove",moveGhost);
+  node.removeEventListener("pointerup",endTrayDrag);
+  node.removeEventListener("pointercancel",endTrayDrag);
+  const onPanel=document.elementFromPoint(e.clientX,e.clientY);
+  trayDrag=null;
+  if(onPanel&&onPanel.closest(".panel")) return;          // dropped back onto a panel — cancel
+  if(simPucks.some(s=>s.tpl.id===tpl.id)) return;
+  simPucks.push({tpl,x:e.clientX,y:e.clientY,rot:Math.random()*Math.PI*2});
+  markTray();
+}
+el("trayPucks").addEventListener("pointerdown",e=>{
+  const node=e.target.closest(".traypuck");
+  if(!node||node.classList.contains("used")) return;
+  const tpl=templates.find(t=>t.id===node.dataset.id);
+  if(!tpl) return;
+  e.preventDefault();
+  const ghost=node.cloneNode(true);
+  ghost.style.cssText="position:fixed;z-index:60;margin:0;pointer-events:none;opacity:.9";
+  document.body.appendChild(ghost);
+  trayDrag={tpl,ghost,node};
+  moveGhost(e);
+  node.setPointerCapture(e.pointerId);
+  node.addEventListener("pointermove",moveGhost);
+  node.addEventListener("pointerup",endTrayDrag);
+  node.addEventListener("pointercancel",endTrayDrag);
+});
+
 function simPads(){
   const out=[],Lm=CFG.longestSideMM*pxPerMM;
   for(const s of simPucks) for(const p of padsFor(s.tpl,Lm)){
@@ -490,7 +539,7 @@ function updateUI(pucks){
       <div class="name">${vName(t.tpl.verdict)} · ${topics()[topicOf(t.angle)]}</div>
       <div class="data">${t.tpl.id} · ${(t.conf*100).toFixed(0)}% · ${(t.angle*180/Math.PI).toFixed(0)}°<br>
       ${t.armed?"klaar om vast te leggen":"til op en verplaats"}</div></div>`;
-  }).join(""):`<p class="empty">Nog niets op tafel. Druk op <b>Puck neerleggen</b> en sleep hem. Draaien doet het onderwerp.</p>`;
+  }).join(""):`<p class="empty">Nog niets op tafel. Sleep een puck vanaf de balk links. Draaien doet het onderwerp.</p>`;
 
   el("recentBody").innerHTML=pins.length?pins.slice(-8).reverse().map(p=>
     `<div class="pin"><i style="background:${vColor(p.verdict)}"></i>
@@ -510,11 +559,10 @@ function applyLock(){
 el("ctrlHead").onclick=()=>{const c=el("controls");c.classList.toggle("collapsed");
   el("chev").textContent=c.classList.contains("collapsed")?"SHOW":"HIDE";};
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
-el("btnLang").onclick=e=>{lang=lang==="nl"?"en":"nl";e.target.textContent=lang==="nl"?"EN":"NL";applyLock();};
+el("btnLang").onclick=e=>{lang=lang==="nl"?"en":"nl";e.target.textContent=lang==="nl"?"EN":"NL";applyLock();renderTray();};
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
 el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",debugMode);};
-el("btnAdd").onclick=addSimPuck;
-el("btnClear").onclick=()=>{simPucks.length=0;tracks.clear();};
+el("btnClear").onclick=()=>{simPucks.length=0;tracks.clear();markTray();};
 el("dwell").oninput=e=>{CFG.dwellMS=parseFloat(e.target.value)*1000;el("dwellVal").textContent=(+e.target.value).toFixed(1)+" s";};
 el("tol").oninput=e=>{tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
 el("diag").oninput=resize;
@@ -562,6 +610,7 @@ el("btnLearn").onclick=()=>{
   CFG.longestSideMM=d.longest/pxPerMM;
   hint.innerHTML=`<b>${id}</b> toegevoegd — ratio's ${d.ratios[0].toFixed(3)} / ${d.ratios[1].toFixed(3)}, langste zijde ${(d.longest/pxPerMM).toFixed(1)} mm.`+
     (clash?` <b style="color:var(--warn)">Te dicht bij ${clash.id}</b>: maak deze driehoek duidelijk anders.`:"");
+  renderTray();
 };
 el("btnExport").onclick=()=>download("puck-config.json",
   JSON.stringify({longestSideMM:CFG.longestSideMM,tolerance,templates},null,2),"application/json");
@@ -639,4 +688,4 @@ el("btnUnbake").onclick=()=>{
   el("bakeHint").textContent="Bewaarde kaart gewist.";
 };
 
-resize(); restore(); restoreBasemap(); applyLock(); addSimPuck(); addSimPuck(); frame();
+resize(); restore(); restoreBasemap(); applyLock(); renderTray(); frame();
