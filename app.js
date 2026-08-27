@@ -19,11 +19,11 @@ const CFG = {
 };
 const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
-       topics:["Verkeer","Veiligheid","Groen","Geluid","Sociaal","Onderhoud"],
+       topics:["Veiligheid","Verkeer","Groen","Afval","Sociaal","Anders"],
        move:"Kaart vastzetten", locked:"Kaart staat vast", hold:"Stilhouden…", placed:"Vastgelegd",
        noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door." },
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
-       topics:["Traffic","Safety","Green","Noise","Social","Upkeep"],
+       topics:["Safety","Traffic","Green","Waste","Social","Other"],
        move:"Freeze map", locked:"Map is frozen", hold:"Hold still…", placed:"Marked",
        noNet:"No map tiles — check the connection. Marking still works." }
 };
@@ -194,8 +194,26 @@ const realTouches=new Map(); let peakTouches=0;
 
 /* One finger drags the map, two fingers pinch it. Three or more is a puck,
    and a recognised puck freezes the map so it can't slide out from under it. */
-let gesture=null, mousePan=null;
-const mapMovable = () => !mapLocked && !drag && tracks.size===0 && realTouches.size<3;
+let gesture=null, mousePan=null, puckTouch=null;
+const mapMovable = () => !mapLocked && !drag && !puckTouch && tracks.size===0 && realTouches.size<3;
+
+/* Topmost simulated puck under a screen point — a generous, finger-sized hit area. */
+function simPuckAt(x,y){
+  return simPucks.slice().reverse().find(s=>Math.hypot(s.x-x,s.y-y)<CFG.puckRadiusMM*pxPerMM);
+}
+/* Snapshot the puck + finger geometry so the next move can be applied as a delta:
+   one finger slides the puck, two fingers twist it (and nudge it by their midpoint). */
+function basePuckTouch(){
+  const p=[...puckTouch.ptrs.values()];
+  puckTouch.baseRot=puckTouch.puck.rot;
+  if(p.length===1){
+    puckTouch.dx=p[0].x-puckTouch.puck.x; puckTouch.dy=p[0].y-puckTouch.puck.y;
+  }else{
+    puckTouch.baseAngle=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
+    puckTouch.dx=puckTouch.puck.x-(p[0].x+p[1].x)/2;
+    puckTouch.dy=puckTouch.puck.y-(p[0].y+p[1].y)/2;
+  }
+}
 function syncGesture(){
   if(!mapMovable()){ gesture=null; return; }
   const pts=[...realTouches.entries()];
@@ -209,14 +227,38 @@ function syncGesture(){
 }
 addEventListener("pointerdown",e=>{
   if(e.target.closest(".panel")) return;
-  if(e.pointerType!=="mouse"){
-    realTouches.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    peakTouches=Math.max(peakTouches,realTouches.size);
-    syncGesture();
+  if(e.pointerType==="mouse") return;
+  // A finger on a simulated puck grabs it: one finger slides, a second finger twists it
+  // to pick a theme. Once grabbed, any further finger joins the twist.
+  if(tracks.size===0){
+    const onPuck=simPuckAt(e.clientX,e.clientY);
+    if((onPuck && (!puckTouch || puckTouch.puck===onPuck)) || (puckTouch && puckTouch.ptrs.size>=1)){
+      if(!puckTouch) puckTouch={puck:onPuck,ptrs:new Map()};
+      puckTouch.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      basePuckTouch(); gesture=null;
+      return;
+    }
   }
+  realTouches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  peakTouches=Math.max(peakTouches,realTouches.size);
+  syncGesture();
 });
 addEventListener("pointermove",e=>{
-  if(e.pointerType==="mouse"||!realTouches.has(e.pointerId)) return;
+  if(e.pointerType==="mouse") return;
+  if(puckTouch && puckTouch.ptrs.has(e.pointerId)){
+    puckTouch.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const p=[...puckTouch.ptrs.values()];
+    if(p.length===1){
+      puckTouch.puck.x=p[0].x-puckTouch.dx; puckTouch.puck.y=p[0].y-puckTouch.dy;
+    }else{
+      const ang=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
+      puckTouch.puck.rot=puckTouch.baseRot+(ang-puckTouch.baseAngle);
+      puckTouch.puck.x=(p[0].x+p[1].x)/2+puckTouch.dx;
+      puckTouch.puck.y=(p[0].y+p[1].y)/2+puckTouch.dy;
+    }
+    return;
+  }
+  if(!realTouches.has(e.pointerId)) return;
   realTouches.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(!gesture||!mapMovable()) return;
   if(gesture.n===1 && realTouches.has(gesture.id)){
@@ -231,7 +273,14 @@ addEventListener("pointermove",e=>{
     gesture.d=d; gesture.mx=mx; gesture.my=my;
   }
 });
-function endPointer(e){ realTouches.delete(e.pointerId); syncGesture(); }
+function endPointer(e){
+  if(puckTouch && puckTouch.ptrs.has(e.pointerId)){
+    puckTouch.ptrs.delete(e.pointerId);
+    if(puckTouch.ptrs.size===0) puckTouch=null; else basePuckTouch();
+    return;
+  }
+  realTouches.delete(e.pointerId); syncGesture();
+}
 addEventListener("pointerup",endPointer);
 addEventListener("pointercancel",endPointer);
 addEventListener("contextmenu",e=>e.preventDefault());
@@ -263,16 +312,22 @@ function moveGhost(e){
 }
 function endTrayDrag(e){
   if(!trayDrag) return;
-  const {tpl,ghost,node}=trayDrag;
+  const {tpl,ghost,node,x0,y0}=trayDrag;
   ghost.remove();
   node.removeEventListener("pointermove",moveGhost);
   node.removeEventListener("pointerup",endTrayDrag);
   node.removeEventListener("pointercancel",endTrayDrag);
-  const onPanel=document.elementFromPoint(e.clientX,e.clientY);
   trayDrag=null;
-  if(onPanel&&onPanel.closest(".panel")) return;          // dropped back onto a panel — cancel
   if(simPucks.some(s=>s.tpl.id===tpl.id)) return;
-  simPucks.push({tpl,x:e.clientX,y:e.clientY,rot:Math.random()*Math.PI*2});
+  if(Math.hypot(e.clientX-x0,e.clientY-y0)<24) return;     // a tap, not a drag — ignore
+  // Drop where released; if that's still under a panel, slide it toward the middle
+  // until it clears, so the puck actually lands somewhere visible on the table.
+  let x=e.clientX, y=e.clientY;
+  const panels=[...document.querySelectorAll(".panel")], M=CFG.ringPX+24;
+  const buried=()=>panels.some(p=>{const r=p.getBoundingClientRect();
+    return x>=r.left-M&&x<=r.right+M&&y>=r.top-M&&y<=r.bottom+M;});
+  for(let i=0;i<400 && buried();i++){ x+=(innerWidth/2-x)*0.05; y+=(innerHeight/2-y)*0.05; }
+  simPucks.push({tpl,x,y,rot:Math.random()*Math.PI*2});
   markTray();
 }
 el("trayPucks").addEventListener("pointerdown",e=>{
@@ -284,7 +339,7 @@ el("trayPucks").addEventListener("pointerdown",e=>{
   const ghost=node.cloneNode(true);
   ghost.style.cssText="position:fixed;z-index:60;margin:0;pointer-events:none;opacity:.9";
   document.body.appendChild(ghost);
-  trayDrag={tpl,ghost,node};
+  trayDrag={tpl,ghost,node,x0:e.clientX,y0:e.clientY};
   moveGhost(e);
   node.setPointerCapture(e.pointerId);
   node.addEventListener("pointermove",moveGhost);
@@ -303,7 +358,7 @@ function simPads(){
 let drag=null;
 addEventListener("mousedown",e=>{
   if(e.target.closest(".panel")||e.target.closest("#sheet")) return;
-  const hit=simPucks.slice().reverse().find(s=>Math.hypot(s.x-e.clientX,s.y-e.clientY)<CFG.puckRadiusMM*pxPerMM);
+  const hit=simPuckAt(e.clientX,e.clientY);
   e.preventDefault();
   if(!hit){
     if(!mapLocked && tracks.size===0) mousePan={x:e.clientX,y:e.clientY};
@@ -324,7 +379,7 @@ addEventListener("mousemove",e=>{
 });
 addEventListener("mouseup",()=>{ drag=null; mousePan=null; });
 addEventListener("wheel",e=>{
-  const hit=simPucks.find(s=>Math.hypot(s.x-e.clientX,s.y-e.clientY)<CFG.puckRadiusMM*pxPerMM);
+  const hit=simPuckAt(e.clientX,e.clientY);
   if(hit){ e.preventDefault(); hit.rot+=e.deltaY*0.002; return; }
   if(!mapLocked && !e.target.closest(".panel")){
     e.preventDefault();
@@ -410,7 +465,7 @@ function restore(){
 }
 let tapStart=null, selected=null;
 addEventListener("pointerdown",e=>{
-  if(e.target.closest(".panel")) return;
+  if(e.target.closest(".panel")||puckTouch) return;
   tapStart={x:e.clientX,y:e.clientY,t:performance.now()};
 });
 addEventListener("pointerup",e=>{
@@ -478,11 +533,25 @@ function frame(){
       const a0=-Math.PI+(k/n)*Math.PI*2+0.03, a1=-Math.PI+((k+1)/n)*Math.PI*2-0.03;
       ctx.beginPath(); ctx.arc(t.x,t.y,CFG.ringPX,a0,a1);
       ctx.strokeStyle=k===ti?c:c+"33"; ctx.lineWidth=k===ti?7:3; ctx.stroke();
-      const am=(a0+a1)/2, lr=CFG.ringPX+20;
-      ctx.font=k===ti?"600 13px 'Space Grotesk',system-ui,sans-serif":"12px 'Space Grotesk',system-ui,sans-serif";
-      ctx.fillStyle=k===ti?"#e8edf4":"rgba(232,237,244,.4)";
+      const am=(a0+a1)/2, lr=CFG.ringPX+23;
+      const lx=t.x+Math.cos(am)*lr, ly=t.y+Math.sin(am)*lr;
+      const selected=k===ti;
+      ctx.font=selected?"700 14px 'Space Grotesk',system-ui,sans-serif":"600 13px 'Space Grotesk',system-ui,sans-serif";
       ctx.textAlign="center"; ctx.textBaseline="middle";
-      ctx.fillText(list[k],t.x+Math.cos(am)*lr,t.y+Math.sin(am)*lr);
+
+      // Keep the topic legible over detailed map tiles. A compact opaque label
+      // also makes the active topic much easier to spot from across the table.
+      const labelW=Math.ceil(ctx.measureText(list[k]).width)+18;
+      const labelH=selected?28:25;
+      ctx.beginPath();
+      ctx.roundRect(lx-labelW/2,ly-labelH/2,labelW,labelH,labelH/2);
+      ctx.fillStyle=selected?"rgba(9,12,17,.98)":"rgba(9,12,17,.88)";
+      ctx.fill();
+      ctx.strokeStyle=selected?c:"rgba(232,237,244,.28)";
+      ctx.lineWidth=selected?2:1;
+      ctx.stroke();
+      ctx.fillStyle=selected?"#ffffff":"rgba(232,237,244,.9)";
+      ctx.fillText(list[k],lx,ly+.5);
     }
     ctx.textBaseline="alphabetic";
     const prog=Math.min(1,(now-t.dwellFrom)/CFG.dwellMS);
@@ -539,7 +608,7 @@ function updateUI(pucks){
       <div class="name">${vName(t.tpl.verdict)} · ${topics()[topicOf(t.angle)]}</div>
       <div class="data">${t.tpl.id} · ${(t.conf*100).toFixed(0)}% · ${(t.angle*180/Math.PI).toFixed(0)}°<br>
       ${t.armed?"klaar om vast te leggen":"til op en verplaats"}</div></div>`;
-  }).join(""):`<p class="empty">Nog niets op tafel. Sleep een puck vanaf de balk links. Draaien doet het onderwerp.</p>`;
+  }).join(""):`<p class="empty">Nog niets op tafel. Sleep een puck op de tafel en draai hem met twee vingers voor het thema.</p>`;
 
   el("recentBody").innerHTML=pins.length?pins.slice(-8).reverse().map(p=>
     `<div class="pin"><i style="background:${vColor(p.verdict)}"></i>

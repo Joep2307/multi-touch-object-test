@@ -9,7 +9,12 @@
 html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
   font-family:'Space Grotesk',system-ui,sans-serif;-webkit-user-select:none;user-select:none;
   touch-action:none;overscroll-behavior:none}
-#c{position:fixed;inset:0;display:block}
+/* width/height must be pinned to the viewport: <canvas> is a replaced element,
+   so without them its CSS box takes the pixel size of the backing store
+   (innerWidth*dpr) and on a Retina screen it renders at 2x, spilling off the
+   bottom-right — which also throws every clientX/clientY hit-test and the
+   zoom anchor off by the device pixel ratio. */
+#c{position:fixed;inset:0;width:100vw;height:100vh;display:block}
 .panel{position:fixed;background:rgba(14,18,24,.9);backdrop-filter:blur(14px);
   border:1px solid var(--line);border-radius:14px;padding:14px 16px;z-index:10}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
