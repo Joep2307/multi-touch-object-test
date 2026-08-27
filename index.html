@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Puck Table — participatie kaart</title>
+<link rel="stylesheet" href="styles.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div class="panel" id="controls">
+  <div class="head" id="ctrlHead"><h1>Participatietafel</h1><span class="chev mono" id="chev">HIDE</span></div>
+  <div class="body">
+    <p class="eyebrow">Kaart</p>
+    <div class="row">
+      <button id="btnMove">Kaart verplaatsen</button>
+      <button id="btnLang">EN</button>
+    </div>
+    <label class="field" for="search">Zoek een plek</label>
+    <input id="search" placeholder="Breda, Ginneken…" autocomplete="off">
+    <div class="row" style="margin-top:9px">
+      <button data-go="51.5886,4.7756,15">Centrum</button>
+      <button data-go="51.5975,4.7715,15">Belcrum</button>
+    </div>
+    <div class="row">
+      <button data-go="51.5726,4.7864,15">Ginneken</button>
+      <button data-go="51.6098,4.7813,14">Hoge Vucht</button>
+    </div>
+    <div class="row">
+      <button data-go="51.5866,4.7759,13">Heel Breda</button>
+    </div>
+    <label class="field" for="tiles">Kaartbeeld</label>
+    <select id="tiles">
+      <option value="osm" selected>OpenStreetMap</option>
+      <option value="dark">Donker (CARTO — API-sleutel nodig)</option>
+      <option value="light">Licht (CARTO — API-sleutel nodig)</option>
+      <option value="none">Geen — alleen raster</option>
+    </select>
+
+    <div class="row" style="margin-top:9px">
+      <button id="btnBake">Kaart offline bewaren</button>
+    </div>
+    <div class="row"><button id="btnUnbake">Bewaarde kaart wissen</button></div>
+    <p class="hint" id="bakeHint">Druk hierop terwijl je internet hebt. Het huidige kaartbeeld wordt opgeslagen en verschijnt daarna ook zonder verbinding.</p>
+
+    <p class="eyebrow" style="margin-top:20px">Sessie</p>
+    <label class="field" for="sess">Naam van de sessie</label>
+    <input id="sess" value="sessie-01">
+    <div class="row" style="margin-top:9px">
+      <button id="btnGeo">Export GeoJSON</button>
+      <button id="btnCsv">Export CSV</button>
+    </div>
+    <div class="row"><button id="btnWipe" class="danger">Alles wissen</button></div>
+
+    <p class="eyebrow" style="margin-top:20px">Invoer</p>
+    <div class="row">
+      <button id="btnSim" class="on">Puck simuleren</button>
+      <button id="btnDebug">Touch debug</button>
+    </div>
+    <div class="row">
+      <button id="btnAdd">Puck neerleggen</button>
+      <button id="btnClear">Tafel leegmaken</button>
+    </div>
+    <label class="field" for="dwell">Hoe lang stilhouden <span id="dwellVal" class="mono">1.2 s</span></label>
+    <input type="range" id="dwell" min="0.4" max="3" step="0.1" value="1.2">
+    <label class="field" for="tol">Ratio-tolerantie <span id="tolVal" class="mono">0.060</span></label>
+    <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
+    <label class="field" for="diag">Schermdiagonaal (inch)</label>
+    <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
+
+    <p class="eyebrow" style="margin-top:20px">Fysieke pucks</p>
+    <div class="row"><button id="btnLearn">Puck inlezen</button></div>
+    <div class="row">
+      <button id="btnSheet">Bouwtekening</button>
+      <button id="btnExport">Config exporteren</button>
+    </div>
+    <p class="hint" id="learnHint">Leg één puck op het scherm, houd hem stil en druk op <b>Puck inlezen</b>.</p>
+  </div>
+</div>
+
+<div class="panel" id="tally">
+  <p class="eyebrow">Wat is er gezegd</p>
+  <div id="tallyBody"></div>
+  <div class="total" id="tallyTotal">nog niets vastgelegd</div>
+  <div class="flag" id="flag"></div>
+</div>
+
+<div class="panel" id="zoom">
+  <button id="zIn">+</button><button id="zOut">−</button>
+</div>
+
+<div class="panel" id="readout">
+  <p class="eyebrow">Op tafel</p>
+  <div id="readoutBody"><p class="empty">Nog niets op tafel. Druk op <b>Puck neerleggen</b> en sleep hem. Draaien doet het onderwerp.</p></div>
+</div>
+
+<div class="panel" id="recent">
+  <p class="eyebrow">Laatste markeringen</p>
+  <div id="recentBody"><p class="empty">Leg een puck op een plek en houd hem stil om die plek vast te leggen.</p></div>
+</div>
+
+<div class="panel" id="note">
+  <p class="eyebrow" id="noteHead">Toelichting</p>
+  <input id="noteText" placeholder="Wat is hier aan de hand?">
+  <div class="row" style="margin-bottom:0">
+    <button id="noteSave">Bewaren</button>
+    <button id="noteDel" class="danger">Verwijderen</button>
+  </div>
+</div>
+
+<div id="sheet"><div class="inner">
+  <h2>Bouwtekening pucks</h2>
+  <p>Padposities per puck, in millimeters vanaf het midden. Elke driehoek is ongelijkzijdig en de zijdeverhoudingen liggen ver genoeg uit elkaar om ze met een paar millimeter meetfout nog te onderscheiden.</p>
+  <div class="sheetgrid" id="sheetGrid"></div>
+  <button id="closeSheet">Sluiten</button>
+</div></div>
+
+</body>
+</html>
