@@ -11,19 +11,20 @@
 
 <canvas id="c"></canvas>
 
-<div class="panel" id="controls">
-  <div class="head" id="ctrlHead"><h1>Participatietafel</h1><span class="chev mono" id="chev">HIDE</span></div>
+<div class="panel collapsed" id="controls">
+  <div class="head" id="ctrlHead"><h1>Participatietafel</h1><span class="chev mono" id="chev">SHOW</span></div>
+  <div class="mode-switch" aria-label="Bediening kiezen">
+    <button id="modeTouch" type="button">Touchscreen</button>
+    <button id="modeLaptop" type="button">Laptop</button>
+  </div>
   <div class="body">
-    <p class="eyebrow">Pucks</p>
-    <p class="hint" style="margin:0 0 9px">Sleep een puck op de tafel. Draai hem met twee vingers om het thema te kiezen.</p>
-    <div id="trayPucks" class="row"></div>
-    <div class="row"><button id="btnClear" class="danger">Haal pucks weg</button></div>
-
-    <p class="eyebrow" style="margin-top:20px">Kaart</p>
+    <p class="eyebrow">Kaart</p>
     <div class="row">
       <button id="btnMove">Kaart verplaatsen</button>
       <button id="btnLang">EN</button>
     </div>
+    <div class="row"><button id="btnMoveDots">Dots verplaatsen</button></div>
+    <p class="hint" id="dotsHint" style="margin:0 0 9px">Zet aan en sleep daarna een gekleurde dot naar een andere plek.</p>
     <label class="field" for="search">Zoek een plek</label>
     <input id="search" placeholder="Breda, Ginneken…" autocomplete="off">
     <div class="row" style="margin-top:9px">
@@ -82,6 +83,17 @@
   </div>
 </div>
 
+<div class="panel" id="puckDock">
+  <div class="puck-dock-head">
+    <div>
+      <p class="eyebrow">Pucks</p>
+      <p class="hint" id="puckHint">Sleep een puck op de tafel. Draai hem om het thema te kiezen, ook na het vastleggen.</p>
+    </div>
+    <button id="btnClear" class="danger">Deselecteren</button>
+  </div>
+  <div id="trayPucks" class="row"></div>
+</div>
+
 <div class="panel" id="tally">
   <p class="eyebrow">Wat is er gezegd</p>
   <div id="tallyBody"></div>
@@ -93,23 +105,29 @@
   <button id="zIn">+</button><button id="zOut">−</button>
 </div>
 
-<div class="panel" id="readout">
-  <p class="eyebrow">Op tafel</p>
-  <div id="readoutBody"><p class="empty">Nog niets op tafel. Sleep een puck op de tafel en draai hem met twee vingers voor het thema.</p></div>
-</div>
-
 <div class="panel" id="recent">
   <p class="eyebrow">Laatste markeringen</p>
   <div id="recentBody"><p class="empty">Leg een puck op een plek en houd hem stil om die plek vast te leggen.</p></div>
 </div>
 
 <div class="panel" id="note">
-  <p class="eyebrow" id="noteHead">Toelichting</p>
-  <input id="noteText" placeholder="Wat is hier aan de hand?">
+  <p class="eyebrow" id="noteHead">Nieuwe bijdrage</p>
+  <label class="field" for="noteTitle">Titel</label>
+  <input id="noteTitle" placeholder="Geef deze bijdrage een titel" maxlength="80">
+  <label class="field" for="noteText">Beschrijving</label>
+  <textarea id="noteText" placeholder="Wat is hier aan de hand?" rows="4"></textarea>
   <div class="row" style="margin-bottom:0">
-    <button id="noteSave">Bewaren</button>
     <button id="noteDel" class="danger">Verwijderen</button>
+    <button id="noteSave" class="primary">Bewaren</button>
   </div>
+</div>
+
+<div class="panel" id="keyboard" aria-label="Schermtoetsenbord">
+  <div class="keyboard-head">
+    <p class="eyebrow">Toetsenbord</p>
+    <span id="keyboardField" class="mono"></span>
+  </div>
+  <div id="keyboardKeys"></div>
 </div>
 
 <div id="sheet"><div class="inner">

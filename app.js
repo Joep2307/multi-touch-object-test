@@ -15,19 +15,27 @@ const CFG = {
   longestSideMM:60, puckRadiusMM:45,
   stableFrames:3, dropoutMS:180, smoothing:4,
   dwellMS:1200, jitterPX:22, rearmPX:70, ringPX:110,
-  retina:1            // fetch one zoom level deeper and draw it at half size → twice the detail, no upscaling
+  retina:0            // use the visible zoom level; avoids four times as many tile requests
 };
 const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
        topics:["Veiligheid","Verkeer","Groen","Afval","Sociaal","Anders"],
        move:"Kaart vastzetten", locked:"Kaart staat vast", hold:"Stilhouden…", placed:"Vastgelegd",
+       moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
+       touchHint:"Sleep met één vinger. Draai met twee vingers om het thema te kiezen, ook na het vastleggen.",
+       laptopHint:"Sleep met de muis. Kies het thema met Shift + slepen of het scrollwiel, ook na het vastleggen.",
        noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door." },
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
        topics:["Safety","Traffic","Green","Waste","Social","Other"],
        move:"Freeze map", locked:"Map is frozen", hold:"Hold still…", placed:"Marked",
+       moveDots:"Move dots", movingDots:"Finish moving",
+       touchHint:"Drag with one finger. Rotate with two fingers to choose a topic, even after marking.",
+       laptopHint:"Drag with the mouse. Choose the topic with Shift + drag or the scroll wheel, even after marking.",
        noNet:"No map tiles — check the connection. Marking still works." }
 };
 let lang="nl";
+let uiMode=(()=>{ try{return localStorage.getItem("pucktable-ui-mode");}catch(e){return null;} })();
+if(uiMode!=="touch"&&uiMode!=="laptop") uiMode=matchMedia("(pointer:coarse)").matches?"touch":"laptop";
 const VERDICTS=[{key:"good",color:"#39d8a4"},{key:"bad",color:"#ff5f56"},
                 {key:"talk",color:"#c48cff"},{key:"idea",color:"#ffd166"}];
 const vName=k=>L[lang][k], topics=()=>L[lang].topics, vColor=k=>VERDICTS.find(v=>v.key===k).color;
@@ -38,6 +46,7 @@ let templates=[
   {id:"puck-04",ratios:[0.85,0.90],verdict:"idea"}
 ];
 let simMode=true, debugMode=false, tolerance=0.06, pxPerMM=4, mapLocked=false;
+let pinMoveMode=false, pinDrag=null;
 const pins=[];
 const el=id=>document.getElementById(id);
 
@@ -79,15 +88,19 @@ const MV = {
   }
 };
 window.MV = MV;   // handy for debugging from the console
-const tileCache=new Map(); let tilesTried=0, tilesFailed=0;
+const tileCache=new Map(); let tilesTried=0, tilesFailed=0, tileRevision=0, tileRefreshTimer=null;
+function tileChanged(){
+  if(tileRefreshTimer) return;
+  tileRefreshTimer=setTimeout(()=>{tileRevision++;tileRefreshTimer=null;},120);
+}
 function getTile(z,x,y){
   const tpl=TILE_SETS[MV.set]; if(!tpl) return null;
   const key=MV.set+"/"+z+"/"+x+"/"+y;
   let img=tileCache.get(key);
   if(!img){
     img=new Image(); img.crossOrigin="anonymous"; img.ok=false;
-    img.onload=()=>img.ok=true;
-    img.onerror=()=>{ img.bad=true; tilesFailed++; };
+    img.onload=()=>{img.ok=true;tileChanged();};
+    img.onerror=()=>{img.bad=true;tilesFailed++;tileChanged();};
     img.src=tpl.replace("{s}","abc"[(x+y)%3]).replace("{z}",z).replace("{x}",x).replace("{y}",y);
     tileCache.set(key,img); tilesTried++;
     if(tileCache.size>1600){ const k=tileCache.keys().next().value; tileCache.delete(k); }
@@ -102,30 +115,30 @@ function peekTile(z,x,y){                      // cache lookup only — never st
 /* Draw one tile slot. If its own tile isn't loaded yet, fill the slot from whatever
    is already cached — a patch of a coarser parent tile (zoom-in) or the four finer
    child tiles (zoom-out) — so the map never flashes empty while zooming. */
-function blitCovered(z,x,y,rx,ry,rw,rh){
+function blitCovered(g,z,x,y,rx,ry,rw,rh){
   const img=getTile(z,x,y);
-  if(img){ ctx.drawImage(img,rx,ry,rw,rh); return true; }
+  if(img){ g.drawImage(img,rx,ry,rw,rh); return true; }
   for(let d=1;d<=6 && z-d>=0;d++){
     const f=1<<d, a=peekTile(z-d,Math.floor(x/f),Math.floor(y/f));
-    if(a){ const s=256/f; ctx.drawImage(a,(x%f)*s,(y%f)*s,s,s,rx,ry,rw,rh); return true; }
+    if(a){ const s=256/f; g.drawImage(a,(x%f)*s,(y%f)*s,s,s,rx,ry,rw,rh); return true; }
   }
   const kids=[peekTile(z+1,x*2,y*2),peekTile(z+1,x*2+1,y*2),
               peekTile(z+1,x*2,y*2+1),peekTile(z+1,x*2+1,y*2+1)];
   if(kids.some(Boolean)){
     const hw=rw/2, hh=rh/2, off=[[0,0],[hw,0],[0,hh],[hw,hh]];
-    kids.forEach((k,i)=>{ if(k) ctx.drawImage(k,rx+off[i][0],ry+off[i][1],hw+1,hh+1); });
+    kids.forEach((k,i)=>{ if(k) g.drawImage(k,rx+off[i][0],ry+off[i][1],hw+1,hh+1); });
     return kids.every(Boolean);
   }
   return false;
 }
 let bgImage=null;   // {img, west, east, north, south} — a map picture pinned to real coordinates
-function drawMap(){
-  ctx.fillStyle="#0b0e13"; ctx.fillRect(0,0,W,H);
+function drawMap(g){
+  g.fillStyle="#0b0e13"; g.fillRect(0,0,W,H);
   let drawn=0;
 
   if(bgImage){
     const nw=MV.project(bgImage.west,bgImage.north), se=MV.project(bgImage.east,bgImage.south);
-    ctx.drawImage(bgImage.img, nw.x, nw.y, se.x-nw.x, se.y-nw.y);
+    g.drawImage(bgImage.img, nw.x, nw.y, se.x-nw.x, se.y-nw.y);
     drawn=1;
   }
 
@@ -139,34 +152,34 @@ function drawMap(){
     // snap every edge to a whole pixel so neighbouring tiles butt together with no seam and no half-pixel blur
     const rx=Math.round(tx*ts-ox), ry=Math.round(ty*ts-oy);
     const rw=Math.round((tx+1)*ts-ox)-rx, rh=Math.round((ty+1)*ts-oy)-ry;
-    if(blitCovered(z,wrapped,ty,rx,ry,rw,rh)) drawn++;
-    else if(!bgImage){ ctx.strokeStyle="rgba(28,35,45,.9)"; ctx.lineWidth=1; ctx.strokeRect(rx,ry,rw,rh); }
+    if(blitCovered(g,z,wrapped,ty,rx,ry,rw,rh)) drawn++;
+    else if(!bgImage){ g.strokeStyle="rgba(28,35,45,.9)"; g.lineWidth=1; g.strokeRect(rx,ry,rw,rh); }
   }
 
   if(!drawn && MV.set!=="none"){
     const msg = tilesFailed>0
       ? "Kaartbeeld wordt geblokkeerd. Open dit bestand lokaal in Chrome, niet in een preview-venster."
       : "Kaartbeeld laden…";
-    ctx.textAlign="center";
-    ctx.fillStyle="rgba(14,18,24,.92)"; ctx.fillRect(W/2-320,22,640,52);
-    ctx.strokeStyle="rgba(255,209,102,.4)"; ctx.lineWidth=1; ctx.strokeRect(W/2-320,22,640,52);
-    ctx.fillStyle="#ffd166"; ctx.font="13px 'Space Grotesk',system-ui,sans-serif";
-    ctx.fillText(msg,W/2,46);
-    ctx.fillStyle="rgba(127,139,155,.9)"; ctx.font="11px 'JetBrains Mono',ui-monospace,monospace";
-    ctx.fillText(tilesTried+" tegels gevraagd · "+tilesFailed+" mislukt · of sleep een kaartafbeelding hierin",W/2,64);
+    g.textAlign="center";
+    g.fillStyle="rgba(14,18,24,.92)"; g.fillRect(W/2-320,22,640,52);
+    g.strokeStyle="rgba(255,209,102,.4)"; g.lineWidth=1; g.strokeRect(W/2-320,22,640,52);
+    g.fillStyle="#ffd166"; g.font="13px 'Space Grotesk',system-ui,sans-serif";
+    g.fillText(msg,W/2,46);
+    g.fillStyle="rgba(127,139,155,.9)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace";
+    g.fillText(tilesTried+" tegels gevraagd · "+tilesFailed+" mislukt · of sleep een kaartafbeelding hierin",W/2,64);
   }
   // scale bar + attribution
   const mPerPx=156543.03392*Math.cos(MV.lat*Math.PI/180)/Math.pow(2,MV.zoom);
   let barM=Math.pow(10,Math.floor(Math.log10(mPerPx*140)));
   if(barM*2/mPerPx<160) barM*=2;
   const barPx=barM/mPerPx;
-  ctx.strokeStyle="rgba(232,237,244,.6)"; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(20,H-26); ctx.lineTo(20+barPx,H-26);
-  ctx.moveTo(20,H-31); ctx.lineTo(20,H-21); ctx.moveTo(20+barPx,H-31); ctx.lineTo(20+barPx,H-21); ctx.stroke();
-  ctx.fillStyle="rgba(232,237,244,.6)"; ctx.font="11px 'JetBrains Mono',ui-monospace,monospace"; ctx.textAlign="left";
-  ctx.fillText(barM>=1000?(barM/1000)+" km":barM+" m", 20, H-36);
-  ctx.textAlign="center"; ctx.fillStyle="rgba(127,139,155,.75)"; ctx.font="10px 'JetBrains Mono',ui-monospace,monospace";
-  ctx.fillText("© OpenStreetMap contributors — openstreetmap.org/copyright"+(MV.set==="osm"?"":" · © CARTO"), W/2, H-10);
+  g.strokeStyle="rgba(232,237,244,.6)"; g.lineWidth=2;
+  g.beginPath(); g.moveTo(20,H-26); g.lineTo(20+barPx,H-26);
+  g.moveTo(20,H-31); g.lineTo(20,H-21); g.moveTo(20+barPx,H-31); g.lineTo(20+barPx,H-21); g.stroke();
+  g.fillStyle="rgba(232,237,244,.6)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace"; g.textAlign="left";
+  g.fillText(barM>=1000?(barM/1000)+" km":barM+" m", 20, H-36);
+  g.textAlign="center"; g.fillStyle="rgba(127,139,155,.75)"; g.font="10px 'JetBrains Mono',ui-monospace,monospace";
+  g.fillText("© OpenStreetMap contributors — openstreetmap.org/copyright"+(MV.set==="osm"?"":" · © CARTO"), W/2, H-10);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -195,11 +208,26 @@ const realTouches=new Map(); let peakTouches=0;
 /* One finger drags the map, two fingers pinch it. Three or more is a puck,
    and a recognised puck freezes the map so it can't slide out from under it. */
 let gesture=null, mousePan=null, puckTouch=null;
-const mapMovable = () => !mapLocked && !drag && !puckTouch && tracks.size===0 && realTouches.size<3;
+const mapMovable = () => !mapLocked && !pinMoveMode && !drag && !puckTouch && tracks.size===0 && realTouches.size<3;
 
 /* Topmost simulated puck under a screen point — a generous, finger-sized hit area. */
 function simPuckAt(x,y){
   return simPucks.slice().reverse().find(s=>Math.hypot(s.x-x,s.y-y)<CFG.puckRadiusMM*pxPerMM);
+}
+function setSimPuckPosition(puck,x,y){
+  puck.x=x; puck.y=y;
+  const ll=MV.unproject(x,y);
+  puck.lng=ll.lng; puck.lat=ll.lat;
+}
+function pinAt(x,y){
+  return [...pins].reverse().find(pin=>{
+    const p=MV.project(pin.lng,pin.lat);
+    return Math.hypot(p.x-x,p.y-y)<32;
+  });
+}
+function movePinTo(pin,x,y){
+  const ll=MV.unproject(x,y);
+  pin.lng=+ll.lng.toFixed(6); pin.lat=+ll.lat.toFixed(6);
 }
 /* Snapshot the puck + finger geometry so the next move can be applied as a delta:
    one finger slides the puck, two fingers twist it (and nudge it by their midpoint). */
@@ -228,6 +256,15 @@ function syncGesture(){
 addEventListener("pointerdown",e=>{
   if(e.target.closest(".panel")) return;
   if(e.pointerType==="mouse") return;
+  if(pinMoveMode){
+    e.preventDefault();
+    const pin=pinAt(e.clientX,e.clientY);
+    if(pin){
+      pinDrag={pin,pointerId:e.pointerId,kind:"touch"};
+      document.body.classList.add("dragging-dot"); closeNote();
+    }
+    gesture=null; return;
+  }
   // A finger on a simulated puck grabs it: one finger slides, a second finger twists it
   // to pick a theme. Once grabbed, any further finger joins the twist.
   if(tracks.size===0){
@@ -245,16 +282,20 @@ addEventListener("pointerdown",e=>{
 });
 addEventListener("pointermove",e=>{
   if(e.pointerType==="mouse") return;
+  if(pinDrag&&pinDrag.kind==="touch"&&pinDrag.pointerId===e.pointerId){
+    movePinTo(pinDrag.pin,e.clientX,e.clientY); return;
+  }
   if(puckTouch && puckTouch.ptrs.has(e.pointerId)){
     puckTouch.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     const p=[...puckTouch.ptrs.values()];
     if(p.length===1){
-      puckTouch.puck.x=p[0].x-puckTouch.dx; puckTouch.puck.y=p[0].y-puckTouch.dy;
+      setSimPuckPosition(puckTouch.puck,p[0].x-puckTouch.dx,p[0].y-puckTouch.dy);
     }else{
       const ang=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
       puckTouch.puck.rot=puckTouch.baseRot+(ang-puckTouch.baseAngle);
-      puckTouch.puck.x=(p[0].x+p[1].x)/2+puckTouch.dx;
-      puckTouch.puck.y=(p[0].y+p[1].y)/2+puckTouch.dy;
+      setSimPuckPosition(puckTouch.puck,
+        (p[0].x+p[1].x)/2+puckTouch.dx,
+        (p[0].y+p[1].y)/2+puckTouch.dy);
     }
     return;
   }
@@ -274,6 +315,10 @@ addEventListener("pointermove",e=>{
   }
 });
 function endPointer(e){
+  if(pinDrag&&pinDrag.kind==="touch"&&pinDrag.pointerId===e.pointerId){
+    movePinTo(pinDrag.pin,e.clientX,e.clientY); pinDrag=null;
+    document.body.classList.remove("dragging-dot"); save(); return;
+  }
   if(puckTouch && puckTouch.ptrs.has(e.pointerId)){
     puckTouch.ptrs.delete(e.pointerId);
     if(puckTouch.ptrs.size===0) puckTouch=null; else basePuckTouch();
@@ -304,6 +349,12 @@ function markTray(){
   [...document.querySelectorAll(".traypuck")].forEach(d=>
     d.classList.toggle("used",simPucks.some(s=>s.tpl.id===d.dataset.id)));
 }
+/* Deselecteren: take every puck off the table and forget the live tracks.
+   Marks that were already dropped stay on the map — only the selection goes. */
+function clearPucks(){
+  if(simPucks.length===0 && tracks.size===0) return;
+  simPucks.length=0; tracks.clear(); puckTouch=null; drag=null; markTray();
+}
 let trayDrag=null;
 function moveGhost(e){
   if(!trayDrag) return;
@@ -327,7 +378,8 @@ function endTrayDrag(e){
   const buried=()=>panels.some(p=>{const r=p.getBoundingClientRect();
     return x>=r.left-M&&x<=r.right+M&&y>=r.top-M&&y<=r.bottom+M;});
   for(let i=0;i<400 && buried();i++){ x+=(innerWidth/2-x)*0.05; y+=(innerHeight/2-y)*0.05; }
-  simPucks.push({tpl,x,y,rot:Math.random()*Math.PI*2});
+  const ll=MV.unproject(x,y);
+  simPucks.push({tpl,x,y,lng:ll.lng,lat:ll.lat,rot:Math.random()*Math.PI*2});
   markTray();
 }
 el("trayPucks").addEventListener("pointerdown",e=>{
@@ -355,9 +407,35 @@ function simPads(){
   }
   return out;
 }
+/* Simulated pucks are map markers: their physical size stays constant, while
+   their screen position follows the same geographic point during pan/zoom.
+   Move the matching track by the same delta so a map transform is not mistaken
+   for someone moving the puck to create a second contribution. */
+function syncSimPucksToMap(){
+  for(const s of simPucks){
+    if(!Number.isFinite(s.lng)||!Number.isFinite(s.lat)){
+      const ll=MV.unproject(s.x,s.y); s.lng=ll.lng; s.lat=ll.lat;
+    }
+    if(drag?.puck===s||puckTouch?.puck===s) continue;
+    const p=MV.project(s.lng,s.lat), dx=p.x-s.x, dy=p.y-s.y;
+    if(Math.abs(dx)<0.001&&Math.abs(dy)<0.001) continue;
+    s.x=p.x; s.y=p.y;
+    const t=tracks.get(s.tpl.id);
+    if(t){
+      t.x+=dx; t.y+=dy; t.anchorX+=dx; t.anchorY+=dy;
+      t.buf=t.buf.map(q=>({x:q.x+dx,y:q.y+dy}));
+    }
+  }
+}
 let drag=null;
 addEventListener("mousedown",e=>{
   if(e.target.closest(".panel")||e.target.closest("#sheet")) return;
+  if(pinMoveMode){
+    e.preventDefault();
+    const pin=pinAt(e.clientX,e.clientY);
+    if(pin){pinDrag={pin,kind:"mouse"};document.body.classList.add("dragging-dot");closeNote();}
+    return;
+  }
   const hit=simPuckAt(e.clientX,e.clientY);
   e.preventDefault();
   if(!hit){
@@ -369,16 +447,24 @@ addEventListener("mousedown",e=>{
   gesture=null; mousePan=null;
 });
 addEventListener("mousemove",e=>{
+  if(pinDrag&&pinDrag.kind==="mouse"){movePinTo(pinDrag.pin,e.clientX,e.clientY);return;}
   if(mousePan){
     MV.panBy(e.clientX-mousePan.x,e.clientY-mousePan.y);
     mousePan.x=e.clientX; mousePan.y=e.clientY; return;
   }
   if(!drag) return;
   if(drag.rotate) drag.puck.rot=drag.r0+(Math.atan2(e.clientY-drag.puck.y,e.clientX-drag.puck.x)-drag.a0);
-  else{ drag.puck.x=e.clientX-drag.ox; drag.puck.y=e.clientY-drag.oy; }
+  else setSimPuckPosition(drag.puck,e.clientX-drag.ox,e.clientY-drag.oy);
 });
-addEventListener("mouseup",()=>{ drag=null; mousePan=null; });
+addEventListener("mouseup",e=>{
+  if(pinDrag&&pinDrag.kind==="mouse"){
+    movePinTo(pinDrag.pin,e.clientX,e.clientY); pinDrag=null;
+    document.body.classList.remove("dragging-dot"); save();
+  }
+  drag=null; mousePan=null;
+});
 addEventListener("wheel",e=>{
+  if(pinMoveMode){e.preventDefault();return;}
   const hit=simPuckAt(e.clientX,e.clientY);
   if(hit){ e.preventDefault(); hit.rot+=e.deltaY*0.002; return; }
   if(!mapLocked && !e.target.closest(".panel")){
@@ -452,11 +538,26 @@ const topicOf=angle=>{
 };
 function dropPin(t){
   const ll=MV.unproject(t.x,t.y);
-  pins.push({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),
+  const pin={id:Date.now()+"-"+Math.random().toString(36).slice(2,6),
              lng:+ll.lng.toFixed(6), lat:+ll.lat.toFixed(6),
              verdict:t.tpl.verdict, topic:topics()[topicOf(t.angle)],
-             note:"", t:new Date().toISOString()});
+             title:"", description:"", note:"", t:new Date().toISOString()};
+  pins.push(pin);
+  // Keep the mark linked to this puck while it remains on the table. Rotating
+  // the puck can then correct its topic after the initial dwell/drop as well.
+  t.pinId=pin.id;
   t.armed=false; t.flash=1; t.dwellFrom=performance.now(); save();
+  openNote(pin,t.x,t.y,true);
+}
+function syncPlacedPinTopic(t){
+  if(!t.pinId) return;
+  const pin=pins.find(p=>p.id===t.pinId);
+  if(!pin){ t.pinId=null; return; }
+  const topic=topics()[topicOf(t.angle)];
+  if(pin.topic===topic) return;
+  pin.topic=topic;
+  save();
+  if(selected===pin) el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
 }
 function save(){ try{ localStorage.setItem("pucktable-"+el("sess").value,JSON.stringify(pins)); }catch(e){} }
 function restore(){
@@ -465,49 +566,86 @@ function restore(){
 }
 let tapStart=null, selected=null;
 addEventListener("pointerdown",e=>{
-  if(e.target.closest(".panel")||puckTouch) return;
+  if(e.target.closest(".panel")||puckTouch||pinMoveMode) return;
   tapStart={x:e.clientX,y:e.clientY,t:performance.now()};
 });
 addEventListener("pointerup",e=>{
   if(!tapStart) return;
   const quick=performance.now()-tapStart.t<350 && Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y)<12;
   tapStart=null;
-  if(!quick||tracks.size) return;
+  if(!quick) return;
+  // A tap that lands on a puck (simulated or detected) belongs to that puck.
+  const R=CFG.puckRadiusMM*pxPerMM;
+  if(simPuckAt(e.clientX,e.clientY)) return;
+  if([...tracks.values()].some(t=>Math.hypot(t.x-e.clientX,t.y-e.clientY)<R*1.3)) return;
   const hit=[...pins].reverse().find(p=>{
     const s=MV.project(p.lng,p.lat);
     return Math.hypot(s.x-e.clientX,s.y-e.clientY)<24;
   });
-  if(hit) openNote(hit,e.clientX,e.clientY); else closeNote();
+  // Tapping empty table closes the note and deselects: the pucks leave the table.
+  if(hit) openNote(hit,e.clientX,e.clientY); else { closeNote(); clearPucks(); }
 });
-function openNote(pin,x,y){
+function openNote(pin,x,y,fromPuck=false){
   selected=pin; const n=el("note");
   n.style.display="block";
-  n.style.left=Math.min(innerWidth-280,Math.max(10,x-130))+"px";
-  n.style.top=Math.min(innerHeight-160,y+26)+"px";
+  const width=310, estimatedHeight=250;
+  const puckReach=fromPuck?CFG.puckRadiusMM*pxPerMM+46:34;
+  const opensRight=x+width+puckReach<innerWidth-12;
+  const left=opensRight?x+puckReach:x-puckReach-width;
+  const top=Math.min(innerHeight-estimatedHeight-12,Math.max(12,y-estimatedHeight/2));
+  n.style.left=Math.max(12,Math.min(innerWidth-width-12,left))+"px";
+  n.style.top=top+"px";
+  n.style.setProperty("--stem-top",Math.max(20,Math.min(estimatedHeight-20,y-top))+"px");
+  n.style.setProperty("--stem-width",Math.max(26,puckReach-4)+"px");
+  n.style.setProperty("--note-color",vColor(pin.verdict));
+  n.style.setProperty("--origin-x",opensRight?"0":"100%");
+  n.style.setProperty("--enter-x",opensRight?"-28px":"28px");
+  n.dataset.anchorY=String(y);
+  n.classList.toggle("from-left",opensRight);
+  n.classList.toggle("from-right",!opensRight);
+  n.classList.remove("opening");
+  if(fromPuck){ void n.offsetWidth; n.classList.add("opening"); }
   el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
-  el("noteText").value=pin.note||""; el("noteText").focus();
+  el("noteTitle").value=pin.title||"";
+  el("noteText").value=pin.description||pin.note||"";
+  el("noteTitle").focus();
 }
-function closeNote(){ el("note").style.display="none"; selected=null; }
+function closeNote(){
+  const n=el("note"); n.style.display="none"; n.classList.remove("opening"); selected=null;
+  if(keyboardTarget===el("noteTitle")||keyboardTarget===el("noteText")) hideKeyboard(true);
+}
 
 /* ═══════════════════════════════════════════════════════════════
    5. FRAME
    ═══════════════════════════════════════════════════════════════ */
 const cv=el("c"), ctx=cv.getContext("2d");
-let W=0,H=0,lastUI=0;
+const mapLayer=document.createElement("canvas"), mapCtx=mapLayer.getContext("2d");
+let W=0,H=0,lastUI=0,mapRenderKey="";
 function resize(){
   const dpr=Math.min(devicePixelRatio||1,3);
   W=innerWidth;H=innerHeight; cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  mapLayer.width=W*dpr; mapLayer.height=H*dpr; mapCtx.setTransform(dpr,0,0,dpr,0,0);
+  mapRenderKey="";
   ctx.imageSmoothingQuality="high";
+  mapCtx.imageSmoothingQuality="high";
   pxPerMM=Math.hypot(W,H)/((parseFloat(el("diag").value)||43)*25.4);
 }
 addEventListener("resize",resize);
 
+function paintMapLayer(){
+  const bgKey=bgImage?[bgImage.west,bgImage.east,bgImage.north,bgImage.south].join(","):"none";
+  const key=[W,H,MV.set,MV.lng.toFixed(7),MV.lat.toFixed(7),MV.zoom.toFixed(5),tileRevision,bgKey].join("|");
+  if(key!==mapRenderKey){drawMap(mapCtx);mapRenderKey=key;}
+  ctx.drawImage(mapLayer,0,0,mapLayer.width,mapLayer.height,0,0,W,H);
+}
+
 function frame(){
   requestAnimationFrame(frame);
   const now=performance.now();
-  drawMap();
+  paintMapLayer();
   if(bakePending){ bakePending=false; bakeMap(); }
 
+  syncSimPucksToMap();
   const points=[...realTouches.values(),...(simMode?simPads():[])];
   const {pucks:dets,usedIdx}=recognise(points);
   const pucks=track(dets,now);
@@ -519,7 +657,12 @@ function frame(){
     ctx.beginPath(); ctx.arc(s.x,s.y,17,0,Math.PI*2); ctx.fillStyle=c+"22"; ctx.fill();
     ctx.beginPath(); ctx.arc(s.x,s.y,8,0,Math.PI*2); ctx.fillStyle=c; ctx.fill();
     ctx.strokeStyle="rgba(7,9,12,.85)"; ctx.lineWidth=2; ctx.stroke();
-    if(p.note){ ctx.fillStyle="#07090c"; ctx.font="700 10px 'JetBrains Mono',ui-monospace,monospace"; ctx.textAlign="center";
+    if(pinMoveMode){
+      ctx.beginPath(); ctx.arc(s.x,s.y,pinDrag?.pin===p?27:23,0,Math.PI*2);
+      ctx.strokeStyle=pinDrag?.pin===p?"#fff":c; ctx.lineWidth=pinDrag?.pin===p?3:2;
+      ctx.setLineDash([5,4]); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if(p.title||p.description||p.note){ ctx.fillStyle="#07090c"; ctx.font="700 10px 'JetBrains Mono',ui-monospace,monospace"; ctx.textAlign="center";
                 ctx.fillText("•",s.x,s.y+3.5); }
     if(selected===p){ ctx.beginPath(); ctx.arc(s.x,s.y,24,0,Math.PI*2);
       ctx.strokeStyle="#e8edf4"; ctx.lineWidth=1.5; ctx.stroke(); }
@@ -528,6 +671,7 @@ function frame(){
   for(const t of pucks){
     const c=vColor(t.tpl.verdict), R=CFG.puckRadiusMM*pxPerMM;
     const ti=topicOf(t.angle), list=topics(), n=list.length;
+    syncPlacedPinTopic(t);
     ctx.save(); ctx.globalAlpha=t.state==="incomplete"?0.35:1;
     for(let k=0;k<n;k++){
       const a0=-Math.PI+(k/n)*Math.PI*2+0.03, a1=-Math.PI+((k+1)/n)*Math.PI*2-0.03;
@@ -602,17 +746,11 @@ function updateUI(pucks){
     flag.textContent="Minder dan 3 contactpunten. Ligt er een puck? Dan koppelen de pads niet — check de aarding.";
   } else flag.style.display="none";
 
-  el("readoutBody").innerHTML=pucks.length?pucks.map(t=>{
-    const c=vColor(t.tpl.verdict);
-    return `<div class="puckcard" style="border-color:${c}">
-      <div class="name">${vName(t.tpl.verdict)} · ${topics()[topicOf(t.angle)]}</div>
-      <div class="data">${t.tpl.id} · ${(t.conf*100).toFixed(0)}% · ${(t.angle*180/Math.PI).toFixed(0)}°<br>
-      ${t.armed?"klaar om vast te leggen":"til op en verplaats"}</div></div>`;
-  }).join(""):`<p class="empty">Nog niets op tafel. Sleep een puck op de tafel en draai hem met twee vingers voor het thema.</p>`;
-
+  const safe=s=>String(s||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);
   el("recentBody").innerHTML=pins.length?pins.slice(-8).reverse().map(p=>
     `<div class="pin"><i style="background:${vColor(p.verdict)}"></i>
-     <div><b>${p.topic}</b>${p.note?" — "+p.note:""}
+     <div><b>${safe(p.title)||(lang==="nl"?"Zonder titel":"Untitled")} - ${safe(p.topic)}</b>
+     ${(p.description||p.note)?`<div class="description">${safe(p.description||p.note)}</div>`:""}
      <div class="meta">${vName(p.verdict)} · ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)} · ${p.t.slice(11,16)}</div></div>
      <span class="del" data-id="${p.id}">✕</span></div>`).join("")
     :`<p class="empty">Leg een puck op een plek en houd hem stil om die plek vast te leggen.</p>`;
@@ -624,14 +762,130 @@ function applyLock(){
   el("btnMove").classList.toggle("on",mapLocked);
   el("btnMove").textContent=mapLocked?L[lang].locked:L[lang].move;
 }
+function applyPinMoveMode(){
+  el("btnMoveDots").classList.toggle("on",pinMoveMode);
+  el("btnMoveDots").textContent=pinMoveMode?L[lang].movingDots:L[lang].moveDots;
+  document.body.classList.toggle("moving-dots",pinMoveMode);
+  if(!pinMoveMode){pinDrag=null;document.body.classList.remove("dragging-dot");}
+  gesture=null; mousePan=null;
+}
+
+/* Touchscreen keyboard — kept inside the app so a table without an operating-
+   system keyboard can still enter titles and descriptions. */
+const KEY_ROWS=[
+  ["q","w","e","r","t","y","u","i","o","p"],
+  ["a","s","d","f","g","h","j","k","l"],
+  ["shift","z","x","c","v","b","n","m","backspace"],
+  ["close",",","space",".","enter"]
+];
+let keyboardTarget=null, keyboardShift=false;
+const keyboardLabel=key=>({shift:"⇧",backspace:"⌫",space:"Spatie",enter:"Enter",close:"Sluiten"})[key]||key;
+function renderKeyboard(){
+  el("keyboardKeys").innerHTML=KEY_ROWS.map(row=>`<div class="keyboard-row">${row.map(key=>{
+    const wide=["shift","backspace","enter","close"].includes(key)?" key-wide":"";
+    const space=key==="space"?" key-space":"";
+    const active=key==="shift"&&keyboardShift?" key-active":"";
+    const label=/^[a-z]$/.test(key)&&keyboardShift?key.toUpperCase():keyboardLabel(key);
+    return `<button type="button" class="${wide}${space}${active}" data-key="${key}">${label}</button>`;
+  }).join("")}</div>`).join("");
+}
+function keyboardFields(){
+  return [...document.querySelectorAll('input[type="text"],input:not([type]),textarea')];
+}
+function refreshKeyboardFields(){
+  keyboardFields().forEach(field=>{
+    field.classList.add("touch-type");
+    if(uiMode==="touch") field.setAttribute("inputmode","none");
+    else field.removeAttribute("inputmode");
+  });
+}
+function liftEditorAboveKeyboard(){
+  const n=el("note"), kb=el("keyboard");
+  if(n.style.display!=="block"||!kb.classList.contains("visible")) return;
+  const nr=n.getBoundingClientRect(), kr=kb.getBoundingClientRect();
+  if(nr.bottom>kr.top-12){
+    const top=Math.max(12,kr.top-nr.height-12);
+    n.style.top=top+"px";
+    const anchorY=Number(n.dataset.anchorY)||top+nr.height/2;
+    n.style.setProperty("--stem-top",Math.max(20,Math.min(nr.height-20,anchorY-top))+"px");
+  }
+}
+function showKeyboard(target){
+  if(uiMode!=="touch"||!target.classList.contains("touch-type")) return;
+  keyboardTarget=target;
+  el("keyboardField").textContent=target.labels?.[0]?.textContent||target.placeholder||"Tekst invoeren";
+  renderKeyboard();
+  el("keyboard").classList.add("visible");
+  document.body.classList.add("keyboard-open");
+  requestAnimationFrame(liftEditorAboveKeyboard);
+  setTimeout(liftEditorAboveKeyboard,360);
+}
+function hideKeyboard(blur=false){
+  el("keyboard").classList.remove("visible");
+  document.body.classList.remove("keyboard-open");
+  if(blur&&keyboardTarget) keyboardTarget.blur();
+  keyboardTarget=null; keyboardShift=false;
+}
+function insertKeyboardText(text){
+  const target=keyboardTarget; if(!target) return;
+  const start=target.selectionStart??target.value.length, end=target.selectionEnd??start;
+  target.setRangeText(text,start,end,"end");
+  target.dispatchEvent(new Event("input",{bubbles:true}));
+  target.focus({preventScroll:true});
+}
+el("keyboard").addEventListener("pointerdown",e=>{if(e.target.closest("button")) e.preventDefault();});
+el("keyboard").addEventListener("click",e=>{
+  const button=e.target.closest("button[data-key]"); if(!button||!keyboardTarget) return;
+  const key=button.dataset.key;
+  if(key==="shift"){keyboardShift=!keyboardShift;renderKeyboard();return;}
+  if(key==="close"){hideKeyboard(true);return;}
+  if(key==="backspace"){
+    const target=keyboardTarget, start=target.selectionStart??target.value.length, end=target.selectionEnd??start;
+    if(start!==end) target.setRangeText("",start,end,"end");
+    else if(start>0) target.setRangeText("",start-1,start,"end");
+    target.dispatchEvent(new Event("input",{bubbles:true})); return;
+  }
+  if(key==="enter"){
+    if(keyboardTarget.tagName==="TEXTAREA") insertKeyboardText("\n");
+    else if(keyboardTarget===el("noteTitle")){el("noteText").focus();}
+    else{
+      keyboardTarget.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+      keyboardTarget.dispatchEvent(new Event("change",{bubbles:true}));
+      hideKeyboard(true);
+    }
+    return;
+  }
+  insertKeyboardText(key==="space"?" ":keyboardShift?key.toUpperCase():key);
+  if(keyboardShift){keyboardShift=false;renderKeyboard();}
+});
+addEventListener("focusin",e=>{if(e.target.classList?.contains("touch-type")) showKeyboard(e.target);});
+
+function applyMode(mode){
+  uiMode=mode;
+  document.body.classList.toggle("mode-touch",mode==="touch");
+  document.body.classList.toggle("mode-laptop",mode==="laptop");
+  [["modeTouch","touch"],["modeLaptop","laptop"]].forEach(([id,value])=>{
+    const active=value===mode;
+    el(id).classList.toggle("active",active);
+    el(id).setAttribute("aria-pressed",String(active));
+  });
+  el("puckHint").textContent=mode==="touch"?L[lang].touchHint:L[lang].laptopHint;
+  refreshKeyboardFields();
+  if(mode!=="touch") hideKeyboard();
+  try{localStorage.setItem("pucktable-ui-mode",mode);}catch(e){}
+  resize();
+}
 
 el("ctrlHead").onclick=()=>{const c=el("controls");c.classList.toggle("collapsed");
   el("chev").textContent=c.classList.contains("collapsed")?"SHOW":"HIDE";};
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
-el("btnLang").onclick=e=>{lang=lang==="nl"?"en":"nl";e.target.textContent=lang==="nl"?"EN":"NL";applyLock();renderTray();};
+el("btnLang").onclick=e=>{lang=lang==="nl"?"en":"nl";e.target.textContent=lang==="nl"?"EN":"NL";applyLock();applyPinMoveMode();applyMode(uiMode);renderTray();};
+el("btnMoveDots").onclick=()=>{pinMoveMode=!pinMoveMode;closeNote();applyPinMoveMode();};
+el("modeTouch").onclick=()=>applyMode("touch");
+el("modeLaptop").onclick=()=>applyMode("laptop");
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
 el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",debugMode);};
-el("btnClear").onclick=()=>{simPucks.length=0;tracks.clear();markTray();};
+el("btnClear").onclick=clearPucks;
 el("dwell").oninput=e=>{CFG.dwellMS=parseFloat(e.target.value)*1000;el("dwellVal").textContent=(+e.target.value).toFixed(1)+" s";};
 el("tol").oninput=e=>{tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
 el("diag").oninput=resize;
@@ -651,7 +905,12 @@ el("search").onkeydown=async e=>{
     if(j[0]){ MV.lat=+j[0].lat; MV.lng=+j[0].lon; MV.zoom=15; }
   }catch(err){}
 };
-el("noteSave").onclick=()=>{ if(selected){selected.note=el("noteText").value.trim();save();} closeNote(); };
+el("noteSave").onclick=()=>{ if(selected){
+  selected.title=el("noteTitle").value.trim();
+  selected.description=el("noteText").value.trim();
+  selected.note=selected.description; // keep older exports and saved sessions compatible
+  save();
+} closeNote(); };
 el("noteDel").onclick=()=>{ if(selected){const i=pins.indexOf(selected); if(i>=0)pins.splice(i,1); save();} closeNote(); };
 el("btnWipe").onclick=()=>{ if(confirm("Alle markeringen van deze sessie wissen?")){pins.length=0;save();} };
 
@@ -662,11 +921,12 @@ function download(name,text,type){
 el("btnGeo").onclick=()=>download(el("sess").value+".geojson",JSON.stringify({
   type:"FeatureCollection",
   features:pins.map(p=>({type:"Feature",geometry:{type:"Point",coordinates:[p.lng,p.lat]},
-    properties:{verdict:p.verdict,topic:p.topic,note:p.note,time:p.t}}))
+    properties:{verdict:p.verdict,topic:p.topic,title:p.title||"",description:p.description||p.note||"",time:p.t}}))
 },null,2),"application/geo+json");
 el("btnCsv").onclick=()=>download(el("sess").value+".csv",
-  "lat,lng,verdict,topic,note,time\n"+pins.map(p=>
-    [p.lat,p.lng,p.verdict,p.topic,'"'+(p.note||"").replace(/"/g,'""')+'"',p.t].join(",")).join("\n"),"text/csv");
+  "lat,lng,verdict,topic,title,description,time\n"+pins.map(p=>
+    [p.lat,p.lng,p.verdict,p.topic,'"'+(p.title||"").replace(/"/g,'""')+'"',
+     '"'+(p.description||p.note||"").replace(/"/g,'""')+'"',p.t].join(",")).join("\n"),"text/csv");
 
 el("btnLearn").onclick=()=>{
   const pts=[...realTouches.values()], hint=el("learnHint");
@@ -757,4 +1017,4 @@ el("btnUnbake").onclick=()=>{
   el("bakeHint").textContent="Bewaarde kaart gewist.";
 };
 
-resize(); restore(); restoreBasemap(); applyLock(); renderTray(); frame();
+resize(); restore(); restoreBasemap(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); frame();
