@@ -17,6 +17,8 @@
     <button id="modeTouch" type="button">Touchscreen</button>
     <button id="modeLaptop" type="button">Laptop</button>
   </div>
+  <div class="row" style="margin:9px 0 0"><button id="btnSides" type="button">Twee zijden</button></div>
+  <p class="hint" id="sidesHint" style="margin:7px 0 0">Voor een tafel waar mensen aan weerszijden staan: een pucks-balk aan beide kanten, en vensters draaien naar wie ze opent.</p>
   <div class="body">
     <p class="eyebrow">Kaart</p>
     <div class="row">
@@ -107,15 +109,28 @@
   </div>
 </div>
 
-<div class="panel" id="puckDock">
+<!-- Twee pucks-balken: één per lange zijde van de tafel. De bovenste staat
+     op zijn kop, zodat hij leesbaar is voor wie aan de overkant staat. -->
+<div class="panel dock" id="puckDockTop">
   <div class="puck-dock-head">
     <div>
       <p class="eyebrow">Pucks</p>
-      <p class="hint" id="puckHint">Sleep een puck op de tafel. Draai hem om het thema te kiezen, ook na het vastleggen.</p>
+      <p class="hint puck-hint">Sleep een puck op de tafel. Draai hem om het thema te kiezen, ook na het vastleggen.</p>
     </div>
-    <button id="btnClear" class="danger">Deselecteren</button>
+    <button class="danger btn-clear">Deselecteren</button>
   </div>
-  <div id="trayPucks" class="row"></div>
+  <div class="tray row"></div>
+</div>
+
+<div class="panel dock" id="puckDock">
+  <div class="puck-dock-head">
+    <div>
+      <p class="eyebrow">Pucks</p>
+      <p class="hint puck-hint">Sleep een puck op de tafel. Draai hem om het thema te kiezen, ook na het vastleggen.</p>
+    </div>
+    <button class="danger btn-clear">Deselecteren</button>
+  </div>
+  <div class="tray row"></div>
 </div>
 
 <div class="panel" id="tally">

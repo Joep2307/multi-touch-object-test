@@ -68,7 +68,12 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
 .pin .del{color:var(--ink-dim);cursor:pointer;margin-left:auto;font-size:14px;padding:0 4px}
 .pin .del:hover{color:var(--bad)}
 .empty{font-size:12px;color:var(--ink-dim);line-height:1.6}
-#puckDock{left:50%;bottom:18px;transform:translateX(-50%);width:330px;padding:12px 14px 13px}
+.dock{left:50%;width:330px;padding:12px 14px 13px}
+#puckDock{bottom:18px;transform:translateX(-50%)}
+/* De bovenste balk staat 180° gedraaid: alles erin — tekst, knop, pucks —
+   leest daarmee rechtop voor wie aan de overkant van de tafel staat. */
+#puckDockTop{top:18px;transform:translateX(-50%) rotate(180deg);display:none}
+body.two-sided #puckDockTop{display:block}
 .puck-dock-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
 .puck-dock-head .eyebrow{margin-bottom:4px}
 .puck-dock-head .hint{margin:0;line-height:1.35;max-width:190px}
@@ -87,7 +92,11 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
   padding:10px}
 #zoom button{width:44px;height:44px;font-size:18px;flex:none;padding:0}
 #note{position:fixed;z-index:20;display:none;width:310px;padding:17px 18px 16px;
+  transform:rotate(var(--flip,0deg));
   transform-origin:var(--origin-x,0) var(--origin-y,50%)}
+/* Gedraaid draait het venster om zijn eigen midden — anders zou het bij het
+   kantelen van zijn plek af schuiven. */
+#note.flipped{transform-origin:50% 50%}
 #note.opening{animation:puck-note-out .32s cubic-bezier(.2,.85,.25,1.12) both}
 #note::before{content:"";position:absolute;top:var(--stem-top,50%);width:var(--stem-width,42px);
   height:2px;background:linear-gradient(90deg,var(--note-color,#3d7bff),rgba(61,123,255,.18));
@@ -97,8 +106,8 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
 #note input,#note textarea{margin-bottom:2px}
 #note .field{margin-top:10px}
 @keyframes puck-note-out{
-  from{opacity:0;transform:translateX(var(--enter-x,-28px)) scale(.72)}
-  to{opacity:1;transform:translateX(0) scale(1)}
+  from{opacity:0;transform:rotate(var(--flip,0deg)) translateX(var(--enter-x,-28px)) scale(.72)}
+  to{opacity:1;transform:rotate(var(--flip,0deg)) translateX(0) scale(1)}
 }
 #keyboard{left:50%;bottom:14px;z-index:40;display:none;width:min(820px,calc(100vw - 28px));
   transform:translateX(-50%);padding:12px;background:rgba(10,14,20,.98);box-shadow:0 -14px 50px rgba(0,0,0,.42)}
@@ -114,6 +123,13 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
 #keyboard .key-space{flex:4}
 #keyboard .key-active{background:rgba(61,123,255,.28);border-color:var(--accent)}
 @keyframes keyboard-up{from{opacity:0;transform:translate(-50%,22px)}to{opacity:1;transform:translate(-50%,0)}}
+/* Toetsenbord voor iemand aan de overkant: bovenaan en op zijn kop. */
+#keyboard.flipped{top:14px;bottom:auto;transform:translateX(-50%) rotate(180deg)}
+#keyboard.flipped.visible{animation:keyboard-down .2s ease-out both}
+@keyframes keyboard-down{
+  from{opacity:0;transform:translate(-50%,-22px) rotate(180deg)}
+  to{opacity:1;transform:translate(-50%,0) rotate(180deg)}
+}
 #sheet{position:fixed;inset:0;background:rgba(3,5,8,.9);z-index:50;display:none;overflow:auto;padding:40px 20px}
 #sheet .inner{max-width:920px;margin:0 auto;background:var(--surface);border:1px solid var(--line);
   border-radius:18px;padding:34px}
@@ -132,7 +148,7 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
 #closeSheetTop{position:sticky;top:0;float:right;width:38px;height:38px;padding:0;
   font-size:20px;line-height:1;border-radius:10px;z-index:1}
 .mode-touch #controls{width:310px}
-.mode-touch #puckDock{width:370px}
+.mode-touch .dock{width:370px}
 .mode-touch button{min-height:44px;font-size:13px}
 .mode-touch .mode-switch button{min-height:40px}
 .mode-touch input,.mode-touch select,.mode-touch textarea{font-size:16px;min-height:44px}
@@ -219,3 +235,6 @@ body.keyboard-open #note{z-index:45}
 #noteMatches{margin-bottom:10px}
 #kgInfoBody{margin-bottom:12px}
 #kgInfo{width:300px}
+
+/* Het leesvenster van de kennisgraaf draait mee met dezelfde regel. */
+#kgInfo{transform:rotate(var(--kg-flip,0deg));transform-origin:50% 50%}

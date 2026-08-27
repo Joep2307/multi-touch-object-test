@@ -391,16 +391,22 @@ addEventListener("contextmenu",e=>e.preventDefault());
 const simPucks=[];
 
 /* ── Puck tray: drag a mini-puck off the left bar to drop it on the table ── */
+/* Eén balk per zijde van de tafel, allemaal met dezelfde inhoud. Vandaar
+   klassen in plaats van ids: het aantal balken mag veranderen zonder dat de
+   code het hoeft te weten. */
+const trays=()=>[...document.querySelectorAll(".tray")];
 function renderTray(){
-  const box=el("trayPucks"); box.innerHTML="";
-  templates.forEach(tpl=>{
-    const d=document.createElement("div");
-    d.className="traypuck"; d.dataset.id=tpl.id;
-    d.style.borderColor=vColor(tpl.verdict);
-    d.style.color=vColor(tpl.verdict);
-    d.textContent=vName(tpl.verdict);
-    box.appendChild(d);
-  });
+  for(const box of trays()){
+    box.innerHTML="";
+    templates.forEach(tpl=>{
+      const d=document.createElement("div");
+      d.className="traypuck"; d.dataset.id=tpl.id;
+      d.style.borderColor=vColor(tpl.verdict);
+      d.style.color=vColor(tpl.verdict);
+      d.textContent=vName(tpl.verdict);
+      box.appendChild(d);
+    });
+  }
   markTray();
 }
 function markTray(){
@@ -440,7 +446,8 @@ function endTrayDrag(e){
   simPucks.push({tpl,x,y,lng:ll.lng,lat:ll.lat,rot:Math.random()*Math.PI*2});
   markTray();
 }
-el("trayPucks").addEventListener("pointerdown",e=>{
+trays().forEach(t=>t.addEventListener("pointerdown",onTrayDown));
+function onTrayDown(e){
   const node=e.target.closest(".traypuck");
   if(!node||node.classList.contains("used")) return;
   const tpl=templates.find(t=>t.id===node.dataset.id);
@@ -455,7 +462,7 @@ el("trayPucks").addEventListener("pointerdown",e=>{
   node.addEventListener("pointermove",moveGhost);
   node.addEventListener("pointerup",endTrayDrag);
   node.addEventListener("pointercancel",endTrayDrag);
-});
+}
 
 function simPads(){
   const out=[],Lm=CFG.longestSideMM*pxPerMM;
@@ -666,7 +673,7 @@ function positionNote(recentre=true){
   const wanted=recentre?y-h/2:(parseFloat(n.style.top)||y-h/2);
   const top=Math.max(12,Math.min(max,wanted));
   n.style.top=top+"px";
-  n.style.setProperty("--stem-top",Math.max(20,Math.min(h-20,y-top))+"px");
+  setStem(n,h,y-top);
 }
 // Eén waarnemer voor de hele levensduur van de pagina: elke hoogtewijziging
 // trekt het venster zo nodig terug binnen beeld.
@@ -677,6 +684,9 @@ function openNote(pin,x,y,fromPuck=false){
   selected=pin; const n=el("note");
   n.style.display="block";
   const width=310;
+  const flip=flippedFor(y);
+  n.classList.toggle("flipped",flip);
+  n.style.setProperty("--flip",flip?"180deg":"0deg");
   const puckReach=fromPuck?CFG.puckRadiusMM*pxPerMM+46:34;
   const opensRight=x+width+puckReach<innerWidth-12;
   const left=opensRight?x+puckReach:x-puckReach-width;
@@ -687,8 +697,10 @@ function openNote(pin,x,y,fromPuck=false){
   n.style.setProperty("--enter-x",opensRight?"-28px":"28px");
   n.dataset.anchorY=String(y);
   positionNote();
-  n.classList.toggle("from-left",opensRight);
-  n.classList.toggle("from-right",!opensRight);
+  // In een gedraaid venster wisselt links en rechts van plek, dus de stengel
+  // moet aan de andere kant beginnen om nog naar de puck te wijzen.
+  n.classList.toggle("from-left",flip?!opensRight:opensRight);
+  n.classList.toggle("from-right",flip?opensRight:!opensRight);
   n.classList.remove("opening");
   if(fromPuck){ void n.offsetWidth; n.classList.add("opening"); }
   el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
@@ -1030,18 +1042,25 @@ function liftEditorAboveKeyboard(){
   const n=el("note"), kb=el("keyboard");
   if(n.style.display!=="block"||!kb.classList.contains("visible")) return;
   const nr=n.getBoundingClientRect(), kr=kb.getBoundingClientRect();
-  if(nr.bottom>kr.top-12){
-    const top=Math.max(12,kr.top-nr.height-12);
-    n.style.top=top+"px";
-    const anchorY=Number(n.dataset.anchorY)||top+nr.height/2;
-    n.style.setProperty("--stem-top",Math.max(20,Math.min(nr.height-20,anchorY-top))+"px");
-  }
+  const flip=n.classList.contains("flipped");
+  // Het toetsenbord staat aan dezelfde kant als de persoon: onderaan voor wie
+  // vooraan staat, bovenaan voor wie aan de overkant staat. Het venster wijkt
+  // dus de andere kant op.
+  let top=null;
+  if(flip && nr.top<kr.bottom+12) top=Math.min(innerHeight-nr.height-12,kr.bottom+12);
+  else if(!flip && nr.bottom>kr.top-12) top=Math.max(12,kr.top-nr.height-12);
+  if(top===null) return;
+  n.style.top=Math.max(12,top)+"px";
+  const anchorY=Number(n.dataset.anchorY)||top+nr.height/2;
+  setStem(n,nr.height,anchorY-top);
 }
 function showKeyboard(target){
   if(uiMode!=="touch"||!target.classList.contains("touch-type")) return;
   keyboardTarget=target;
   el("keyboardField").textContent=target.labels?.[0]?.textContent||target.placeholder||"Tekst invoeren";
   renderKeyboard();
+  // Het toetsenbord volgt het venster waar getypt wordt.
+  el("keyboard").classList.toggle("flipped",el("note").classList.contains("flipped"));
   el("keyboard").classList.add("visible");
   document.body.classList.add("keyboard-open");
   requestAnimationFrame(liftEditorAboveKeyboard);
@@ -1096,7 +1115,8 @@ function applyMode(mode){
     el(id).classList.toggle("active",active);
     el(id).setAttribute("aria-pressed",String(active));
   });
-  el("puckHint").textContent=mode==="touch"?L[lang].touchHint:L[lang].laptopHint;
+  [...document.querySelectorAll(".puck-hint")].forEach(h=>
+    h.textContent=mode==="touch"?L[lang].touchHint:L[lang].laptopHint);
   refreshKeyboardFields();
   if(mode!=="touch") hideKeyboard();
   try{localStorage.setItem("pucktable-ui-mode",mode);}catch(e){}
@@ -1112,13 +1132,14 @@ el("modeTouch").onclick=()=>applyMode("touch");
 el("modeLaptop").onclick=()=>applyMode("laptop");
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
 el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",debugMode);};
-el("btnClear").onclick=clearPucks;
+[...document.querySelectorAll(".btn-clear")].forEach(b=>b.onclick=clearPucks);
 
 /* ── Kennisgraaf ───────────────────────────────────────────────── */
 function openKgInfo(node,x,y){
   kg.selected=node;
   const n=el("kgInfo");
   n.style.display="block";
+  n.style.setProperty("--kg-flip",flippedFor(y)?"180deg":"0deg");
   const width=280, height=120;
   n.style.left=Math.max(12,Math.min(innerWidth-width-12,x+26))+"px";
   n.style.top=Math.max(12,Math.min(innerHeight-height-12,y-height/2))+"px";
@@ -1194,6 +1215,36 @@ el("kgUrl").onchange=()=>{ kg.nodes.length=0; kg.themes.length=0; if(kg.enabled|
 el("dwell").oninput=e=>{CFG.dwellMS=parseFloat(e.target.value)*1000;el("dwellVal").textContent=(+e.target.value).toFixed(1)+" s";};
 el("tol").oninput=e=>{tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
 el("diag").oninput=resize;
+/* ── Twee zijden ────────────────────────────────────────────────────────
+   Een tafel ligt plat en mensen staan er omheen; wat voor de één rechtop
+   staat, staat voor de ander op zijn kop. De kaart laten we met rust — dat
+   is het gedeelde object, net als een papieren plattegrond die je ook niet
+   voor iedereen apart draait. Maar wat persoonlijk en tijdelijk is draait
+   wél mee: het venster verschijnt in de leesrichting van de rand waar de
+   aanraking vandaan kwam. */
+let twoSided=false;
+try{ twoSided=localStorage.getItem("pucktable-two-sided")==="1"; }catch(e){}
+function applySides(){
+  document.body.classList.toggle("two-sided",twoSided);
+  el("btnSides").classList.toggle("on",twoSided);
+  el("btnSides").setAttribute("aria-pressed",String(twoSided));
+  try{ localStorage.setItem("pucktable-two-sided",twoSided?"1":"0"); }catch(e){}
+}
+el("btnSides").onclick=()=>{ twoSided=!twoSided; applySides(); };
+applySides();
+
+/* Staat de aanraking in de bovenste helft, dan staat de persoon aan die kant
+   en moet het venster 180° gedraaid. */
+const flippedFor=y=>twoSided && y<innerHeight/2;
+
+/* De stengel wijst naar de puck. In een gedraaid venster loopt de lokale
+   y-as andersom, dus wat op het scherm `d` vanaf de bovenkant is, is lokaal
+   `h - d`. */
+function setStem(n,h,d){
+  const local=n.classList.contains("flipped")?h-d:d;
+  n.style.setProperty("--stem-top",Math.max(20,Math.min(h-20,local))+"px");
+}
+
 const BAKE_HINT=el("bakeHint").textContent;
 el("tiles").onchange=e=>{
   MV.set=e.target.value; tileCache.clear();
