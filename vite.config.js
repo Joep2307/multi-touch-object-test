@@ -59,7 +59,13 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 5173,
+    // Eigen poort: 5173 is die van sturnia-node's eigen dev-server (en van
+    // coco-biblio's `make start`). Draaien die tegelijk, dan opent
+    // localhost:5173 hún graafverkenner in plaats van deze tafel.
+    // strictPort zorgt dat we dat merken in plaats van stilletjes op te
+    // schuiven naar een poort die je niet verwacht.
+    port: 5174,
+    strictPort: true,
     // Laat het veld "Adres van de backend" in de app leeg: de app vraagt dan
     // relatief om api/biblio/..., wat hier naar coco-biblio gaat.
     proxy: { "/api": { target: API, changeOrigin: true } },
