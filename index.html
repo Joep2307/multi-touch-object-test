@@ -40,10 +40,24 @@
     </div>
     <label class="field" for="tiles">Kaartbeeld</label>
     <select id="tiles">
-      <option value="osm" selected>OpenStreetMap</option>
-      <option value="dark">Donker (CARTO — API-sleutel nodig)</option>
-      <option value="light">Licht (CARTO — API-sleutel nodig)</option>
-      <option value="none">Geen — alleen raster</option>
+      <optgroup label="Algemeen">
+        <option value="osm" selected>OpenStreetMap</option>
+        <option value="brt">Topografie — PDOK</option>
+        <option value="brtgrijs">Grijs — PDOK</option>
+        <option value="brtpastel">Pastel — PDOK</option>
+      </optgroup>
+      <optgroup label="Thema">
+        <option value="groen">Groen &amp; hoogte</option>
+        <option value="bebouwing">Bebouwing</option>
+        <option value="verkeer">Verkeer &amp; fiets</option>
+        <option value="water">Water — PDOK</option>
+        <option value="lucht">Luchtfoto — PDOK</option>
+      </optgroup>
+      <optgroup label="Overig">
+        <option value="dark">Donker (CARTO — API-sleutel nodig)</option>
+        <option value="light">Licht (CARTO — API-sleutel nodig)</option>
+        <option value="none">Geen — alleen raster</option>
+      </optgroup>
     </select>
 
     <div class="row" style="margin-top:9px">

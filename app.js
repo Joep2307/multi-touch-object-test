@@ -58,12 +58,46 @@ const el=id=>document.getElementById(id);
    2. MAP — slippy tiles drawn straight onto the canvas.
       No library: Web Mercator is twelve lines of arithmetic.
    ═══════════════════════════════════════════════════════════════ */
+/* Kaartbeelden. Elk beeld is een andere lezing van dezelfde stad: waar het
+   groen zit, waar gebouwd is, hoe het verkeer loopt. `max` is het diepste
+   zoomniveau dat de bron levert — daarboven vragen we niets meer op en vult
+   blitCovered() het gat met een uitvergrote moedertegel, wat er beter uitziet
+   dan lege vlakken. `credit` verschijnt onderaan het scherm; de bronnen
+   hieronder eisen die vermelding.
+
+   PDOK is van het Kadaster en open; de OSM-varianten draaien op vrijwillig
+   betaalde servers, dus dit is prima voor een prototype op één tafel maar
+   niet voor iets dat de hele dag door tienduizenden tegels trekt. */
 const TILE_SETS = {
-  dark : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
-  osm  : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  none : null
+  osm      : {url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", max:19,
+              credit:"© OpenStreetMap contributors — openstreetmap.org/copyright"},
+  brt      : {url:"https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png", max:19,
+              credit:"© Kadaster / PDOK — BRT Achtergrondkaart"},
+  brtgrijs : {url:"https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/grijs/EPSG:3857/{z}/{x}/{y}.png", max:19,
+              credit:"© Kadaster / PDOK — BRT Achtergrondkaart (grijs)"},
+  brtpastel: {url:"https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/pastel/EPSG:3857/{z}/{x}/{y}.png", max:19,
+              credit:"© Kadaster / PDOK — BRT Achtergrondkaart (pastel)"},
+  water    : {url:"https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/water/EPSG:3857/{z}/{x}/{y}.png", max:19,
+              credit:"© Kadaster / PDOK — BRT Achtergrondkaart (water)"},
+  lucht    : {url:"https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_ortho25/EPSG:3857/{z}/{x}/{y}.jpeg", max:19,
+              credit:"© Kadaster / Beeldmateriaal.nl — luchtfoto 25 cm"},
+  groen    : {url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", max:17,
+              credit:"© OpenStreetMap contributors · SRTM · OpenTopoMap (CC-BY-SA)"},
+  bebouwing: {url:"https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", max:19,
+              credit:"© OpenStreetMap contributors · Humanitarian OSM Team"},
+  verkeer  : {url:"https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", max:18,
+              credit:"© OpenStreetMap contributors · CyclOSM"},
+  dark     : {url:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png", max:19,
+              credit:"© OpenStreetMap contributors · © CARTO"},
+  light    : {url:"https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png", max:19,
+              credit:"© OpenStreetMap contributors · © CARTO"},
+  none     : null
 };
+// Bronnen zonder CORS-header kunnen niet met crossOrigin geladen worden en
+// blijven dan zwart. We proberen het één keer opnieuw zonder; de tegels
+// verschijnen dan wel, maar het canvas raakt "besmet" en offline bewaren
+// werkt niet meer voor dat beeld.
+const taintedSets=new Set();
 const MV = {
   lng:4.7759, lat:51.5866, zoom:14, set:"osm",
   world(){ return 256*Math.pow(2,this.zoom); },
@@ -98,14 +132,32 @@ function tileChanged(){
   tileRefreshTimer=setTimeout(()=>{tileRevision++;tileRefreshTimer=null;},120);
 }
 function getTile(z,x,y){
-  const tpl=TILE_SETS[MV.set]; if(!tpl) return null;
+  const set=TILE_SETS[MV.set]; if(!set) return null;
+  if(z>set.max) return null;                   // bron gaat niet dieper; parent vullen
   const key=MV.set+"/"+z+"/"+x+"/"+y;
   let img=tileCache.get(key);
   if(!img){
-    img=new Image(); img.crossOrigin="anonymous"; img.ok=false;
+    const src=set.url.replace("{s}","abc"[(x+y)%3])
+                     .replace("{z}",z).replace("{x}",x).replace("{y}",y);
+    const setName=MV.set, cors=!taintedSets.has(setName);
+    img=new Image(); img.ok=false;
+    if(cors) img.crossOrigin="anonymous";
     img.onload=()=>{img.ok=true;tileChanged();};
-    img.onerror=()=>{img.bad=true;tilesFailed++;tileChanged();};
-    img.src=tpl.replace("{s}","abc"[(x+y)%3]).replace("{z}",z).replace("{x}",x).replace("{y}",y);
+    img.onerror=()=>{
+      if(cors && tileCache.get(key)===img){
+        // Tweede kans zonder CORS. Een verse Image, want dezelfde src
+        // opnieuw zetten haalt de browser niet altijd opnieuw op.
+        taintedSets.add(setName);
+        const retry=new Image(); retry.ok=false;
+        retry.onload=()=>{retry.ok=true;tileChanged();};
+        retry.onerror=()=>{retry.bad=true;tilesFailed++;tileChanged();};
+        retry.src=src;
+        tileCache.set(key,retry);
+        return;
+      }
+      img.bad=true; tilesFailed++; tileChanged();
+    };
+    img.src=src;
     tileCache.set(key,img); tilesTried++;
     if(tileCache.size>1600){ const k=tileCache.keys().next().value; tileCache.delete(k); }
   }
@@ -183,7 +235,7 @@ function drawMap(g){
   g.fillStyle="rgba(232,237,244,.6)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace"; g.textAlign="left";
   g.fillText(barM>=1000?(barM/1000)+" km":barM+" m", 20, H-36);
   g.textAlign="center"; g.fillStyle="rgba(127,139,155,.75)"; g.font="10px 'JetBrains Mono',ui-monospace,monospace";
-  g.fillText("© OpenStreetMap contributors — openstreetmap.org/copyright"+(MV.set==="osm"?"":" · © CARTO"), W/2, H-10);
+  g.fillText(TILE_SETS[MV.set]?.credit || "", W/2, H-10);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1023,7 +1075,12 @@ el("kgUrl").onchange=()=>{ kg.nodes.length=0; kg.themes.length=0; if(kg.enabled|
 el("dwell").oninput=e=>{CFG.dwellMS=parseFloat(e.target.value)*1000;el("dwellVal").textContent=(+e.target.value).toFixed(1)+" s";};
 el("tol").oninput=e=>{tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
 el("diag").oninput=resize;
-el("tiles").onchange=e=>{MV.set=e.target.value;tileCache.clear();};
+const BAKE_HINT=el("bakeHint").textContent;
+el("tiles").onchange=e=>{
+  MV.set=e.target.value; tileCache.clear();
+  tilesTried=0; tilesFailed=0;                 // de melding gaat over dít beeld
+  el("bakeHint").textContent=BAKE_HINT;
+};
 el("sess").onchange=restore;
 el("zIn").onclick=()=>MV.zoomBy(1);
 el("zOut").onclick=()=>MV.zoomBy(-1);
@@ -1123,7 +1180,12 @@ function bakeMap(){
   off.getContext("2d").drawImage(cv,0,0,off.width,off.height);
   let data;
   try{ data=off.toDataURL("image/jpeg",0.9); }
-  catch(err){ el("bakeHint").innerHTML="<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw."; return; }
+  catch(err){
+    el("bakeHint").innerHTML=taintedSets.has(MV.set)
+      ? "<b>Dit kaartbeeld kan niet offline bewaard worden</b> — de tegelserver staat het uitlezen van de afbeelding niet toe. Kies OpenStreetMap of een PDOK-beeld en probeer het daarmee."
+      : "<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw.";
+    return;
+  }
   const rec={data,west:nw.lng,north:nw.lat,east:se.lng,south:se.lat};
   const img=new Image();
   img.onload=()=>{ bgImage={img,west:rec.west,north:rec.north,east:rec.east,south:rec.south}; };
