@@ -72,6 +72,8 @@
       <button id="btnKg">Graaf tonen</button>
       <button id="btnKgThemes">Thema's uit graaf</button>
     </div>
+    <div class="row"><button id="btnGaps">Witte vlekken</button></div>
+    <p class="hint" id="gapsHint">Kleurt de gebieden waar in de graaf niets is vastgelegd — daar is de vraag aan tafel het meest waard.</p>
     <label class="field" for="kgUrl">Adres van de backend</label>
     <input id="kgUrl" placeholder="leeg = fixtures" autocomplete="off">
     <p class="hint" id="kgStatus">uit</p>
@@ -147,7 +149,9 @@
 <div class="panel" id="kgInfo">
   <p class="eyebrow" id="kgInfoType">document</p>
   <p class="kg-title" id="kgInfoLabel"></p>
+  <div id="kgInfoBody"></div>
   <div class="row" style="margin-bottom:0">
+    <button id="kgInfoOpen">Openen</button>
     <button id="kgInfoClose">Sluiten</button>
   </div>
 </div>
@@ -166,6 +170,8 @@
   <div class="kg-block">
     <p class="eyebrow">Wat is hier al bekend</p>
     <div id="noteNearby"><p class="empty">Kennisgraaf wordt geladen…</p></div>
+    <p class="eyebrow" id="noteMatchHead" style="display:none">Gaat over wat je zegt</p>
+    <div id="noteMatches"></div>
     <div class="row" style="margin-bottom:0">
       <button id="noteAsk" class="primary">Vraag om een oplossing</button>
     </div>

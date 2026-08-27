@@ -204,3 +204,17 @@ body.keyboard-open #note{z-index:45}
 #layersMenu .eyebrow:first-child{margin-top:0}
 #layersMenu .layer{display:block;width:100%;text-align:left;margin-bottom:5px}
 #layersMenu .layer:last-child{margin-bottom:0}
+
+/* ── Aanklikbare graafitems ─────────────────────────────────────────────
+   Een titel die ergens heen leidt moet er ook zo uitzien. */
+.kg-near{cursor:pointer;border-radius:6px;padding-left:6px;padding-right:6px;
+  margin-left:-6px;margin-right:-6px;transition:background .12s}
+.kg-near:hover{background:rgba(122,162,247,.10)}
+.kg-quote{margin:2px 0 8px;padding:8px 10px;border-left:2px solid rgba(122,162,247,.5);
+  background:rgba(122,162,247,.06);border-radius:0 8px 8px 0;
+  font:400 11.5px/1.5 'Space Grotesk',system-ui,sans-serif;color:rgba(232,237,244,.82)}
+.kg-quote .src{display:block;margin-top:5px;font:400 9.5px/1.4 'JetBrains Mono',ui-monospace,monospace;
+  color:rgba(232,237,244,.4)}
+#noteMatches{margin-bottom:10px}
+#kgInfoBody{margin-bottom:12px}
+#kgInfo{width:300px}

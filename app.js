@@ -1,5 +1,6 @@
-import { kg, loadKG, ensureKG, drawKG, kgAt, kgDescribe, onKgChange,
-         nearby, formatDistance, buildQuestion, ask } from "./kg.js";
+import { kg, loadKG, ensureKG, drawKG, drawGaps, kgAt, kgDescribe, onKgChange,
+         nearby, formatDistance, buildQuestion, ask,
+         fileUrl, knowledgeOf, relevantDocs } from "./kg.js";
 
 /* ═══════════════════════════════════════════════════════════════
    0. FONTS — loaded from CSS, silently falls back to system faces
@@ -700,6 +701,11 @@ function openNote(pin,x,y,fromPuck=false){
 /* ── Wat de kennisgraaf over deze plek weet ──────────────────────────────
    Los van de kaartlaag: het venster laadt de graaf desnoods zelf, ook als
    "Graaf tonen" uit staat. */
+/* De losse opvraag van een entiteit valt niet terug op de fixtures: een 404
+   op één item betekent volgens het contract "bestaat niet", niet "geen
+   backend". Zonder coco-biblio zijn er dus geen citaten, en dat zeggen we
+   liever met zoveel woorden dan met een misleidend "niets gevonden". */
+const NO_BACKEND="Hiervoor moet coco-biblio draaien — zonder backend zijn er geen letterlijke fragmenten.";
 let askAbort=null;
 function fillNoteKnowledge(pin){
   askAbort?.abort(); askAbort=null;
@@ -707,23 +713,88 @@ function fillNoteKnowledge(pin){
   el("noteSources").textContent=""; el("noteSources").style.display="none";
   const box=el("noteNearby");
   box.innerHTML='<p class="empty">Kennisgraaf wordt geladen…</p>';
+  el("noteMatches").textContent=""; el("noteMatchHead").style.display="none";
   ensureKG(el("kgUrl").value.trim()).then(()=>{
     if(selected!==pin) return;
     renderNearby(pin);
+    renderMatches(pin);
   });
 }
+/* Eén regel in een graaflijst. Labels via textContent, zodat een titel uit
+   de graaf nooit als HTML in de pagina belandt. */
+function kgRow(label,right,extraClass=""){
+  const row=document.createElement("div");
+  row.className="kg-near"+(extraClass?" "+extraClass:"");
+  const l=document.createElement("span"); l.className="kg-near-label"; l.textContent=label;
+  const r=document.createElement("span"); r.className="kg-near-dist mono"; r.textContent=right;
+  row.append(l,r);
+  return row;
+}
+
+/* Tikken op een regel. Een document opent zichzelf; bij een plek halen we op
+   wat er létterlijk over geschreven staat en vouwen dat eronder open. */
+async function kgReveal(row,node){
+  const open=row.nextElementSibling?.classList.contains("kg-quote");
+  [...row.parentElement.querySelectorAll(".kg-quote")].forEach(q=>q.remove());
+  if(open){ positionNote(false); return; }
+  if(node.type==="document"){
+    const url=fileUrl(node.id);
+    if(url) window.open(url,"_blank","noopener");
+    return;
+  }
+  const box=document.createElement("div");
+  box.className="kg-quote"; box.textContent="Zoeken…";
+  row.after(box);
+  positionNote(false);
+  const k=await knowledgeOf(node.id);
+  const chunks=(k?.chunks||[]).slice(0,3);
+  if(!k){ box.textContent=NO_BACKEND; positionNote(false); return; }
+  if(!chunks.length){ box.textContent="Geen letterlijke fragmenten gevonden."; positionNote(false); return; }
+  box.textContent="";
+  const titleOf=new Map((k.documents||[]).map(d=>[d.id,d.title]));
+  for(const c of chunks){
+    const q=document.createElement("p");
+    q.style.margin="0 0 8px";
+    q.textContent="\u201c"+c.excerpt.trim()+"\u201d";
+    const src=document.createElement("span");
+    src.className="src";
+    src.textContent=(titleOf.get(c.doc_id)||c.doc_id)+(c.page?" · p. "+c.page:"");
+    q.appendChild(src);
+    box.appendChild(q);
+  }
+  positionNote(false);
+}
+
 function renderNearby(pin){
   const box=el("noteNearby");
+  box.textContent="";
   if(!kg.loaded){ box.innerHTML='<p class="empty">Kennisgraaf niet bereikbaar.</p>'; return; }
   const near=nearby(pin.lat,pin.lng,{theme:pin.topic,limit:4});
   if(!near.length){ box.innerHTML='<p class="empty">Niets bekend binnen 1,5 km.</p>'; return; }
-  box.innerHTML=near.map(r=>
-    `<div class="kg-near${r.match?" match":""}">`+
-    `<span class="kg-near-label"></span>`+
-    `<span class="kg-near-dist mono">${formatDistance(r.dist)}</span></div>`).join("");
-  // Labels via textContent, zodat een titel uit de graaf geen HTML kan worden.
-  [...box.querySelectorAll(".kg-near-label")].forEach((n,i)=>{ n.textContent=near[i].node.label; });
+  for(const r of near){
+    const row=kgRow(r.node.label,formatDistance(r.dist),r.match?"match":"");
+    row.onclick=()=>kgReveal(row,r.node);
+    box.appendChild(row);
+  }
   positionNote();
+}
+
+/* Zoeken op de bétekenis van wat er gezegd is, los van de afstand. Vandaar
+   een eigen lijstje: dit zijn stukken die over het onderwerp gaan, ook als
+   ze aan de andere kant van de stad hangen. */
+async function renderMatches(pin){
+  const box=el("noteMatches"), head=el("noteMatchHead");
+  box.textContent=""; head.style.display="none";
+  const q=[pin.title,pin.description||pin.note].filter(Boolean).join(" ");
+  const docs=await relevantDocs(q);
+  if(selected!==pin||!docs.length) return;
+  head.style.display="block";
+  for(const d of docs){
+    const row=kgRow(d.title,d.year?String(d.year):"");
+    row.onclick=()=>{ const u=fileUrl(d.id); if(u) window.open(u,"_blank","noopener"); };
+    box.appendChild(row);
+  }
+  positionNote(false);
 }
 /* Het antwoord komt als markdown terug. Een volledige parser is hier
    overdreven; dit dekt wat er in de praktijk uit komt — koppen, vet,
@@ -798,6 +869,7 @@ function frame(){
   const now=performance.now();
   paintMapLayer();
   if(bakePending){ bakePending=false; bakeMap(); }
+  drawGaps(ctx,MV,W,H);
   drawKG(ctx,MV,W,H);
 
   syncSimPucksToMap();
@@ -1052,9 +1124,54 @@ function openKgInfo(node,x,y){
   n.style.top=Math.max(12,Math.min(innerHeight-height-12,y-height/2))+"px";
   el("kgInfoType").textContent=kgDescribe(node);
   el("kgInfoLabel").textContent=node.label;
+  const body=el("kgInfoBody"); body.textContent="";
+  const rel=(kg.linksOf.get(node.id)||new Set()).size;
+  if(rel){
+    const p=document.createElement("p");
+    p.className="kg-quote"; p.style.borderLeftColor="rgba(122,162,247,.5)";
+    p.textContent=rel+" verbinding"+(rel===1?"":"en")+" — de lijnen op de kaart.";
+    body.appendChild(p);
+  }
+  const open=el("kgInfoOpen");
+  open.textContent=node.type==="document"?"Document openen":"Wat staat erover";
+  open.onclick=()=>{
+    if(node.type==="document"){ const u=fileUrl(node.id); if(u) window.open(u,"_blank","noopener"); return; }
+    showKgKnowledge(node);
+  };
+}
+
+/* De letterlijke fragmenten over een plek, in het leesvenster naast het punt. */
+async function showKgKnowledge(node){
+  const body=el("kgInfoBody");
+  body.textContent="Zoeken…";
+  const k=await knowledgeOf(node.id);
+  if(kg.selected!==node) return;
+  const chunks=(k?.chunks||[]).slice(0,3);
+  body.textContent="";
+  if(!k||!chunks.length){
+    const p=document.createElement("p"); p.className="empty";
+    p.textContent=k?"Geen letterlijke fragmenten gevonden.":NO_BACKEND;
+    body.appendChild(p); return;
+  }
+  const titleOf=new Map((k.documents||[]).map(d=>[d.id,d.title]));
+  for(const c of chunks){
+    const q=document.createElement("p");
+    q.className="kg-quote";
+    q.textContent="\u201c"+c.excerpt.trim()+"\u201d";
+    const src=document.createElement("span");
+    src.className="src";
+    src.textContent=(titleOf.get(c.doc_id)||c.doc_id)+(c.page?" · p. "+c.page:"");
+    q.appendChild(src);
+    body.appendChild(q);
+  }
 }
 function closeKgInfo(){ kg.selected=null; el("kgInfo").style.display="none"; }
 el("kgInfoClose").onclick=closeKgInfo;
+el("btnGaps").onclick=async()=>{
+  kg.gaps=!kg.gaps;
+  el("btnGaps").classList.toggle("on",kg.gaps);
+  if(kg.gaps && !kg.loaded) await ensureKG(el("kgUrl").value.trim());
+};
 el("noteAsk").onclick=askKnowledge;
 onKgChange(()=>{
   el("kgStatus").textContent=kg.status;
@@ -1153,7 +1270,7 @@ el("search").onkeydown=async e=>{
     if(j[0]){ MV.lat=+j[0].lat; MV.lng=+j[0].lon; MV.zoom=15; }
   }catch(err){}
 };
-el("noteSave").onclick=()=>{ if(selected){
+el("noteSave").onclick=()=>{ if(selected){ setTimeout(()=>{ if(selected) renderMatches(selected); },0);
   selected.title=el("noteTitle").value.trim();
   selected.description=el("noteText").value.trim();
   selected.note=selected.description; // keep older exports and saved sessions compatible

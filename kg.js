@@ -19,11 +19,22 @@ export const kg = {
   nodes: [],           // alleen de knopen mét coördinaat
   themes: [],          // themalabels uit de graaf
   themeOf: new Map(),  // knoop-id → [thema, …]
-  selected: null,      // aangetikt punt op de kaart
+  nodeById: new Map(),  // id → knoop mét coördinaat
+  linksOf: new Map(),   // id → Set(ids) — inhoudelijke relaties
+  grid: new Map(),      // celsleutel → aantal knopen
+  bounds: null,         // gebied waarover de graaf iets zegt
+  gaps: false,          // witte vlekken tonen
+  selected: null,       // aangetikt punt op de kaart
   client: null,
   baseUrl: "",
   loaded: false,
 };
+
+/* Rastercel voor de witte vlekken. 0.004° breedtegraad is ~445 m; op 51,6°
+   is een lengtegraad nog maar 62% van een breedtegraad, dus de lengte-stap
+   moet groter om vierkante cellen te krijgen. */
+const CELL_LAT = 0.004, CELL_LON = 0.004 / Math.cos(51.6 * Math.PI / 180);
+const cellOf = (lat, lon) => Math.floor(lat / CELL_LAT) + "," + Math.floor(lon / CELL_LON);
 
 let onChange = () => {};
 export function onKgChange(fn) { onChange = fn; }
@@ -66,6 +77,37 @@ export async function loadKG(baseUrl = "") {
         themes: kg.themeOf.get(n.id) || [],
       }));
     kg.themes = g.nodes.filter((n) => n.type === "theme").map((n) => n.label);
+
+    kg.nodeById = new Map(kg.nodes.map((n) => [n.id, n]));
+
+    // Inhoudelijke relaties: een document dat een plek noemt, en plekken die
+    // met elkaar te maken hebben. `has_theme`/`has_keyword` slaan we over —
+    // die verbinden alles met alles en leveren alleen een web op.
+    kg.linksOf = new Map();
+    const join = (a, b) => {
+      if (!kg.linksOf.has(a)) kg.linksOf.set(a, new Set());
+      kg.linksOf.get(a).add(b);
+    };
+    for (const l of g.links || []) {
+      if (l.type !== "mentions" && l.type !== "related") continue;
+      join(l.source, l.target);
+      join(l.target, l.source);
+    }
+
+    // Kennisdichtheid per rastercel, plus het gebied waarover de graaf
+    // überhaupt iets zegt — daarbuiten is "niets bekend" geen bevinding.
+    kg.grid = new Map();
+    let mnLa = Infinity, mxLa = -Infinity, mnLo = Infinity, mxLo = -Infinity;
+    for (const n of kg.nodes) {
+      const k = cellOf(n.lat, n.lon);
+      kg.grid.set(k, (kg.grid.get(k) || 0) + 1);
+      if (n.lat < mnLa) mnLa = n.lat;
+      if (n.lat > mxLa) mxLa = n.lat;
+      if (n.lon < mnLo) mnLo = n.lon;
+      if (n.lon > mxLo) mxLo = n.lon;
+    }
+    kg.bounds = kg.nodes.length ? { mnLa, mxLa, mnLo, mxLo } : null;
+
     kg.loaded = true;
     kg.status = kg.nodes.length
       ? `${kg.nodes.length} punten · ${kg.themes.length} thema's`
@@ -73,6 +115,8 @@ export async function loadKG(baseUrl = "") {
   } catch (e) {
     console.warn("[kg] laden mislukt:", e);
     kg.nodes = []; kg.themes = []; kg.loaded = false;
+    kg.nodeById = new Map(); kg.linksOf = new Map();
+    kg.grid = new Map(); kg.bounds = null;
     kg.status = "niet bereikbaar";
   }
   onChange();
@@ -87,10 +131,60 @@ export function ensureKG(baseUrl = "") {
   return pending;
 }
 
+/* ── Witte vlekken ──────────────────────────────────────────────────────
+   Waar de stad veel over zichzelf heeft opgeschreven, en waar niets. Alleen
+   binnen het gebied waarover de graaf iets zegt: daarbuiten betekent "geen
+   documenten" niets meer dan dat het buiten Breda ligt.
+
+   De lege cellen krijgen de kleur, niet de volle. Dat is de omkering die de
+   kaart bruikbaar maakt aan tafel: je ziet in één oogopslag waar niemand
+   iets heeft vastgelegd, en dus waar je de vraag moet stellen. */
+export function drawGaps(ctx, MV, W, H) {
+  if (!kg.gaps || !kg.bounds) return;
+  const { mnLa, mxLa, mnLo, mxLo } = kg.bounds;
+  ctx.save();
+  for (let gy = Math.floor(mnLa / CELL_LAT); gy <= Math.floor(mxLa / CELL_LAT); gy++) {
+    for (let gx = Math.floor(mnLo / CELL_LON); gx <= Math.floor(mxLo / CELL_LON); gx++) {
+      const a = MV.project(gx * CELL_LON, (gy + 1) * CELL_LAT);      // linksboven
+      const b = MV.project((gx + 1) * CELL_LON, gy * CELL_LAT);      // rechtsonder
+      if (b.x < 0 || b.y < 0 || a.x > W || a.y > H) continue;
+      const n = kg.grid.get(gy + "," + gx) || 0;
+      if (n > 0) continue;
+      ctx.fillStyle = "rgba(255,209,102,.10)";
+      ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
+      ctx.strokeStyle = "rgba(255,209,102,.16)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(a.x + .5, a.y + .5, b.x - a.x - 1, b.y - a.y - 1);
+    }
+  }
+  ctx.restore();
+}
+
 /* ── Tekenen ────────────────────────────────────────────────────────────
    Alleen wat op het scherm valt — bij 400+ punten scheelt dat merkbaar. */
 export function drawKG(ctx, MV, W, H) {
   if (!kg.enabled || !kg.nodes.length) return;
+
+  // Verbindingen van het aangetikte punt: welke plekken en documenten hebben
+  // met elkaar te maken. Alleen bij een selectie, anders is het een web.
+  if (kg.selected) {
+    const from = MV.project(kg.selected.lon, kg.selected.lat);
+    ctx.save();
+    ctx.strokeStyle = "rgba(122,162,247,.42)";
+    ctx.lineWidth = 1.2;
+    for (const id of kg.linksOf.get(kg.selected.id) || []) {
+      const other = kg.nodeById.get(id);
+      if (!other) continue;                       // geen coördinaat, niets te tekenen
+      const to = MV.project(other.lon, other.lat);
+      if (Math.max(from.x, to.x) < 0 || Math.max(from.y, to.y) < 0 ||
+          Math.min(from.x, to.x) > W || Math.min(from.y, to.y) > H) continue;
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
+      ctx.beginPath(); ctx.arc(to.x, to.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(122,162,247,.9)"; ctx.fill();
+    }
+    ctx.restore();
+  }
+
   for (const n of kg.nodes) {
     const s = MV.project(n.lon, n.lat);
     if (s.x < -20 || s.y < -20 || s.x > W + 20 || s.y > H + 20) continue;
@@ -188,4 +282,36 @@ export async function ask(question, { onToken, onSources, signal } = {}) {
     else if (ev.event === "done") break;
   }
   return text;
+}
+
+/* ── Het document zelf ──────────────────────────────────────────────────
+   De lijst met titels is pas bruikbaar als je erop kunt tikken. */
+export function fileUrl(docId) {
+  return kg.client ? kg.client.fileUrl(docId) : "";
+}
+
+/* Wat er letterlijk over een plek staat: de tekstfragmenten met hun
+   paginanummer, plus de documenten waar ze uit komen. Alleen zinvol voor
+   entiteiten — een document verwijst niet naar zichzelf. */
+export async function knowledgeOf(entId) {
+  if (!kg.client) return null;
+  try { return await kg.client.knowledge(entId); }
+  catch (e) { console.warn("[kg] knowledge mislukt:", e); return null; }
+}
+
+/* Zoeken op wat er gezegd is in plaats van op waar het gezegd is.
+   `semantic` laat coco-biblio de zin door de embedder halen en op betekenis
+   zoeken — dat vindt het afvalbeleid ook als het in een stuk over de
+   binnenstad staat. Draait er geen backend, dan valt de client terug op de
+   fixtures en wordt het een gewone zoekopdracht op woorden. */
+export async function relevantDocs(text, { limit = 4 } = {}) {
+  const q = (text || "").trim();
+  if (!kg.client || q.length < 4) return [];
+  try {
+    const docs = await kg.client.documents({ search: q, semantic: true });
+    return docs.slice(0, limit);
+  } catch (e) {
+    console.warn("[kg] zoeken mislukt:", e);
+    return [];
+  }
 }
