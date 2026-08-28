@@ -1085,8 +1085,9 @@ addEventListener("pointerup",e=>{
   // Geen eigen markering geraakt? Dan mag de kennisgraaf de tik hebben.
   const node=kgAt(MV,e.clientX,e.clientY);
   if(node){ closeNote(); openKgInfo(node,e.clientX,e.clientY); return; }
-  // Leeg stuk tafel: notitie dicht, graafselectie weg, pucks van tafel.
-  closeNote(); closeKgInfo(); clearPucks();
+  // Een leeg stuk tafel is kaartbediening en sluit geen open panelen. De
+  // gebruiker sluit die bewust met hun sluitknop of met Escape.
+  clearPucks();
 });
 /* De hoogte van het venster staat niet vooraf vast: eerst komt de lijst met
    nabije documenten binnen, daarna groeit het antwoord token voor token. Dus
@@ -1809,8 +1810,9 @@ el("btnScaleUp").onclick=()=>stepScale(1);
    weer klaar zoals hij bedoeld is. Dubbeltikken op de greep zet één paneel
    terug. */
 const DRAG_PANELS=[
-  /* Het lagen-/instellingenmenu en de vier knoppen waarmee het opent blijven
-     bewust op hun vaste plek: dat zijn de ankers van de tafelbediening. */
+  /* Het uitgeklapte menu mag opzij; alleen de vier hoekknoppen waarmee het
+     opent blijven als vaste ankers van de tafelbediening staan. */
+  {id:"menu",       head:".menu-head"},
   {id:"note",       head:".note-head"},
   {id:"keyboard",   head:".keyboard-head"},
   {id:"puckDock",   head:".puck-dock-head"},
@@ -2249,13 +2251,8 @@ MENU_BTNS.forEach(([id,side,view])=>{
   el(id).onclick=()=>(menuSide===side&&menuView===view)?closeMenu():openMenu(side,view);
 });
 el("menuClose").onclick=closeMenu;
-// Naast het menu tikken sluit het; erin tikken uiteraard niet, en het
-// schermtoetsenbord hoort erbij zolang er in een veld getypt wordt.
-addEventListener("pointerdown",e=>{
-  if(!menuSide) return;
-  if(e.target.closest("#menu")||e.target.closest(".menu-btn")||e.target.closest("#keyboard")) return;
-  closeMenu();
-});
+// Het menu blijft open wanneer iemand daarnaast op de kaart werkt. Sluiten
+// gebeurt bewust via het kruisje, dezelfde menuknop of Escape.
 buildLayerMenu();
 el("sess").onchange=restore;
 el("zIn").onclick=()=>MV.zoomBy(1);
