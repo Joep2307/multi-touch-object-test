@@ -322,7 +322,13 @@ let templates=[
   {id:"puck-03",ratios:[0.70,0.93],verdict:"talk"},
   {id:"puck-04",ratios:[0.85,0.90],verdict:"idea"}
 ];
-let simMode=DEV, debugMode=false, tolerance=CFG.tolerance, pxPerMM=4, mapLocked=false;
+/* `simMode` bepaalt of de contactpunten van pucks uit de balk meetellen bij de
+   herkenning — en de balk is geen ontwikkelgereedschap maar de gewone manier om
+   zonder fysieke puck te werken. Stond dit op `DEV`, dan liet een tafel zonder
+   ?dev in de URL de sleepkopie wél volgen, maar verscheen er nooit een puck: de
+   puck lag er, maar had geen pads om herkend te worden. Vandaar `true`; de
+   dev-knop "Puck simuleren" kan hem nog steeds uitzetten. */
+let simMode=true, debugMode=false, tolerance=CFG.tolerance, pxPerMM=4, mapLocked=false;
 let pinMoveMode=false, pinDrag=null;
 const pins=[];
 const el=id=>document.getElementById(id);
