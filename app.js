@@ -59,6 +59,7 @@ const L = {
        controlSize:"Grootte van de bediening",
        smaller:"Bediening kleiner", larger:"Bediening groter",
        scaleHint:"Vensters en knoppen; de kaart blijft op ware grootte.",
+       mapControlHead:"Bediening", placesHead:"Ga naar", offlineHead:"Offline kaart",
        rotateControls:"Draai bediening 90 graden", rotateControlsBack:"Zet bediening terug",
        rotateQuarter:"Draai 90 graden",
        orientationHint:"Draait alleen de bediening, vensters en tekst; de kaart blijft staan.",
@@ -75,7 +76,7 @@ const L = {
        tileDark:"Donker (CARTO — API-sleutel nodig)",
        tileLight:"Licht (CARTO — API-sleutel nodig)",
        tileNone:"Geen — alleen raster",
-       layersHead:"Lagen", docDensity:"Documentdichtheid",
+       layersHead:"Lagen", overlaysHead:"Overlays", docDensity:"Documentdichtheid",
        gapsNote:"Rood waar niets is vastgelegd.",
        tileBlocked:"Kaartbeeld wordt geblokkeerd. Open dit bestand lokaal in Chrome, niet in een preview-venster.",
        tileLoading:"Kaartbeeld laden…",
@@ -165,6 +166,7 @@ const L = {
        controlSize:"Size of the controls",
        smaller:"Smaller controls", larger:"Larger controls",
        scaleHint:"Panels and buttons; the map stays at true size.",
+       mapControlHead:"Controls", placesHead:"Go to", offlineHead:"Offline map",
        rotateControls:"Rotate controls 90 degrees", rotateControlsBack:"Reset controls",
        rotateQuarter:"Rotate 90 degrees",
        orientationHint:"Rotates only the controls, panels, and text; the map stays in place.",
@@ -181,7 +183,7 @@ const L = {
        tileDark:"Dark (CARTO — API key required)",
        tileLight:"Light (CARTO — API key required)",
        tileNone:"None — grid only",
-       layersHead:"Layers", docDensity:"Document density",
+       layersHead:"Layers", overlaysHead:"Overlays", docDensity:"Document density",
        gapsNote:"Red where nothing has been recorded.",
        tileBlocked:"Map tiles are being blocked. Open this file locally in Chrome, not in a preview window.",
        tileLoading:"Loading map tiles…",
@@ -1684,6 +1686,13 @@ document.querySelectorAll("#menu .menu-sec>.accordion-head").forEach(head=>{
     const section=head.parentElement;
     const collapsed=section.classList.toggle("collapsed");
     head.setAttribute("aria-expanded",String(!collapsed));
+    if(!collapsed){
+      document.querySelectorAll(`#menu .menu-sec[data-view="${section.dataset.view}"]`).forEach(other=>{
+        if(other===section) return;
+        other.classList.add("collapsed");
+        other.querySelector(":scope>.accordion-head")?.setAttribute("aria-expanded","false");
+      });
+    }
   };
 });
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
@@ -1901,7 +1910,7 @@ function buildLayerMenu(){
   /* Bovenaan de lagen die óver de kaart heen liggen. Het kaartbeeld eronder
      is een keuze uit één; dit zijn schakelaars, vandaar de scheiding. */
   const overlayHead=document.createElement("p");
-  overlayHead.className="eyebrow"; overlayHead.textContent=tr("layersHead");
+  overlayHead.className="eyebrow"; overlayHead.textContent=tr("overlaysHead");
   box.appendChild(overlayHead);
 
   const gaps=document.createElement("button");
@@ -1916,15 +1925,13 @@ function buildLayerMenu(){
   box.appendChild(note);
 
   const mapHead=document.createElement("p");
-  mapHead.className="eyebrow"; mapHead.textContent=tr("basemap");
-  mapHead.style.borderTop="1px solid var(--line)";
-  mapHead.style.paddingTop="14px";
+  mapHead.className="eyebrow layer-basemap-head"; mapHead.textContent=tr("basemap");
   box.appendChild(mapHead);
 
   for(const child of el("tiles").children){
     if(child.tagName==="OPTGROUP"){
       const h=document.createElement("p");
-      h.className="eyebrow"; h.textContent=tr(child.dataset.i18nLabel||"")||child.label;
+      h.className="eyebrow layer-group-head"; h.textContent=tr(child.dataset.i18nLabel||"")||child.label;
       box.appendChild(h);
       for(const o of child.children) box.appendChild(layerButton(o));
     }else box.appendChild(layerButton(child));

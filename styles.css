@@ -67,7 +67,8 @@ body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}
 .mode-touch #btnSetA{left:90px}
 .mode-touch #btnSetB{right:90px}
 
-#menu{display:none;width:320px;max-height:calc(100vh - 112px);overflow-y:auto;z-index:31}
+#menu{display:none;width:320px;max-height:calc(100vh - 112px);overflow-y:auto;z-index:31;
+  scrollbar-width:thin;scrollbar-color:#293443 transparent}
 #menu.open{display:block}
 #menu.at-a{left:18px;bottom:86px}
 #menu.at-b{right:18px;top:86px}
@@ -75,7 +76,7 @@ body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}
 .mode-touch #menu.at-a{bottom:94px}
 .mode-touch #menu.at-b{top:94px}
 #menu.flipped{transform:rotate(180deg);transform-origin:50% 50%}
-.menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .menu-head h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Taalknop boven in het menu. Twee vakjes in plaats van één wisselknop:
    aan een tafel waar iemand langsloopt en even meekijkt moet in één blik
@@ -88,30 +89,33 @@ body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}
   box-shadow:0 1px 6px rgba(0,0,0,.25)}
 .mode-touch .lang-switch button{padding:8px 12px;font-size:13px}
 #menuClose{flex:none;width:34px;height:34px;padding:0;font-size:19px;line-height:1;border-radius:9px}
-/* Eén scheidingslijn per onderdeel; koppen dragen de rest. */
-.menu-sec{border-top:1px solid var(--line);padding-top:15px;margin-top:15px}
-.menu-head+.menu-sec{border-top:0;padding-top:0;margin-top:0}
+/* De onderdelen vormen rustige, losse blokken. Dat maakt het menu scanbaar
+   zonder dat iedere regel om aandacht vraagt. */
+.menu-sec{margin-top:7px;border:1px solid var(--line);border-radius:10px;
+  background:rgba(7,9,12,.28);overflow:hidden}
+.menu-head+.menu-sec{margin-top:0}
 /* Eén venster, twee inhouden: de kaartknop toont alleen wat over de kaart
    gaat, de instellingenknop de rest. Zo staat er nooit een lijst voor je
    waar je doorheen moet scrollen om bij het andere te komen. */
 #menu .menu-sec[data-view]{display:none}
 #menu.view-map .menu-sec[data-view="map"],
 #menu.view-settings .menu-sec[data-view="settings"]{display:block}
-/* Het eerste zichtbare onderdeel hoort geen streep boven zich te hebben. */
-#menu.view-map #layersMenu,#menu.view-settings #tally{border-top:0;padding-top:0;margin-top:0}
 /* De <select> met kaartbeelden is de bron waaruit de knoppenlijst wordt
    opgebouwd; zichtbaar zou hij dezelfde keuze een tweede keer aanbieden. */
 .src-only{display:none}
 .menu-sec.collapsed>.accordion-body{display:none}
 .accordion-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
-  width:100%;padding:4px 0;border:0;background:transparent;color:var(--ink);
-  border-radius:4px;font-size:15px;font-weight:700;text-align:left}
-.accordion-head:hover{border-color:transparent;background:transparent;color:#fff}
-.accordion-head:focus-visible{outline-offset:4px}
-.accordion-chev{width:9px;height:9px;flex:none;border-right:2px solid var(--ink-dim);
-  border-bottom:2px solid var(--ink-dim);transform:rotate(45deg);transition:transform .18s ease}
+  width:100%;padding:11px 12px;border:0;background:transparent;color:var(--ink);
+  border-radius:0;font-size:14px;font-weight:650;text-align:left}
+.accordion-head:hover{border-color:transparent;background:rgba(255,255,255,.035);color:#fff}
+.accordion-head:focus-visible{outline-offset:-3px}
+.accordion-chev{width:8px;height:8px;flex:none;border-right:1.5px solid var(--ink-dim);
+  border-bottom:1.5px solid var(--ink-dim);transform:rotate(45deg);transition:transform .18s ease}
 .menu-sec:not(.collapsed)>.accordion-head .accordion-chev{transform:rotate(225deg)}
-.accordion-body{margin-top:14px}
+.menu-sec:not(.collapsed)>.accordion-head{background:rgba(61,123,255,.075);color:#dbe7ff}
+.accordion-body{padding:12px;border-top:1px solid var(--line)}
+.menu-subhead{margin:18px 0 8px}
+.menu-subhead:first-child{margin-top:0}
 .stamp{margin:0 0 7px;font-size:10px;line-height:1.3;color:var(--ink-dim);opacity:.75;
   letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
@@ -326,6 +330,8 @@ body.keyboard-open #note{z-index:45}
    in de instellingen eronder. */
 #layersMenu .eyebrow{margin:16px 0 8px}
 #layersMenu .eyebrow:first-child{margin-top:0}
+#layersMenu .layer-basemap-head{padding-top:15px;border-top:1px solid var(--line)}
+#layersMenu .layer-group-head{margin-top:13px;color:#a9b4c2;letter-spacing:.12em}
 #layersMenu .hint{font-size:10.5px;line-height:1.45}
 #layersMenu .layer{display:block;width:100%;text-align:left;margin-bottom:5px}
 #layersMenu .layer:last-child{margin-bottom:0}
