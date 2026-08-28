@@ -145,6 +145,13 @@
         <button id="btnScaleUp" type="button" aria-label="Bediening groter" data-i18n-aria="larger">+</button>
       </div>
       <p class="hint" id="scaleHint" data-i18n="scaleHint" style="margin:7px 0 0">Vensters en knoppen; de kaart blijft op ware grootte.</p>
+      <div class="row orientation-row" style="margin:9px 0 0">
+        <button id="btnOrientation" type="button" aria-describedby="orientationHint">
+          <span class="orientation-icon" aria-hidden="true">↻</span>
+          <span id="orientationLabel">Draai naar staand</span>
+        </button>
+      </div>
+      <p class="hint" id="orientationHint" data-i18n="orientationHint" aria-live="polite" style="margin:7px 0 0">Wisselt het hele scherm tussen liggend en staand.</p>
       <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button" data-i18n="twoSides">Twee zijden</button></div>
       <p class="hint" id="sidesHint" data-i18n="sidesHint" style="margin:7px 0 0">Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.</p>
 
@@ -279,7 +286,10 @@
      en pas bij reflectie neemt dit overzicht het hele scherm over. -->
 <div id="analytics" role="dialog" aria-modal="true" aria-label="Sessie-analyse" data-i18n-aria="analyticsTitle">
   <div class="analytics-inner">
-    <button id="closeAnalytics" class="analytics-close" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+    <div class="analytics-actions">
+      <button type="button" id="flipAnalytics" aria-label="Naar de overkant" title="Naar de overkant" data-i18n-aria="flipSide" data-i18n-title="flipSide" aria-pressed="false">⇅</button>
+      <button type="button" id="closeAnalytics" class="analytics-close" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+    </div>
     <p class="eyebrow" data-i18n="analyticsEyebrow">SESSIE-OVERZICHT</p>
     <h2 data-i18n="analyticsTitle">Analyse van de pucks</h2>
     <p class="analytics-intro" id="analyticsIntro"></p>

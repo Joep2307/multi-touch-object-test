@@ -59,6 +59,10 @@ const L = {
        controlSize:"Grootte van de bediening",
        smaller:"Bediening kleiner", larger:"Bediening groter",
        scaleHint:"Vensters en knoppen; de kaart blijft op ware grootte.",
+       rotatePortrait:"Draai naar staand", rotateLandscape:"Draai naar liggend",
+       orientationHint:"Wisselt het hele scherm tussen liggend en staand.",
+       orientationBusy:"Scherm draaien…",
+       orientationUnsupported:"Dit apparaat laat de browser het scherm niet draaien. Draai het apparaat of wijzig de schermstand in de systeeminstellingen.",
        twoSides:"Twee zijden",
        sidesHint:"Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.",
 
@@ -162,6 +166,10 @@ const L = {
        controlSize:"Size of the controls",
        smaller:"Smaller controls", larger:"Larger controls",
        scaleHint:"Panels and buttons; the map stays at true size.",
+       rotatePortrait:"Rotate to portrait", rotateLandscape:"Rotate to landscape",
+       orientationHint:"Switches the entire screen between landscape and portrait.",
+       orientationBusy:"Rotating screen…",
+       orientationUnsupported:"This device does not let the browser rotate the screen. Rotate the device or change its orientation in the system settings.",
        twoSides:"Two sides",
        sidesHint:"Puck bar on both sides; panels turn towards whoever opens them.",
 
@@ -1481,7 +1489,30 @@ function renderAnalytics(){
   quality.appendChild(analyticsBar(tr("analyticsNotes",notes,total),notes,total,"#39d8a4"));
   quality.appendChild(analyticsBar(tr("analyticsLocations",multi),multi,Math.max(1,clusters.length),"#ffd166"));
 }
-function openAnalytics(){ closeMenu(); closeNote(); renderAnalytics(); el("analytics").classList.add("open"); }
+let analyticsSide="a";
+let analyticsFlipped=false;
+function applyAnalyticsOrientation(){
+  const a=el("analytics");
+  a.classList.toggle("at-a",analyticsSide==="a");
+  a.classList.toggle("at-b",analyticsSide==="b");
+  a.classList.toggle("flipped",analyticsFlipped);
+  a.style.setProperty("--analytics-flip",analyticsFlipped?"180deg":"0deg");
+  el("flipAnalytics").setAttribute("aria-pressed",String(analyticsFlipped));
+}
+function openAnalytics(){
+  // Bewaar de herkomst voordat closeMenu() die wist: het overzicht hoort bij
+  // dezelfde tafelrand te verschijnen en in de leesrichting daarvan te staan.
+  analyticsSide=menuSide||"a";
+  analyticsFlipped=analyticsSide==="b"&&sidesActive();
+  closeMenu(); closeNote(); renderAnalytics(); applyAnalyticsOrientation();
+  const a=el("analytics"); a.classList.add("open");
+  el("analytics").scrollTop=0; el("analytics").querySelector(".analytics-inner").scrollTop=0;
+}
+function flipAnalytics(){
+  if(!sidesActive()) return;
+  analyticsFlipped=!analyticsFlipped;
+  applyAnalyticsOrientation();
+}
 function closeAnalytics(){ el("analytics").classList.remove("open"); }
 function applyLock(){
   el("btnMove").classList.toggle("on",mapLocked);
@@ -1641,6 +1672,47 @@ function stepScale(step){
 }
 el("btnScaleDown").onclick=()=>stepScale(-1);
 el("btnScaleUp").onclick=()=>stepScale(1);
+
+/* ── Schermstand ─────────────────────────────────────────────────────
+   Browsers staan het vastzetten van de schermstand alleen toe vanuit een
+   gebruikersactie en meestal alleen in volledig scherm. De knop handelt die
+   twee stappen samen af; de kaart krijgt daarna via het bestaande resize-
+   event meteen de nieuwe afmetingen. */
+const isLandscape=()=>matchMedia("(orientation: landscape)").matches;
+function refreshOrientationControl(resetHint=true){
+  el("orientationLabel").textContent=tr(isLandscape()?"rotatePortrait":"rotateLandscape");
+  el("btnOrientation").setAttribute("aria-label",el("orientationLabel").textContent);
+  if(resetHint) el("orientationHint").textContent=tr("orientationHint");
+}
+async function toggleOrientation(){
+  const button=el("btnOrientation");
+  const target=isLandscape()?"portrait":"landscape";
+  let enteredFullscreen=false;
+  button.disabled=true;
+  el("orientationHint").textContent=tr("orientationBusy");
+  try{
+    if(!document.fullscreenElement){
+      if(!document.documentElement.requestFullscreen) throw new Error("fullscreen unsupported");
+      await document.documentElement.requestFullscreen();
+      enteredFullscreen=true;
+    }
+    if(!screen.orientation?.lock) throw new Error("orientation lock unsupported");
+    await screen.orientation.lock(target);
+    refreshOrientationControl();
+  }catch(error){
+    // Laat de gebruiker niet onverwacht in volledig scherm achter wanneer
+    // juist het draaien door dit apparaat of deze browser wordt geweigerd.
+    if(enteredFullscreen && document.fullscreenElement){
+      try{ await document.exitFullscreen(); }catch(e){}
+    }
+    el("orientationHint").textContent=tr("orientationUnsupported");
+  }finally{
+    button.disabled=false;
+  }
+}
+el("btnOrientation").onclick=toggleOrientation;
+screen.orientation?.addEventListener?.("change",()=>refreshOrientationControl());
+addEventListener("orientationchange",()=>refreshOrientationControl());
 
 el("modeTouch").onclick=()=>{applyMode("touch");reorientMenu();};
 el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();};
@@ -1946,6 +2018,7 @@ el("noteFlip").onclick=()=>flipNote();
 el("noteDel").onclick=()=>{ if(selected){const i=pins.indexOf(selected); if(i>=0)pins.splice(i,1); save();} closeNote(); };
 el("btnWipe").onclick=()=>{ if(confirm(tr("wipeConfirm"))){pins.length=0;save();} };
 el("btnAnalytics").onclick=openAnalytics;
+el("flipAnalytics").onclick=flipAnalytics;
 el("closeAnalytics").onclick=closeAnalytics;
 el("analytics").addEventListener("pointerdown",e=>{ if(e.target===el("analytics")) closeAnalytics(); });
 
@@ -2114,6 +2187,7 @@ function applyLang(){
     h.textContent=uiMode==="touch"?tr("touchHint"):tr("laptopHint"));
   const fb=el("noteFlip");
   if(fb){ fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide")); }
+  refreshOrientationControl();
   // Een open venster hoort niet eerst dicht te moeten voordat het meegaat.
   if(selected) el("noteHead").textContent=vName(selected.verdict)+" · "+selected.topic;
   if(el("kgInfo").style.display==="block" && kg.selected){

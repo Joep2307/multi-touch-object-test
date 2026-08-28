@@ -29,6 +29,9 @@ body.dragging-dot #c{cursor:grabbing}
 .scale-row{align-items:center;gap:6px;margin:9px 0 0}
 .scale-row button{flex:none;width:38px;padding:8px 0;font-size:15px;line-height:1}
 .scale-val{flex:1;text-align:center;font-size:11px;color:var(--ink-dim)}
+.orientation-row{display:block}
+#btnOrientation{display:flex;align-items:center;justify-content:center;gap:9px;width:100%}
+.orientation-icon{font-size:18px;line-height:1;transform:rotate(90deg)}
 button:disabled{opacity:.35;cursor:default}
 button:disabled:hover{border-color:var(--line);background:#151b24}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
@@ -320,14 +323,21 @@ body.keyboard-open #note{z-index:45}
    Een rustig, schermvullend leesmoment na het plaatsen. De kaarten zijn
    bewust kort en breed genoeg om ook aan een grote tafel van enige afstand
    te kunnen lezen. */
-#analytics{position:fixed;inset:0;z-index:70;display:none;overflow:auto;padding:28px;
+#analytics{position:fixed;inset:0;z-index:70;display:none;overflow:hidden;padding:28px;
   background:rgba(3,5,8,.88);backdrop-filter:blur(14px);touch-action:pan-y;overscroll-behavior:contain}
-#analytics.open{display:block}
-.analytics-inner{position:relative;max-width:1040px;margin:0 auto;padding:36px;
-  border:1px solid var(--line);border-radius:20px;background:var(--surface)}
+#analytics.open{display:flex;justify-content:center}
+#analytics.at-a{align-items:flex-end}
+#analytics.at-b{align-items:flex-start}
+.analytics-inner{position:relative;width:min(1040px,100%);max-height:100%;overflow:auto;padding:36px;
+  border:1px solid var(--line);border-radius:20px;background:var(--surface);
+  transform:rotate(var(--analytics-flip,0deg));transform-origin:50% 50%}
 .analytics-inner h2{margin:0;font-size:28px;letter-spacing:-.035em}
 .analytics-intro{margin:8px 0 25px;color:var(--ink-dim);font-size:14px}
-.analytics-close{position:absolute;right:18px;top:18px;width:40px;height:40px;padding:0;flex:none;font-size:23px;line-height:1}
+.analytics-actions{position:absolute;right:18px;top:18px;display:flex;gap:8px}
+.analytics-actions button{width:40px;height:40px;padding:0;flex:none;line-height:1}
+#flipAnalytics{display:none;font-size:18px}
+body.two-sided #flipAnalytics{display:block}
+.analytics-close{font-size:23px}
 .analytics-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .analytics-kpi{min-height:100px;padding:17px;border:1px solid var(--line);border-radius:12px;background:#111720;display:flex;flex-direction:column;justify-content:space-between}
 .analytics-kpi b{font:500 30px/1 var(--mono);color:#fff}.analytics-kpi span{font-size:11px;line-height:1.35;color:var(--ink-dim)}
@@ -339,8 +349,8 @@ body.keyboard-open #note{z-index:45}
 .analytics-hotspot span{font-size:11px;color:#ffe18b;text-transform:uppercase;letter-spacing:.08em}.analytics-hotspot b{font:500 12px var(--mono);color:#fff}
 .analytics-place{display:flex;width:100%;padding:10px 0;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;align-items:baseline;gap:12px}.analytics-place:last-child{border-bottom:0}.analytics-place:hover{background:rgba(61,123,255,.08)}
 .analytics-place b{flex:none;font:500 12px var(--mono);color:#cfe0ff}.analytics-place span{color:var(--ink-dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mode-touch #analytics{padding:16px}.mode-touch .analytics-inner{padding:28px 20px}.mode-touch .analytics-inner h2{font-size:25px}.mode-touch .analytics-kpi{min-height:110px}.mode-touch .analytics-card h3{font-size:17px}.mode-touch .analytics-bar-head,.mode-touch .analytics-place b{font-size:14px}.mode-touch .analytics-place span{font-size:13px}
-@media (max-width:700px){.analytics-kpis,.analytics-grid{grid-template-columns:1fr}.analytics-wide{grid-column:auto}.analytics-inner{padding:30px 16px}.analytics-kpi{min-height:80px}.analytics-close{right:10px;top:10px}}
+.mode-touch #analytics{padding:16px}.mode-touch .analytics-inner{padding:28px 20px}.mode-touch .analytics-inner h2{font-size:25px}.mode-touch .analytics-kpi{min-height:110px}.mode-touch .analytics-card h3{font-size:17px}.mode-touch .analytics-bar-head,.mode-touch .analytics-place b{font-size:14px}.mode-touch .analytics-place span{font-size:13px}.mode-touch .analytics-actions button{width:46px;height:46px}
+@media (max-width:700px){.analytics-kpis,.analytics-grid{grid-template-columns:1fr}.analytics-wide{grid-column:auto}.analytics-inner{padding:30px 16px}.analytics-kpi{min-height:80px}.analytics-actions{right:10px;top:10px}}
 
 /* ── Aanklikbare graafitems ─────────────────────────────────────────────
    Een titel die ergens heen leidt moet er ook zo uitzien. */
