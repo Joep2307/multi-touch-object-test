@@ -11,106 +11,143 @@
 
 <canvas id="c"></canvas>
 
-<div class="panel collapsed" id="controls">
-  <p class="stamp mono" id="buildStamp" title="Wanneer de bestanden van deze pagina voor het laatst zijn gewijzigd, en hoe laat deze pagina is geladen.">bijgewerkt …</p>
-  <div class="head" id="ctrlHead"><h1>Participatietafel</h1><span class="chev mono" id="chev">SHOW</span></div>
-  <div class="mode-switch" aria-label="Bediening kiezen">
-    <button id="modeTouch" type="button">Touchscreen</button>
-    <button id="modeLaptop" type="button">Laptop</button>
+<!-- Twee menuknoppen, diagonaal tegenover elkaar. Aan een tafel waar mensen
+     omheen staan is elk paneel dat blijft staan in de weg: het ligt over de
+     kaart en het staat voor de helft van het gezelschap op zijn kop. Alles wat
+     niet op elk moment nodig is — de teller, de laatste markeringen, de
+     kaartlagen en de instellingen — zit daarom achter deze knop, en die staat
+     er twee keer zodat beide lange zijden er één binnen handbereik hebben. -->
+<button class="panel menu-btn" id="btnMenuA" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M4 7h16M4 12h16M4 17h16"/>
+  </svg>
+</button>
+<button class="panel menu-btn" id="btnMenuB" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M4 7h16M4 12h16M4 17h16"/>
+  </svg>
+</button>
+
+<div class="panel" id="menu" role="dialog" aria-label="Menu">
+  <div class="menu-head">
+    <h1>Participatietafel</h1>
+    <button id="menuClose" type="button" aria-label="Sluiten">&times;</button>
   </div>
-  <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening">
-    <button id="btnScaleDown" type="button" aria-label="Bediening kleiner">&minus;</button>
-    <span class="scale-val mono" id="scaleVal" aria-live="polite">100%</span>
-    <button id="btnScaleUp" type="button" aria-label="Bediening groter">+</button>
+
+  <div class="menu-sec" id="tally">
+    <p class="eyebrow">Wat is er gezegd</p>
+    <div id="tallyBody"></div>
+    <div class="total" id="tallyTotal">nog niets vastgelegd</div>
+    <div class="flag" id="flag"></div>
   </div>
-  <p class="hint" id="scaleHint" style="margin:7px 0 0">Alle vensters en knoppen worden groter of kleiner. De kaart blijft op ware grootte.</p>
-  <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button">Twee zijden</button></div>
-  <p class="hint" id="sidesHint" style="margin:7px 0 0">Voor een tafel waar mensen aan weerszijden staan: een pucks-balk aan beide kanten, en vensters draaien naar wie ze opent.</p>
-  <div class="body">
-    <p class="eyebrow">Kaart</p>
-    <div class="row">
-      <button id="btnMove">Kaart verplaatsen</button>
-      <button id="btnLang">EN</button>
-    </div>
-    <div class="row"><button id="btnMoveDots">Dots verplaatsen</button></div>
-    <p class="hint" id="dotsHint" style="margin:0 0 9px">Zet aan en sleep daarna een gekleurde dot naar een andere plek.</p>
-    <label class="field" for="search">Zoek een plek</label>
-    <input id="search" placeholder="Breda, Ginneken…" autocomplete="off">
-    <div class="row" style="margin-top:9px">
-      <button data-go="51.5886,4.7756,15">Centrum</button>
-      <button data-go="51.5975,4.7715,15">Belcrum</button>
-    </div>
-    <div class="row">
-      <button data-go="51.5726,4.7864,15">Ginneken</button>
-      <button data-go="51.6098,4.7813,14">Hoge Vucht</button>
-    </div>
-    <div class="row">
-      <button data-go="51.5866,4.7759,13">Heel Breda</button>
-    </div>
-    <label class="field" for="tiles">Kaartbeeld</label>
-    <select id="tiles">
-      <optgroup label="Algemeen">
-        <option value="osm" selected>OpenStreetMap</option>
-        <option value="brt">Topografie — PDOK</option>
-        <option value="brtgrijs">Grijs — PDOK</option>
-        <option value="brtpastel">Pastel — PDOK</option>
-      </optgroup>
-      <optgroup label="Thema">
-        <option value="groen">Groen &amp; hoogte</option>
-        <option value="bebouwing">Bebouwing</option>
-        <option value="verkeer">Verkeer &amp; fiets</option>
-        <option value="water">Water — PDOK</option>
-        <option value="lucht">Luchtfoto — PDOK</option>
-      </optgroup>
-      <optgroup label="Overig">
-        <option value="dark">Donker (CARTO — API-sleutel nodig)</option>
-        <option value="light">Licht (CARTO — API-sleutel nodig)</option>
-        <option value="none">Geen — alleen raster</option>
-      </optgroup>
-    </select>
 
-    <div class="row" style="margin-top:9px">
-      <button id="btnBake">Kaart offline bewaren</button>
-    </div>
-    <div class="row"><button id="btnUnbake">Bewaarde kaart wissen</button></div>
-    <p class="hint" id="bakeHint">Druk hierop terwijl je internet hebt. Het huidige kaartbeeld wordt opgeslagen en verschijnt daarna ook zonder verbinding.</p>
+  <div class="menu-sec" id="recent">
+    <p class="eyebrow">Laatste markeringen</p>
+    <div id="recentBody"><p class="empty">Nog geen markeringen.</p></div>
+  </div>
 
+  <div class="menu-sec" id="layersMenu" role="group" aria-label="Kaartbeeld kiezen"></div>
 
-    <p class="eyebrow" style="margin-top:20px">Kennisgraaf</p>
-    <div class="row">
-      <button id="btnKg">Graaf tonen</button>
-      <button id="btnKgThemes">Thema's uit graaf</button>
-    </div>
-    <label class="field" for="kgUrl">Adres van de backend</label>
-    <input id="kgUrl" placeholder="leeg = fixtures" autocomplete="off">
-    <p class="hint" id="kgStatus">uit</p>
+  <div class="menu-sec collapsed" id="controls">
+    <div class="head" id="ctrlHead"><h2>Instellingen</h2><span class="chev mono" id="chev">SHOW</span></div>
+    <div class="body">
+      <div class="mode-switch" aria-label="Bediening kiezen">
+        <button id="modeTouch" type="button">Touchscreen</button>
+        <button id="modeLaptop" type="button">Laptop</button>
+      </div>
+      <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening">
+        <button id="btnScaleDown" type="button" aria-label="Bediening kleiner">&minus;</button>
+        <span class="scale-val mono" id="scaleVal" aria-live="polite">100%</span>
+        <button id="btnScaleUp" type="button" aria-label="Bediening groter">+</button>
+      </div>
+      <p class="hint" id="scaleHint" style="margin:7px 0 0">Vensters en knoppen; de kaart blijft op ware grootte.</p>
+      <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button">Twee zijden</button></div>
+      <p class="hint" id="sidesHint" style="margin:7px 0 0">Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.</p>
 
-    <p class="eyebrow" style="margin-top:20px">Sessie</p>
-    <label class="field" for="sess">Naam van de sessie</label>
-    <input id="sess" value="sessie-01">
-    <div class="row" style="margin-top:9px">
-      <button id="btnGeo">Export GeoJSON</button>
-      <button id="btnCsv">Export CSV</button>
-    </div>
-    <div class="row"><button id="btnWipe" class="danger">Alles wissen</button></div>
+      <p class="eyebrow" style="margin-top:20px">Kaart</p>
+      <div class="row">
+        <button id="btnMove">Kaart verplaatsen</button>
+        <button id="btnLang">EN</button>
+      </div>
+      <div class="row"><button id="btnMoveDots">Dots verplaatsen</button></div>
+      <p class="hint" id="dotsHint" style="margin:0 0 9px">Zet aan en sleep dan een dot.</p>
+      <label class="field" for="search">Zoek een plek</label>
+      <input id="search" placeholder="Breda, Ginneken…" autocomplete="off">
+      <div class="row" style="margin-top:9px">
+        <button data-go="51.5886,4.7756,15">Centrum</button>
+        <button data-go="51.5975,4.7715,15">Belcrum</button>
+      </div>
+      <div class="row">
+        <button data-go="51.5726,4.7864,15">Ginneken</button>
+        <button data-go="51.6098,4.7813,14">Hoge Vucht</button>
+      </div>
+      <div class="row">
+        <button data-go="51.5866,4.7759,13">Heel Breda</button>
+      </div>
+      <label class="field" for="tiles">Kaartbeeld</label>
+      <select id="tiles">
+        <optgroup label="Algemeen">
+          <option value="osm" selected>OpenStreetMap</option>
+          <option value="brt">Topografie — PDOK</option>
+          <option value="brtgrijs">Grijs — PDOK</option>
+          <option value="brtpastel">Pastel — PDOK</option>
+        </optgroup>
+        <optgroup label="Thema">
+          <option value="groen">Groen &amp; hoogte</option>
+          <option value="bebouwing">Bebouwing</option>
+          <option value="verkeer">Verkeer &amp; fiets</option>
+          <option value="water">Water — PDOK</option>
+          <option value="lucht">Luchtfoto — PDOK</option>
+        </optgroup>
+        <optgroup label="Overig">
+          <option value="dark">Donker (CARTO — API-sleutel nodig)</option>
+          <option value="light">Licht (CARTO — API-sleutel nodig)</option>
+          <option value="none">Geen — alleen raster</option>
+        </optgroup>
+      </select>
 
-    <p class="eyebrow" style="margin-top:20px">Simulatie</p>
-    <div class="row">
-      <button id="btnSim" class="on">Puck simuleren</button>
-      <button id="btnDebug">Touch debug</button>
-    </div>
-    <label class="field" for="tol">Ratio-tolerantie <span id="tolVal" class="mono">0.060</span></label>
-    <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
-    <label class="field" for="diag">Schermdiagonaal (inch)</label>
-    <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
+      <div class="row" style="margin-top:9px">
+        <button id="btnBake">Kaart offline bewaren</button>
+      </div>
+      <div class="row"><button id="btnUnbake">Bewaarde kaart wissen</button></div>
+      <p class="hint" id="bakeHint">Druk hierop mét internet; daarna werkt dit kaartbeeld ook offline.</p>
 
-    <p class="eyebrow" style="margin-top:20px">Fysieke pucks</p>
-    <div class="row"><button id="btnLearn">Puck inlezen</button></div>
-    <div class="row">
-      <button id="btnSheet">Bouwtekening</button>
-      <button id="btnExport">Config exporteren</button>
+      <p class="eyebrow" style="margin-top:20px">Kennisgraaf</p>
+      <div class="row">
+        <button id="btnKg">Graaf tonen</button>
+        <button id="btnKgThemes">Thema's uit graaf</button>
+      </div>
+      <label class="field" for="kgUrl">Adres van de backend</label>
+      <input id="kgUrl" placeholder="leeg = fixtures" autocomplete="off">
+      <p class="hint" id="kgStatus">uit</p>
+
+      <p class="eyebrow" style="margin-top:20px">Sessie</p>
+      <label class="field" for="sess">Naam van de sessie</label>
+      <input id="sess" value="sessie-01">
+      <div class="row" style="margin-top:9px">
+        <button id="btnGeo">Export GeoJSON</button>
+        <button id="btnCsv">Export CSV</button>
+      </div>
+      <div class="row"><button id="btnWipe" class="danger">Alles wissen</button></div>
+
+      <p class="eyebrow" style="margin-top:20px">Simulatie</p>
+      <div class="row">
+        <button id="btnSim" class="on">Puck simuleren</button>
+        <button id="btnDebug">Touch debug</button>
+      </div>
+      <label class="field" for="tol">Ratio-tolerantie <span id="tolVal" class="mono">0.060</span></label>
+      <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
+      <label class="field" for="diag">Schermdiagonaal (inch)</label>
+      <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
+
+      <p class="eyebrow" style="margin-top:20px">Fysieke pucks</p>
+      <div class="row"><button id="btnLearn">Puck inlezen</button></div>
+      <div class="row">
+        <button id="btnSheet">Bouwtekening</button>
+        <button id="btnExport">Config exporteren</button>
+      </div>
+      <p class="hint" id="learnHint">Leg één puck stil op het scherm en druk op <b>Puck inlezen</b>.</p>
     </div>
-    <p class="hint" id="learnHint">Leg één puck op het scherm, houd hem stil en druk op <b>Puck inlezen</b>.</p>
   </div>
 </div>
 
@@ -118,10 +155,7 @@
      op zijn kop, zodat hij leesbaar is voor wie aan de overkant staat. -->
 <div class="panel dock" id="puckDockTop">
   <div class="puck-dock-head">
-    <div>
-      <p class="eyebrow">Pucks</p>
-      <p class="hint puck-hint">Sleep een puck op de tafel. Draai hem om het thema te kiezen, ook na het vastleggen.</p>
-    </div>
+    <p class="hint puck-hint"></p>
     <button class="danger btn-clear">Deselecteren</button>
   </div>
   <div class="tray row"></div>
@@ -129,39 +163,14 @@
 
 <div class="panel dock" id="puckDock">
   <div class="puck-dock-head">
-    <div>
-      <p class="eyebrow">Pucks</p>
-      <p class="hint puck-hint">Sleep een puck op de tafel. Draai hem om het thema te kiezen, ook na het vastleggen.</p>
-    </div>
+    <p class="hint puck-hint"></p>
     <button class="danger btn-clear">Deselecteren</button>
   </div>
   <div class="tray row"></div>
 </div>
 
-<div class="panel" id="tally">
-  <p class="eyebrow">Wat is er gezegd</p>
-  <div id="tallyBody"></div>
-  <div class="total" id="tallyTotal">nog niets vastgelegd</div>
-  <div class="flag" id="flag"></div>
-</div>
-
-<button class="panel" id="btnLayers" type="button" aria-label="Kaartlagen" aria-expanded="false">
-  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-    <path d="M12 2.8 2.6 7.6 12 12.4l9.4-4.8L12 2.8Z"/>
-    <path d="M5.2 11 2.6 12.3 12 17.1l9.4-4.8L18.8 11"/>
-    <path d="M5.2 15.4 2.6 16.7 12 21.5l9.4-4.8-2.6-1.3"/>
-  </svg>
-</button>
-
-<div class="panel" id="layersMenu" role="group" aria-label="Kaartbeeld kiezen"></div>
-
 <div class="panel" id="zoom">
   <button id="zIn">+</button><button id="zOut">−</button>
-</div>
-
-<div class="panel" id="recent">
-  <p class="eyebrow">Laatste markeringen</p>
-  <div id="recentBody"><p class="empty">Leg een puck op een plek en houd hem stil om die plek vast te leggen.</p></div>
 </div>
 
 <div class="panel" id="kgInfo">

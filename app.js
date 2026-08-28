@@ -27,16 +27,16 @@ const L = {
        move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
        confirmTouch:"Tik om vast te leggen", confirmMouse:"Klik om vast te leggen",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
-       touchHint:"Sleep met één vinger. Draai met twee vingers naar het juiste thema en tik daarna op de puck om vast te leggen. Draaien blijft het thema aanpassen.",
-       laptopHint:"Sleep met de muis. Draai naar het juiste thema met Shift + slepen of het scrollwiel en klik daarna op de puck om vast te leggen. Draaien blijft het thema aanpassen.",
+       touchHint:"Sleep met één vinger, draai met twee voor het thema, tik om vast te leggen.",
+       laptopHint:"Sleep met de muis, draai met Shift of het scrollwiel, klik om vast te leggen.",
        noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door." },
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
        topics:["Safety","Traffic","Green","Waste","Social","Other"],
        move:"Freeze map", locked:"Map is frozen", placed:"Marked",
        confirmTouch:"Tap to confirm", confirmMouse:"Click to confirm",
        moveDots:"Move dots", movingDots:"Finish moving",
-       touchHint:"Drag with one finger. Rotate with two fingers to the right topic, then tap the puck to confirm. Rotating keeps changing the topic afterwards.",
-       laptopHint:"Drag with the mouse. Rotate to the right topic with Shift + drag or the scroll wheel, then click the puck to confirm. Rotating keeps changing the topic afterwards.",
+       touchHint:"Drag with one finger, rotate with two for the topic, tap to confirm.",
+       laptopHint:"Drag with the mouse, rotate with Shift or the wheel, click to confirm.",
        noNet:"No map tiles — check the connection. Marking still works." }
 };
 let lang="nl";
@@ -453,7 +453,10 @@ function endTrayDrag(e){
   // Drop where released; if that's still under a panel, slide it toward the middle
   // until it clears, so the puck actually lands somewhere visible on the table.
   let x=e.clientX, y=e.clientY;
-  const panels=[...document.querySelectorAll(".panel")], M=CFG.ringPX+24;
+  // Alleen panelen die er ook echt liggen: een gesloten menu of venster heeft
+  // een lege rect op 0,0 en zou anders de hele linkerbovenhoek blokkeren.
+  const panels=[...document.querySelectorAll(".panel")]
+    .filter(p=>p.getBoundingClientRect().width>0), M=CFG.ringPX+24;
   const buried=()=>panels.some(p=>{const r=p.getBoundingClientRect();
     return x>=r.left-M&&x<=r.right+M&&y>=r.top-M&&y<=r.bottom+M;});
   for(let i=0;i<400 && buried();i++){ x+=(innerWidth/2-x)*0.05; y+=(innerHeight/2-y)*0.05; }
@@ -1052,7 +1055,7 @@ function updateUI(pucks){
      ${(p.description||p.note)?`<div class="description">${safe(p.description||p.note)}</div>`:""}
      <div class="meta">${vName(p.verdict)} · ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)} · ${p.t.slice(11,16)}</div></div>
      <span class="del" data-id="${p.id}">✕</span></div>`).join("")
-    :`<p class="empty">Leg een puck op een plek en houd hem stil om die plek vast te leggen.</p>`;
+    :`<p class="empty">Nog geen markeringen.</p>`;
   [...document.querySelectorAll(".del")].forEach(b=>b.onclick=()=>{
     const i=pins.findIndex(p=>p.id===b.dataset.id); if(i>=0){pins.splice(i,1);save();}
   });
@@ -1119,8 +1122,10 @@ function showKeyboard(target){
   keyboardTarget=target;
   el("keyboardField").textContent=target.labels?.[0]?.textContent||target.placeholder||"Tekst invoeren";
   renderKeyboard();
-  // Het toetsenbord volgt het venster waar getypt wordt.
-  el("keyboard").classList.toggle("flipped",el("note").classList.contains("flipped"));
+  // Het toetsenbord volgt de kant waar getypt wordt: het menu heeft zijn eigen
+  // leesrichting, een notitievenster die van de puck waar het aan hangt.
+  el("keyboard").classList.toggle("flipped",
+    target.closest("#menu")?menuFlipped():el("note").classList.contains("flipped"));
   el("keyboard").classList.add("visible");
   document.body.classList.add("keyboard-open");
   requestAnimationFrame(liftEditorAboveKeyboard);
@@ -1213,8 +1218,8 @@ function stepScale(step){
 el("btnScaleDown").onclick=()=>stepScale(-1);
 el("btnScaleUp").onclick=()=>stepScale(1);
 
-el("modeTouch").onclick=()=>applyMode("touch");
-el("modeLaptop").onclick=()=>applyMode("laptop");
+el("modeTouch").onclick=()=>{applyMode("touch");reorientMenu();};
+el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();};
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
 el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",debugMode);};
 [...document.querySelectorAll(".btn-clear")].forEach(b=>b.onclick=clearPucks);
@@ -1324,7 +1329,7 @@ function applySides(){
   el("btnSides").setAttribute("aria-pressed",String(twoSided));
   try{ localStorage.setItem("pucktable-two-sided",twoSided?"1":"0"); }catch(e){}
 }
-el("btnSides").onclick=()=>{ twoSided=!twoSided; applySides(); };
+el("btnSides").onclick=()=>{ twoSided=!twoSided; applySides(); reorientMenu(); };
 applySides();
 
 /* Staat de aanraking in de bovenste helft, dan staat de persoon aan die kant
@@ -1380,7 +1385,7 @@ function buildLayerMenu(){
 
   const note=document.createElement("p");
   note.className="hint"; note.style.margin="6px 0 0";
-  note.textContent="Warmtekaart over de kennisgraaf: rood waar niets is vastgelegd.";
+  note.textContent="Rood waar niets is vastgelegd.";
   box.appendChild(note);
 
   const mapHead=document.createElement("p");
@@ -1405,25 +1410,59 @@ function markLayerMenu(){
   const g=el("btnGaps");
   if(g){ g.classList.toggle("on",kg.gaps); g.setAttribute("aria-pressed",String(kg.gaps)); }
 }
-function openLayers(){
-  el("layersMenu").style.display="block";
-  el("btnLayers").classList.add("on");
-  el("btnLayers").setAttribute("aria-expanded","true");
+/* ── Menu ───────────────────────────────────────────────────────────────
+   Aan een tafel waar mensen omheen staan is elk paneel dat blijft staan in de
+   weg: het ligt over de kaart, het staat voor de helft van het gezelschap op
+   zijn kop, en het vraagt aandacht die naar de kaart hoort. Wat je niet op
+   elk moment nodig hebt — de teller, de laatste markeringen, het kaartbeeld
+   en de instellingen — zit daarom achter één knop.
+
+   Die knop staat er twee keer, diagonaal tegenover elkaar, zodat beide lange
+   zijden er één binnen handbereik hebben. Er is maar één menu; het verhuist
+   naar de knop die is ingedrukt en draait, net als het notitievenster, mee
+   met de leesrichting van die kant. */
+let menuSide=null;                                    // "a" | "b" | null
+const menuFlipped=()=>menuSide==="b"&&sidesActive();
+function openMenu(side){
+  menuSide=side;
+  const m=el("menu");
+  m.classList.toggle("at-a",side==="a");
+  m.classList.toggle("at-b",side==="b");
+  m.classList.toggle("flipped",menuFlipped());
+  m.classList.add("open");
+  [["btnMenuA","a"],["btnMenuB","b"]].forEach(([id,value])=>{
+    const mine=value===side;
+    el(id).classList.toggle("on",mine);
+    el(id).setAttribute("aria-expanded",String(mine));
+  });
   markLayerMenu();
 }
-function closeLayers(){
-  el("layersMenu").style.display="none";
-  el("btnLayers").classList.remove("on");
-  el("btnLayers").setAttribute("aria-expanded","false");
+function closeMenu(){
+  if(!menuSide) return;
+  menuSide=null;
+  el("menu").classList.remove("open");
+  ["btnMenuA","btnMenuB"].forEach(id=>{
+    el(id).classList.remove("on");
+    el(id).setAttribute("aria-expanded","false");
+  });
+  // Getypt werd er in een veld dat nu weg is; het toetsenbord hoort mee.
+  if(keyboardTarget&&keyboardTarget.closest("#menu")) hideKeyboard(true);
 }
-el("btnLayers").onclick=()=>{
-  el("layersMenu").style.display==="block"?closeLayers():openLayers();
-};
-// Naast het menu tikken sluit het; erin tikken uiteraard niet.
+/* Een gekozen kaartbeeld sluit het hele menu: de keuze is gemaakt en de tafel
+   hoort weer leeg te zijn. */
+function closeLayers(){ closeMenu(); }
+/* Wisselt de leesrichting terwijl het menu openstaat, dan gaat het niet dicht
+   maar draait het mee. */
+const reorientMenu=()=>{ if(menuSide) openMenu(menuSide); };
+el("btnMenuA").onclick=()=>menuSide==="a"?closeMenu():openMenu("a");
+el("btnMenuB").onclick=()=>menuSide==="b"?closeMenu():openMenu("b");
+el("menuClose").onclick=closeMenu;
+// Naast het menu tikken sluit het; erin tikken uiteraard niet, en het
+// schermtoetsenbord hoort erbij zolang er in een veld getypt wordt.
 addEventListener("pointerdown",e=>{
-  if(el("layersMenu").style.display!=="block") return;
-  if(e.target.closest("#layersMenu")||e.target.closest("#btnLayers")) return;
-  closeLayers();
+  if(!menuSide) return;
+  if(e.target.closest("#menu")||e.target.closest(".menu-btn")||e.target.closest("#keyboard")) return;
+  closeMenu();
 });
 buildLayerMenu();
 el("sess").onchange=restore;
@@ -1506,7 +1545,7 @@ el("sheet").addEventListener("pointerdown",e=>{ if(e.target===el("sheet")) close
 addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
   if(el("sheet").style.display==="block"){ closeSheet(); return; }
-  if(el("layersMenu").style.display==="block"){ closeLayers(); return; }
+  if(menuSide){ closeMenu(); return; }
   if(el("note").style.display==="block"){ closeNote(); return; }
   closeKgInfo();
 });

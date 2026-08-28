@@ -34,14 +34,45 @@ button:disabled:hover{border-color:var(--line);background:#151b24}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim);
   font-family:'JetBrains Mono',ui-monospace,monospace;margin:0 0 10px}
-#controls{top:18px;left:18px;width:294px;max-height:calc(100vh - 36px);overflow:auto}
+/* ── Menu: alles wat niet continu nodig is ──────────────────────────────
+   Een tafel ligt plat en er staan mensen omheen. Elk paneel dat blijft staan
+   ligt dus over de kaart en staat voor de helft van het gezelschap op zijn
+   kop. De teller, de laatste markeringen, de kaartlagen en de instellingen
+   zitten daarom achter één knop. Die knop staat er twee keer, diagonaal
+   tegenover elkaar, zodat beide lange zijden er één binnen handbereik
+   hebben; het menu opent bij de ingedrukte knop en in de leesrichting van
+   die kant. */
+.menu-btn{left:auto;right:auto;width:52px;height:52px;padding:0;flex:none;
+  display:flex;align-items:center;justify-content:center;color:var(--ink);z-index:30}
+.menu-btn svg{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.menu-btn.on{color:#cfe0ff;border-color:var(--accent);background:rgba(61,123,255,.16)}
+#btnMenuA{left:18px;bottom:18px}
+#btnMenuB{right:18px;top:18px;display:none}
+body.mode-touch #btnMenuB{display:flex}
+/* Voor wie aan de overkant staat leest de knop — en straks het menu — pas
+   rechtop als hij een halve slag om is. */
+body.two-sided #btnMenuB{transform:rotate(180deg)}
+.mode-touch .menu-btn{width:60px;height:60px}
+
+#menu{display:none;width:320px;max-height:calc(100vh - 112px);overflow-y:auto;z-index:31}
+#menu.open{display:block}
+#menu.at-a{left:18px;bottom:86px}
+#menu.at-b{right:18px;top:86px}
+#menu.flipped{transform:rotate(180deg);transform-origin:50% 50%}
+.menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.menu-head h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
+#menuClose{flex:none;width:34px;height:34px;padding:0;font-size:19px;line-height:1;border-radius:9px}
+/* Eén scheidingslijn per onderdeel; koppen dragen de rest. */
+.menu-sec{border-top:1px solid var(--line);padding-top:15px;margin-top:15px}
+.menu-head+.menu-sec{border-top:0;padding-top:0;margin-top:0}
 #controls.collapsed .body{display:none}
+#controls .head h2{margin:0}
 .stamp{margin:0 0 7px;font-size:10px;line-height:1.3;color:var(--ink-dim);opacity:.75;
   letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
-.head h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
+.head h1,.head h2{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
 .head .chev{color:var(--ink-dim);font-size:11px}
-.mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:12px;padding:3px;
+.mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;
   border:1px solid var(--line);border-radius:11px;background:rgba(7,9,12,.65)}
 .mode-switch button{padding:8px 7px;border:0;background:transparent;color:var(--ink-dim);border-radius:7px}
 .mode-switch button.active{background:#253044;color:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25)}
@@ -65,14 +96,12 @@ textarea{resize:none;line-height:1.5;min-height:88px}
 input[type=range]{padding:0;accent-color:var(--accent);border:none;background:none}
 .hint{font-size:11px;line-height:1.55;color:var(--ink-dim);margin:12px 0 0}
 .hint b{color:var(--ink);font-weight:500}
-#tally{top:18px;right:18px;width:236px}
 .tal{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13px}
 .tal i{width:9px;height:9px;border-radius:50%;flex:none}
 .tal .n{margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:15px;font-weight:500}
 #tally .total{border-top:1px solid var(--line);margin-top:8px;padding-top:9px;
   font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--ink-dim)}
 #tally .flag{margin-top:9px;font-size:11px;color:var(--warn);display:none;line-height:1.5}
-#recent{bottom:18px;right:18px;width:290px;max-height:42vh;overflow:auto}
 .pin{font-size:12px;line-height:1.45;padding:8px 0;border-bottom:1px solid var(--line);
   display:flex;gap:9px;align-items:flex-start}
 .pin:last-child{border-bottom:none}
@@ -92,9 +121,8 @@ body.two-sided #puckDockTop{display:block}
    er maar één kijkrichting, dus daar bestaat de keuze niet eens. */
 body:not(.mode-touch) #sidesRow,
 body:not(.mode-touch) #sidesHint{display:none}
-.puck-dock-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
-.puck-dock-head .eyebrow{margin-bottom:4px}
-.puck-dock-head .hint{margin:0;line-height:1.35;max-width:190px}
+.puck-dock-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
+.puck-dock-head .hint{margin:0;line-height:1.35;flex:1;min-width:0}
 .puck-dock-head #btnClear{flex:none;width:auto;padding:7px 9px;font-size:10px}
 #trayPucks{gap:10px}
 #puckDock #trayPucks{justify-content:center;margin:0;flex-wrap:nowrap}
@@ -165,7 +193,7 @@ body:not(.mode-touch) #sidesHint{display:none}
 #sheet .inner{position:relative}
 #closeSheetTop{position:sticky;top:0;float:right;width:38px;height:38px;padding:0;
   font-size:20px;line-height:1;border-radius:10px;z-index:1}
-.mode-touch #controls{width:310px}
+.mode-touch #menu{width:350px}
 .mode-touch .dock{width:370px}
 .mode-touch button{min-height:44px;font-size:13px}
 .mode-touch .mode-switch button{min-height:40px}
@@ -218,23 +246,15 @@ body.keyboard-open #note{z-index:45}
    elke veeg daar een kaartgebaar of een puck is; in een paneel moet een
    verticale veeg juist gewoon scrollen. overscroll-behavior houdt die veeg
    binnen het paneel zodra het einde bereikt is. */
-#note,#controls,#recent,#tally,#sheet{touch-action:pan-y;overscroll-behavior:contain;
+#note,#menu,#sheet{touch-action:pan-y;overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch}
 #note{max-height:calc(100vh - 24px);overflow-y:auto}
 #noteAnswer .kg-h{display:inline-block;margin-top:6px;color:#fff;font-weight:700}
 #noteAnswer .kg-li::before{content:"• ";color:rgba(122,162,247,.8)}
 
-/* ── Kaartlagen linksonder ──────────────────────────────────────────────
-   Het kaartbeeld zat verstopt in het ingeklapte bedieningspaneel. Aan een
-   tafel waar mensen omheen staan hoort zo'n keuze binnen handbereik, dus
-   staat hij nu als eigen knop in de hoek. */
-#btnLayers{left:18px;bottom:18px;width:52px;height:52px;padding:0;flex:none;
-  display:flex;align-items:center;justify-content:center;color:var(--ink)}
-#btnLayers svg{fill:none;stroke:currentColor;stroke-width:1.5;
-  stroke-linejoin:round;stroke-linecap:round}
-#btnLayers.on{color:#cfe0ff}
-#layersMenu{left:18px;bottom:82px;width:242px;max-height:min(60vh,460px);
-  overflow-y:auto;display:none;touch-action:pan-y;overscroll-behavior:contain}
+/* ── Kaartlagen ─────────────────────────────────────────────────────────
+   Als eerste keuze in het menu: het kaartbeeld wisselt vaker dan wat dan ook
+   in de instellingen eronder. */
 #layersMenu .eyebrow{margin:16px 0 8px}
 #layersMenu .eyebrow:first-child{margin-top:0}
 #layersMenu .hint{font-size:10.5px;line-height:1.45}
