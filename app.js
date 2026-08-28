@@ -1572,3 +1572,33 @@ el("btnUnbake").onclick=()=>{
 };
 
 resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); frame();
+
+/* ---- Bijgewerkt-stempel -------------------------------------------------
+   Klein regeltje boven "Participatietafel": wanneer de bestanden van deze
+   pagina voor het laatst zijn gewijzigd, en hoe laat deze pagina is geladen.
+   Zo is te zien of een verversing de nieuwe versie heeft opgepikt. De tijd
+   van wijzigen komt uit de Last-Modified-header van de bestanden; levert de
+   server die niet, dan valt hij terug op document.lastModified. */
+const STAMP_FILES=["./index.html","./app.js","./styles.css","./kg.js"];
+function stampDate(d){
+  return d.toLocaleString("nl-NL",{day:"2-digit",month:"2-digit",year:"numeric",
+                                   hour:"2-digit",minute:"2-digit"});
+}
+async function showBuildStamp(){
+  const node=el("buildStamp"); if(!node) return;
+  const loaded=new Date();
+  let newest=new Date(document.lastModified);
+  if(isNaN(newest.getTime())) newest=null;
+  await Promise.all(STAMP_FILES.map(async(u)=>{
+    try{
+      const r=await fetch(u+"?stamp="+Date.now(),{method:"HEAD",cache:"no-store"});
+      const h=r.headers.get("last-modified"); if(!h) return;
+      const d=new Date(h);
+      if(isNaN(d.getTime())) return;
+      if(!newest||d>newest) newest=d;
+    }catch(e){}
+  }));
+  const geladen=loaded.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+  node.textContent=(newest?"bijgewerkt "+stampDate(newest):"bijgewerkt onbekend")+" · geladen "+geladen;
+}
+showBuildStamp();
