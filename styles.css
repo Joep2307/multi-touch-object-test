@@ -36,6 +36,8 @@ button:disabled:hover{border-color:var(--line);background:#151b24}
   font-family:'JetBrains Mono',ui-monospace,monospace;margin:0 0 10px}
 #controls{top:18px;left:18px;width:294px;max-height:calc(100vh - 36px);overflow:auto}
 #controls.collapsed .body{display:none}
+.stamp{margin:0 0 7px;font-size:10px;line-height:1.3;color:var(--ink-dim);opacity:.75;
+  letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
 .head h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
 .head .chev{color:var(--ink-dim);font-size:11px}
