@@ -75,7 +75,7 @@ button:disabled:hover{border-color:var(--line);background:#151b24}
 #btnSetA{left:82px;bottom:18px}
 #btnMapB{right:18px;top:18px;display:none}
 #btnSetB{right:82px;top:18px;display:none}
-body.mode-touch #btnMapB,body.mode-touch #btnSetB{display:flex}
+body.mode-touch.two-sided #btnMapB,body.mode-touch.two-sided #btnSetB{display:flex}
 /* Voor wie aan de overkant staat leest de knop — en straks het menu — pas
    rechtop als hij een halve slag om is. */
 body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}

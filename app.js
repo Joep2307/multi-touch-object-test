@@ -727,17 +727,17 @@ function clearPucks(){
 }
 let trayDrag=null;
 function moveGhost(e){
-  if(!trayDrag) return;
+  if(!trayDrag||e.pointerId!==trayDrag.pointerId) return;
   trayDrag.ghost.style.left=(e.clientX/uiScale-27)+"px";
   trayDrag.ghost.style.top=(e.clientY/uiScale-27)+"px";
 }
 function endTrayDrag(e){
-  if(!trayDrag) return;
+  if(!trayDrag||e.pointerId!==trayDrag.pointerId) return;
   const {tpl,ghost,node,x0,y0}=trayDrag;
   ghost.remove();
-  node.removeEventListener("pointermove",moveGhost);
-  node.removeEventListener("pointerup",endTrayDrag);
-  node.removeEventListener("pointercancel",endTrayDrag);
+  removeEventListener("pointermove",moveGhost);
+  removeEventListener("pointerup",endTrayDrag);
+  removeEventListener("pointercancel",endTrayDrag);
   trayDrag=null;
   if(simPucks.some(s=>s.tpl.id===tpl.id)) return;
   if(Math.hypot(e.clientX-x0,e.clientY-y0)<24) return;     // a tap, not a drag — ignore
@@ -765,12 +765,14 @@ function onTrayDown(e){
   const ghost=node.cloneNode(true);
   ghost.style.cssText="position:fixed;z-index:60;margin:0;pointer-events:none;opacity:.9;zoom:"+uiScale;
   document.body.appendChild(ghost);
-  trayDrag={tpl,ghost,node,x0:e.clientX,y0:e.clientY};
+  trayDrag={tpl,ghost,node,pointerId:e.pointerId,x0:e.clientX,y0:e.clientY};
   moveGhost(e);
-  node.setPointerCapture(e.pointerId);
-  node.addEventListener("pointermove",moveGhost);
-  node.addEventListener("pointerup",endTrayDrag);
-  node.addEventListener("pointercancel",endTrayDrag);
+  // Luister op het venster: sommige touchscreens sturen het loslaten naar het
+  // canvas zodra de vinger de puck-balk verlaat. Dan bleef voorheen alleen de
+  // sleepkopie hangen en werd er geen puck geplaatst.
+  addEventListener("pointermove",moveGhost);
+  addEventListener("pointerup",endTrayDrag);
+  addEventListener("pointercancel",endTrayDrag);
 }
 
 function simPads(){
@@ -2244,7 +2246,10 @@ function closeMenu(){
 function closeLayers(){ closeMenu(); }
 /* Wisselt de leesrichting terwijl het menu openstaat, dan gaat het niet dicht
    maar draait het mee. */
-const reorientMenu=()=>{ if(menuSide) openMenu(menuSide,menuView); };
+const reorientMenu=()=>{
+  if(!menuSide) return;
+  openMenu(menuSide==="b"&&!sidesActive()?"a":menuSide,menuView);
+};
 /* Dezelfde knop nog eens indrukken sluit het menu; de andere knop van hetzelfde
    paar wisselt van inhoud zonder dat het venster tussendoor dichtgaat. */
 MENU_BTNS.forEach(([id,side,view])=>{
