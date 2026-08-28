@@ -44,27 +44,58 @@ button:disabled:hover{border-color:var(--line);background:#151b24}
    die kant. */
 .menu-btn{left:auto;right:auto;width:52px;height:52px;padding:0;flex:none;
   display:flex;align-items:center;justify-content:center;color:var(--ink);z-index:30}
-.menu-btn svg{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.menu-btn svg{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .menu-btn.on{color:#cfe0ff;border-color:var(--accent);background:rgba(61,123,255,.16)}
-#btnMenuA{left:18px;bottom:18px}
-#btnMenuB{right:18px;top:18px;display:none}
-body.mode-touch #btnMenuB{display:flex}
+/* Per hoek twee knoppen: links de kaart, rechts de instellingen. Aan kant B
+   staat het paar gespiegeld, zodat het voor wie daar staat — na de halve slag
+   — in dezelfde volgorde ligt als aan kant A. */
+#btnMapA{left:18px;bottom:18px}
+#btnSetA{left:82px;bottom:18px}
+#btnMapB{right:18px;top:18px;display:none}
+#btnSetB{right:82px;top:18px;display:none}
+body.mode-touch #btnMapB,body.mode-touch #btnSetB{display:flex}
 /* Voor wie aan de overkant staat leest de knop — en straks het menu — pas
    rechtop als hij een halve slag om is. */
-body.two-sided #btnMenuB{transform:rotate(180deg)}
+body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}
 .mode-touch .menu-btn{width:60px;height:60px}
+.mode-touch #btnSetA{left:90px}
+.mode-touch #btnSetB{right:90px}
 
 #menu{display:none;width:320px;max-height:calc(100vh - 112px);overflow-y:auto;z-index:31}
 #menu.open{display:block}
 #menu.at-a{left:18px;bottom:86px}
 #menu.at-b{right:18px;top:86px}
+.mode-touch #menu{max-height:calc(100vh - 128px)}
+.mode-touch #menu.at-a{bottom:94px}
+.mode-touch #menu.at-b{top:94px}
 #menu.flipped{transform:rotate(180deg);transform-origin:50% 50%}
 .menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
-.menu-head h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
+.menu-head h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Taalknop boven in het menu. Twee vakjes in plaats van één wisselknop:
+   aan een tafel waar iemand langsloopt en even meekijkt moet in één blik
+   te zien zijn welke taal aan staat, niet pas na het indrukken. */
+.lang-switch{display:flex;flex:none;gap:2px;padding:2px;border:1px solid var(--line);
+  border-radius:9px;background:rgba(255,255,255,.03)}
+.lang-switch button{padding:5px 9px;min-height:0;border:0;background:transparent;
+  color:var(--ink-dim);border-radius:7px;font-size:11px;font-weight:700;letter-spacing:.06em}
+.lang-switch button[aria-pressed="true"]{background:#253044;color:#fff;
+  box-shadow:0 1px 6px rgba(0,0,0,.25)}
+.mode-touch .lang-switch button{padding:8px 12px;font-size:13px}
 #menuClose{flex:none;width:34px;height:34px;padding:0;font-size:19px;line-height:1;border-radius:9px}
 /* Eén scheidingslijn per onderdeel; koppen dragen de rest. */
 .menu-sec{border-top:1px solid var(--line);padding-top:15px;margin-top:15px}
 .menu-head+.menu-sec{border-top:0;padding-top:0;margin-top:0}
+/* Eén venster, twee inhouden: de kaartknop toont alleen wat over de kaart
+   gaat, de instellingenknop de rest. Zo staat er nooit een lijst voor je
+   waar je doorheen moet scrollen om bij het andere te komen. */
+#menu .menu-sec[data-view]{display:none}
+#menu.view-map .menu-sec[data-view="map"],
+#menu.view-settings .menu-sec[data-view="settings"]{display:block}
+/* Het eerste zichtbare onderdeel hoort geen streep boven zich te hebben. */
+#menu.view-map #layersMenu,#menu.view-settings #tally{border-top:0;padding-top:0;margin-top:0}
+/* De <select> met kaartbeelden is de bron waaruit de knoppenlijst wordt
+   opgebouwd; zichtbaar zou hij dezelfde keuze een tweede keer aanbieden. */
+.src-only{display:none}
 #controls.collapsed .body{display:none}
 #controls .head h2{margin:0}
 .stamp{margin:0 0 7px;font-size:10px;line-height:1.3;color:var(--ink-dim);opacity:.75;
@@ -123,6 +154,7 @@ body:not(.mode-touch) #sidesRow,
 body:not(.mode-touch) #sidesHint{display:none}
 .puck-dock-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
 .puck-dock-head .hint{margin:0;line-height:1.35;flex:1;min-width:0}
+.puck-dock-head .btn-clear{flex:none;width:auto;padding:8px 11px;font-size:11px}
 .puck-dock-head #btnClear{flex:none;width:auto;padding:7px 9px;font-size:10px}
 #trayPucks{gap:10px}
 #puckDock #trayPucks{justify-content:center;margin:0;flex-wrap:nowrap}
@@ -149,6 +181,14 @@ body:not(.mode-touch) #sidesHint{display:none}
   transform:translateY(-50%);pointer-events:none}
 #note.from-left::before{right:100%;transform:translateY(-50%)}
 #note.from-right::before{left:100%;transform:translateY(-50%) rotate(180deg)}
+/* Kop met de draaiknop: één tik zet dit venster (en het toetsenbord) op de
+   kant van wie aan de overkant staat. Alleen zichtbaar als de tafel twee
+   kanten heeft — anders staat er niets om naartoe te draaien. */
+.note-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+#noteFlip{display:none;flex:none;width:34px;height:34px;min-height:0;padding:0;
+  font-size:16px;line-height:1;margin-top:-5px}
+body.two-sided #noteFlip{display:block}
+body.two-sided.mode-touch #noteFlip{width:44px;height:44px;font-size:19px;margin-top:-8px}
 #note input,#note textarea{margin-bottom:2px}
 #note .field{margin-top:10px}
 @keyframes puck-note-out{

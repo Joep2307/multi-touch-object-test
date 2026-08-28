@@ -15,7 +15,9 @@ import { defaultClient } from "@biblio";
 export const kg = {
   enabled: false,      // laag tekenen ja/nee
   useThemes: false,    // thema's van de puck uit de graaf halen
-  status: "uit",       // korte tekst voor het bedieningspaneel
+  status: "uit",       // korte tekst voor het bedieningspaneel (Nederlands, historisch)
+  statusKey: "off",    // dezelfde stand als sleutel, zodat hij te vertalen is
+  statusArgs: [],      // getallen die in die tekst worden ingevuld
   nodes: [],           // alleen de knopen mét coördinaat
   themes: [],          // themalabels uit de graaf
   themeOf: new Map(),  // knoop-id → [thema, …]
@@ -40,6 +42,32 @@ const cellOf = (lat, lon) => Math.floor(lat / CELL_LAT) + "," + Math.floor(lon /
 let onChange = () => {};
 export function onKgChange(fn) { onChange = fn; }
 
+/* ── Taal ────────────────────────────────────────────────────────────────
+   De graaf spreekt op twee plekken zelf: de statusregel in het menu en het
+   soortlabel boven een aangetikt punt. Ze worden hier vertaald in plaats van
+   in app.js, omdat alleen dit bestand weet wanneer ze veranderen. De status
+   bewaart een sleutel in plaats van een zin, zodat een taalwissel achteraf
+   ook een regel raakt die al een tijd op het scherm staat. */
+let kgLang = "nl";
+export function setKgLang(l) { kgLang = l === "en" ? "en" : "nl"; }
+const KL = {
+  nl: { off: "uit", loading: "laden…", unreachable: "niet bereikbaar",
+        noCoords: "graaf zonder coördinaten",
+        counts: (n, m) => `${n} punten · ${m} thema's`,
+        document: "document", entity: "entiteit", theme: "thema" },
+  en: { off: "off", loading: "loading…", unreachable: "unreachable",
+        noCoords: "graph without coordinates",
+        counts: (n, m) => `${n} points · ${m} themes`,
+        document: "document", entity: "entity", theme: "theme" },
+};
+const kl = (k, ...a) => {
+  const v = KL[kgLang][k] !== undefined ? KL[kgLang][k] : KL.nl[k];
+  if (v === undefined) return k;
+  return typeof v === "function" ? v(...a) : v;
+};
+/* De statusregel in de taal van nu. */
+export function kgStatusText() { return kl(kg.statusKey, ...(kg.statusArgs || [])); }
+
 const NODE_COLOR = { document: "#7aa2f7", entity: "#c89bf5" };
 
 /* ── Laden ──────────────────────────────────────────────────────────────
@@ -47,7 +75,7 @@ const NODE_COLOR = { document: "#7aa2f7", entity: "#c89bf5" };
    projecteren. Panning en zoomen raken de data niet. */
 export async function loadKG(baseUrl = "") {
   kg.baseUrl = baseUrl;
-  kg.status = "laden…";
+  kg.statusKey = "loading"; kg.statusArgs = []; kg.status = kgStatusText();
   kg.loaded = false;
   onChange();
   try {
@@ -111,15 +139,15 @@ export async function loadKG(baseUrl = "") {
     heat = null;                                   // veld opnieuw laten bouwen
 
     kg.loaded = true;
-    kg.status = kg.nodes.length
-      ? `${kg.nodes.length} punten · ${kg.themes.length} thema's`
-      : "graaf zonder coördinaten";
+    kg.statusKey = kg.nodes.length ? "counts" : "noCoords";
+    kg.statusArgs = kg.nodes.length ? [kg.nodes.length, kg.themes.length] : [];
+    kg.status = kgStatusText();
   } catch (e) {
     console.warn("[kg] laden mislukt:", e);
     kg.nodes = []; kg.themes = []; kg.loaded = false;
     kg.nodeById = new Map(); kg.linksOf = new Map();
     kg.grid = new Map(); kg.bounds = null;
-    kg.status = "niet bereikbaar";
+    kg.statusKey = "unreachable"; kg.statusArgs = []; kg.status = kgStatusText();
   }
   onChange();
 }
@@ -301,9 +329,8 @@ export function kgAt(MV, x, y) {
   return best;
 }
 
-const TYPE_LABEL = { document: "document", entity: "entiteit", theme: "thema" };
 export function kgDescribe(n) {
-  const bits = [TYPE_LABEL[n.type] || n.type];
+  const bits = [KL[kgLang][n.type] || n.type];
   if (n.etype) bits.push(n.etype);
   if (n.year) bits.push(String(n.year));
   return bits.join(" · ");
@@ -345,9 +372,17 @@ export function formatDistance(m) {
    heeft zit erin: wat er gezegd is, waar, onder welk thema, en welke
    documenten daar in de buurt liggen. */
 export function buildQuestion({ title, description, topic, verdictName, place, near }) {
-  const said = [title, description].filter(Boolean).join(" — ") || "(geen toelichting gegeven)";
+  const said = [title, description].filter(Boolean).join(" — ") || (kgLang === "en" ? "(no explanation given)" : "(geen toelichting gegeven)");
   const docs = near.filter((r) => r.node.type === "document")
                    .map((r) => `"${r.node.label}" (${formatDistance(r.dist)})`);
+  if (kgLang === "en") {
+    return [
+      `At a participation table in Breda, the following was said about ${place}: "${said}".`,
+      `Theme: ${topic}. Nature of the remark: ${verdictName}.`,
+      docs.length ? `Documents in the immediate vicinity: ${docs.join(", ")}.` : "",
+      `Question: what do the policy and the documents say about this place and this theme, and what solution or next step follows from that? Answer briefly and in English, and refer to the documents you base yourself on.`,
+    ].filter(Boolean).join(" ");
+  }
   return [
     `Aan een participatietafel in Breda is bij ${place} het volgende gezegd: "${said}".`,
     `Thema: ${topic}. Aard van de opmerking: ${verdictName}.`,

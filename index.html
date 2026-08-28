@@ -11,142 +11,177 @@
 
 <canvas id="c"></canvas>
 
-<!-- Twee menuknoppen, diagonaal tegenover elkaar. Aan een tafel waar mensen
-     omheen staan is elk paneel dat blijft staan in de weg: het ligt over de
-     kaart en het staat voor de helft van het gezelschap op zijn kop. Alles wat
-     niet op elk moment nodig is — de teller, de laatste markeringen, de
-     kaartlagen en de instellingen — zit daarom achter deze knop, en die staat
-     er twee keer zodat beide lange zijden er één binnen handbereik hebben. -->
-<button class="panel menu-btn" id="btnMenuA" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu">
+<!-- Twee paar menuknoppen, diagonaal tegenover elkaar. Aan een tafel waar
+     mensen omheen staan is elk paneel dat blijft staan in de weg: het ligt
+     over de kaart en het staat voor de helft van het gezelschap op zijn kop.
+     Alles wat niet op elk moment nodig is zit daarom achter deze knoppen, en
+     ze staan er twee keer zodat beide lange zijden ze binnen handbereik
+     hebben. Per hoek zijn het er twee, want de twee dingen die je tijdens een
+     sessie werkelijk pakt — het kaartbeeld en de instellingen — horen niet
+     achter dezelfde tik en dezelfde scroll te zitten. Links de kaart, rechts
+     de instellingen; aan kant B gespiegeld, zodat de volgorde voor wie daar
+     staat hetzelfde leest. -->
+<button class="panel menu-btn" id="btnMapA" type="button" data-side="a" data-view="map"
+        aria-label="Kaart" data-i18n-aria="mapHead" aria-expanded="false" aria-controls="menu">
   <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-    <path d="M4 7h16M4 12h16M4 17h16"/>
+    <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/>
   </svg>
 </button>
-<button class="panel menu-btn" id="btnMenuB" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu">
+<button class="panel menu-btn" id="btnSetA" type="button" data-side="a" data-view="settings"
+        aria-label="Instellingen" data-i18n-aria="settings" aria-expanded="false" aria-controls="menu">
   <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-    <path d="M4 7h16M4 12h16M4 17h16"/>
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+</button>
+
+<button class="panel menu-btn" id="btnMapB" type="button" data-side="b" data-view="map"
+        aria-label="Kaart" data-i18n-aria="mapHead" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/>
+  </svg>
+</button>
+<button class="panel menu-btn" id="btnSetB" type="button" data-side="b" data-view="settings"
+        aria-label="Instellingen" data-i18n-aria="settings" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
   </svg>
 </button>
 
 <div class="panel" id="menu" role="dialog" aria-label="Menu">
   <div class="menu-head">
-    <h1>Participatietafel</h1>
-    <button id="menuClose" type="button" aria-label="Sluiten">&times;</button>
+    <h1 id="menuTitle">Participatietafel</h1>
+    <!-- Taal. De tafel staat op plekken waar niet iedereen Nederlands leest;
+         de knop staat boven in het menu zodat hij bij het openen meteen in
+         beeld is, maar niet permanent over de kaart ligt. -->
+    <div class="lang-switch" id="langSwitch" role="group" aria-label="Taal / Language">
+      <button id="langNl" type="button" lang="nl" aria-pressed="true">NL</button>
+      <button id="langEn" type="button" lang="en" aria-pressed="false">EN</button>
+    </div>
+    <button id="menuClose" type="button" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
   </div>
 
-  <div class="menu-sec" id="tally">
-    <p class="eyebrow">Wat is er gezegd</p>
+  <!-- ── Kaart ─────────────────────────────────────────────────────────
+       Wat je tijdens een sessie aan de kaart doet: welk beeld eronder ligt,
+       hem vastzetten of verschuiven, ergens heen springen, offline bewaren. -->
+  <div class="menu-sec" id="layersMenu" data-view="map" role="group" aria-label="Kaartbeeld kiezen" data-i18n-aria="chooseBasemap"></div>
+
+  <div class="menu-sec" id="mapSec" data-view="map">
+    <p class="eyebrow" data-i18n="mapHead">Kaart</p>
+    <div class="row"><button id="btnMove">Kaart verplaatsen</button></div>
+    <div class="row"><button id="btnMoveDots">Dots verplaatsen</button></div>
+    <p class="hint" id="dotsHint" data-i18n="dotsHint" style="margin:0 0 9px">Zet aan en sleep dan een dot.</p>
+    <label class="field" for="search" data-i18n="searchPlace">Zoek een plek</label>
+    <input id="search" placeholder="Breda, Ginneken…" data-i18n-ph="searchPh" autocomplete="off">
+    <div class="row" style="margin-top:9px">
+      <button data-go="51.5886,4.7756,15">Centrum</button>
+      <button data-go="51.5975,4.7715,15">Belcrum</button>
+    </div>
+    <div class="row">
+      <button data-go="51.5726,4.7864,15">Ginneken</button>
+      <button data-go="51.6098,4.7813,14">Hoge Vucht</button>
+    </div>
+    <div class="row">
+      <button data-go="51.5866,4.7759,13" data-i18n="allBreda">Heel Breda</button>
+    </div>
+    <div class="row" style="margin-top:9px">
+      <button id="btnBake" data-i18n="bake">Kaart offline bewaren</button>
+    </div>
+    <div class="row"><button id="btnUnbake" data-i18n="unbake">Bewaarde kaart wissen</button></div>
+    <p class="hint" id="bakeHint" data-i18n="bakeHint">Druk hierop mét internet; daarna werkt dit kaartbeeld ook offline.</p>
+
+    <!-- Bron van waarheid voor de kaartbeelden: de knoppenlijst hierboven
+         wordt hieruit opgebouwd. Zelf staat hij uit het zicht, anders zou
+         dezelfde keuze twee keer in hetzelfde venster staan. -->
+    <label class="field src-only" for="tiles" data-i18n="basemap">Kaartbeeld</label>
+    <select id="tiles" class="src-only">
+      <optgroup label="Algemeen" data-i18n-label="grpGeneral">
+        <option value="osm" selected data-i18n="tileOsm">OpenStreetMap</option>
+        <option value="brt" data-i18n="tileBrt">Topografie — PDOK</option>
+        <option value="brtgrijs" data-i18n="tileGrijs">Grijs — PDOK</option>
+        <option value="brtpastel" data-i18n="tilePastel">Pastel — PDOK</option>
+      </optgroup>
+      <optgroup label="Thema" data-i18n-label="grpTheme">
+        <option value="groen" data-i18n="tileGroen">Groen &amp; hoogte</option>
+        <option value="bebouwing" data-i18n="tileBebouwing">Bebouwing</option>
+        <option value="verkeer" data-i18n="tileVerkeer">Verkeer &amp; fiets</option>
+        <option value="water" data-i18n="tileWater">Water — PDOK</option>
+        <option value="lucht" data-i18n="tileLucht">Luchtfoto — PDOK</option>
+      </optgroup>
+      <optgroup label="Overig" data-i18n-label="grpOther">
+        <option value="dark" data-i18n="tileDark">Donker (CARTO — API-sleutel nodig)</option>
+        <option value="light" data-i18n="tileLight">Licht (CARTO — API-sleutel nodig)</option>
+        <option value="none" data-i18n="tileNone">Geen — alleen raster</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <!-- ── Instellingen ──────────────────────────────────────────────────
+       De stand van de sessie en alles wat je één keer goedzet. -->
+  <div class="menu-sec" id="tally" data-view="settings">
+    <p class="eyebrow" data-i18n="saidWhat">Wat is er gezegd</p>
     <div id="tallyBody"></div>
     <div class="total" id="tallyTotal">nog niets vastgelegd</div>
     <div class="flag" id="flag"></div>
   </div>
 
-  <div class="menu-sec" id="recent">
-    <p class="eyebrow">Laatste markeringen</p>
-    <div id="recentBody"><p class="empty">Nog geen markeringen.</p></div>
+  <div class="menu-sec" id="recent" data-view="settings">
+    <p class="eyebrow" data-i18n="recentMarks">Laatste markeringen</p>
+    <div id="recentBody"><p class="empty" data-i18n="noMarks">Nog geen markeringen.</p></div>
   </div>
 
-  <div class="menu-sec" id="layersMenu" role="group" aria-label="Kaartbeeld kiezen"></div>
-
-  <div class="menu-sec collapsed" id="controls">
-    <div class="head" id="ctrlHead"><h2>Instellingen</h2><span class="chev mono" id="chev">SHOW</span></div>
+  <div class="menu-sec" id="controls" data-view="settings">
+    <div class="head" id="ctrlHead"><h2 data-i18n="settings">Instellingen</h2><span class="chev mono" id="chev">HIDE</span></div>
     <div class="body">
-      <div class="mode-switch" aria-label="Bediening kiezen">
+      <div class="mode-switch" aria-label="Bediening kiezen" data-i18n-aria="chooseControl">
         <button id="modeTouch" type="button">Touchscreen</button>
         <button id="modeLaptop" type="button">Laptop</button>
       </div>
-      <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening">
-        <button id="btnScaleDown" type="button" aria-label="Bediening kleiner">&minus;</button>
+      <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening" data-i18n-aria="controlSize">
+        <button id="btnScaleDown" type="button" aria-label="Bediening kleiner" data-i18n-aria="smaller">&minus;</button>
         <span class="scale-val mono" id="scaleVal" aria-live="polite">100%</span>
-        <button id="btnScaleUp" type="button" aria-label="Bediening groter">+</button>
+        <button id="btnScaleUp" type="button" aria-label="Bediening groter" data-i18n-aria="larger">+</button>
       </div>
-      <p class="hint" id="scaleHint" style="margin:7px 0 0">Vensters en knoppen; de kaart blijft op ware grootte.</p>
-      <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button">Twee zijden</button></div>
-      <p class="hint" id="sidesHint" style="margin:7px 0 0">Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.</p>
+      <p class="hint" id="scaleHint" data-i18n="scaleHint" style="margin:7px 0 0">Vensters en knoppen; de kaart blijft op ware grootte.</p>
+      <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button" data-i18n="twoSides">Twee zijden</button></div>
+      <p class="hint" id="sidesHint" data-i18n="sidesHint" style="margin:7px 0 0">Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.</p>
 
-      <p class="eyebrow" style="margin-top:20px">Kaart</p>
+      <p class="eyebrow" data-i18n="kgHead" style="margin-top:20px">Kennisgraaf</p>
       <div class="row">
-        <button id="btnMove">Kaart verplaatsen</button>
-        <button id="btnLang">EN</button>
+        <button id="btnKg" data-i18n="kgShow">Graaf tonen</button>
+        <button id="btnKgThemes" data-i18n="kgThemes">Thema's uit graaf</button>
       </div>
-      <div class="row"><button id="btnMoveDots">Dots verplaatsen</button></div>
-      <p class="hint" id="dotsHint" style="margin:0 0 9px">Zet aan en sleep dan een dot.</p>
-      <label class="field" for="search">Zoek een plek</label>
-      <input id="search" placeholder="Breda, Ginneken…" autocomplete="off">
-      <div class="row" style="margin-top:9px">
-        <button data-go="51.5886,4.7756,15">Centrum</button>
-        <button data-go="51.5975,4.7715,15">Belcrum</button>
-      </div>
-      <div class="row">
-        <button data-go="51.5726,4.7864,15">Ginneken</button>
-        <button data-go="51.6098,4.7813,14">Hoge Vucht</button>
-      </div>
-      <div class="row">
-        <button data-go="51.5866,4.7759,13">Heel Breda</button>
-      </div>
-      <label class="field" for="tiles">Kaartbeeld</label>
-      <select id="tiles">
-        <optgroup label="Algemeen">
-          <option value="osm" selected>OpenStreetMap</option>
-          <option value="brt">Topografie — PDOK</option>
-          <option value="brtgrijs">Grijs — PDOK</option>
-          <option value="brtpastel">Pastel — PDOK</option>
-        </optgroup>
-        <optgroup label="Thema">
-          <option value="groen">Groen &amp; hoogte</option>
-          <option value="bebouwing">Bebouwing</option>
-          <option value="verkeer">Verkeer &amp; fiets</option>
-          <option value="water">Water — PDOK</option>
-          <option value="lucht">Luchtfoto — PDOK</option>
-        </optgroup>
-        <optgroup label="Overig">
-          <option value="dark">Donker (CARTO — API-sleutel nodig)</option>
-          <option value="light">Licht (CARTO — API-sleutel nodig)</option>
-          <option value="none">Geen — alleen raster</option>
-        </optgroup>
-      </select>
-
-      <div class="row" style="margin-top:9px">
-        <button id="btnBake">Kaart offline bewaren</button>
-      </div>
-      <div class="row"><button id="btnUnbake">Bewaarde kaart wissen</button></div>
-      <p class="hint" id="bakeHint">Druk hierop mét internet; daarna werkt dit kaartbeeld ook offline.</p>
-
-      <p class="eyebrow" style="margin-top:20px">Kennisgraaf</p>
-      <div class="row">
-        <button id="btnKg">Graaf tonen</button>
-        <button id="btnKgThemes">Thema's uit graaf</button>
-      </div>
-      <label class="field" for="kgUrl">Adres van de backend</label>
-      <input id="kgUrl" placeholder="leeg = fixtures" autocomplete="off">
+      <label class="field" for="kgUrl" data-i18n="kgUrlLabel">Adres van de backend</label>
+      <input id="kgUrl" placeholder="leeg = fixtures" data-i18n-ph="kgUrlPh" autocomplete="off">
       <p class="hint" id="kgStatus">uit</p>
 
-      <p class="eyebrow" style="margin-top:20px">Sessie</p>
-      <label class="field" for="sess">Naam van de sessie</label>
+      <p class="eyebrow" data-i18n="sessionHead" style="margin-top:20px">Sessie</p>
+      <label class="field" for="sess" data-i18n="sessionName">Naam van de sessie</label>
       <input id="sess" value="sessie-01">
       <div class="row" style="margin-top:9px">
         <button id="btnGeo">Export GeoJSON</button>
         <button id="btnCsv">Export CSV</button>
       </div>
-      <div class="row"><button id="btnWipe" class="danger">Alles wissen</button></div>
+      <div class="row"><button id="btnWipe" class="danger" data-i18n="wipe">Alles wissen</button></div>
 
-      <p class="eyebrow" style="margin-top:20px">Simulatie</p>
+      <p class="eyebrow" data-i18n="simulationHead" style="margin-top:20px">Simulatie</p>
       <div class="row">
-        <button id="btnSim" class="on">Puck simuleren</button>
+        <button id="btnSim" class="on" data-i18n="simPuck">Puck simuleren</button>
         <button id="btnDebug">Touch debug</button>
       </div>
-      <label class="field" for="tol">Ratio-tolerantie <span id="tolVal" class="mono">0.060</span></label>
+      <label class="field" for="tol"><span data-i18n="tolLabel">Ratio-tolerantie</span> <span id="tolVal" class="mono">0.060</span></label>
       <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
-      <label class="field" for="diag">Schermdiagonaal (inch)</label>
+      <label class="field" for="diag" data-i18n="diagLabel">Schermdiagonaal (inch)</label>
       <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
 
-      <p class="eyebrow" style="margin-top:20px">Fysieke pucks</p>
-      <div class="row"><button id="btnLearn">Puck inlezen</button></div>
+      <p class="eyebrow" data-i18n="physicalPucks" style="margin-top:20px">Fysieke pucks</p>
+      <div class="row"><button id="btnLearn" data-i18n="learn">Puck inlezen</button></div>
       <div class="row">
-        <button id="btnSheet">Bouwtekening</button>
-        <button id="btnExport">Config exporteren</button>
+        <button id="btnSheet" data-i18n="sheetBtn">Bouwtekening</button>
+        <button id="btnExport" data-i18n="exportCfg">Config exporteren</button>
       </div>
-      <p class="hint" id="learnHint">Leg één puck stil op het scherm en druk op <b>Puck inlezen</b>.</p>
+      <p class="hint" id="learnHint" data-i18n-html="learnHint">Leg één puck stil op het scherm en druk op <b>Puck inlezen</b>.</p>
     </div>
   </div>
 </div>
@@ -156,7 +191,7 @@
 <div class="panel dock" id="puckDockTop">
   <div class="puck-dock-head">
     <p class="hint puck-hint"></p>
-    <button class="danger btn-clear">Deselecteren</button>
+    <button class="danger btn-clear" data-i18n="deselect">Deselecteren</button>
   </div>
   <div class="tray row"></div>
 </div>
@@ -164,7 +199,7 @@
 <div class="panel dock" id="puckDock">
   <div class="puck-dock-head">
     <p class="hint puck-hint"></p>
-    <button class="danger btn-clear">Deselecteren</button>
+    <button class="danger btn-clear" data-i18n="deselect">Deselecteren</button>
   </div>
   <div class="tray row"></div>
 </div>
@@ -178,49 +213,52 @@
   <p class="kg-title" id="kgInfoLabel"></p>
   <div id="kgInfoBody"></div>
   <div class="row" style="margin-bottom:0">
-    <button id="kgInfoOpen">Openen</button>
-    <button id="kgInfoClose">Sluiten</button>
+    <button id="kgInfoOpen" data-i18n="open">Openen</button>
+    <button id="kgInfoClose" data-i18n="close">Sluiten</button>
   </div>
 </div>
 
 <div class="panel" id="note">
-  <p class="eyebrow" id="noteHead">Nieuwe bijdrage</p>
-  <label class="field" for="noteTitle">Titel</label>
-  <input id="noteTitle" placeholder="Geef deze bijdrage een titel" maxlength="80">
-  <label class="field" for="noteText">Beschrijving</label>
-  <textarea id="noteText" placeholder="Wat is hier aan de hand?" rows="4"></textarea>
+  <div class="note-head">
+    <p class="eyebrow" id="noteHead" data-i18n="newNote">Nieuwe bijdrage</p>
+    <button type="button" id="noteFlip" title="Naar de overkant" aria-label="Naar de overkant" data-i18n-title="flipNote" data-i18n-aria="flipNote">⇅</button>
+  </div>
+  <label class="field" for="noteTitle" data-i18n="fTitle">Titel</label>
+  <input id="noteTitle" placeholder="Geef deze bijdrage een titel" data-i18n-ph="titlePh" maxlength="80">
+  <label class="field" for="noteText" data-i18n="fDescription">Beschrijving</label>
+  <textarea id="noteText" placeholder="Wat is hier aan de hand?" data-i18n-ph="descPh" rows="4"></textarea>
   <div class="row">
-    <button id="noteDel" class="danger">Verwijderen</button>
-    <button id="noteSave" class="primary">Bewaren</button>
+    <button id="noteDel" class="danger" data-i18n="del">Verwijderen</button>
+    <button id="noteSave" class="primary" data-i18n="saveBtn">Bewaren</button>
   </div>
 
   <div class="kg-block">
-    <p class="eyebrow">Wat is hier al bekend</p>
-    <div id="noteNearby"><p class="empty">Kennisgraaf wordt geladen…</p></div>
-    <p class="eyebrow" id="noteMatchHead" style="display:none">Gaat over wat je zegt</p>
+    <p class="eyebrow" data-i18n="alreadyKnown">Wat is hier al bekend</p>
+    <div id="noteNearby"><p class="empty" data-i18n="kgLoading">Kennisgraaf wordt geladen…</p></div>
+    <p class="eyebrow" id="noteMatchHead" data-i18n="aboutWhatYouSay" style="display:none">Gaat over wat je zegt</p>
     <div id="noteMatches"></div>
     <div class="row" style="margin-bottom:0">
-      <button id="noteAsk" class="primary">Vraag om een oplossing</button>
+      <button id="noteAsk" class="primary" data-i18n="askSolution">Vraag om een oplossing</button>
     </div>
     <div id="noteAnswer"></div>
     <div id="noteSources"></div>
   </div>
 </div>
 
-<div class="panel" id="keyboard" aria-label="Schermtoetsenbord">
+<div class="panel" id="keyboard" aria-label="Schermtoetsenbord" data-i18n-aria="onscreenKeyboard">
   <div class="keyboard-head">
-    <p class="eyebrow">Toetsenbord</p>
+    <p class="eyebrow" data-i18n="keyboardHead">Toetsenbord</p>
     <span id="keyboardField" class="mono"></span>
   </div>
   <div id="keyboardKeys"></div>
 </div>
 
 <div id="sheet"><div class="inner">
-  <button id="closeSheetTop" aria-label="Sluiten">&times;</button>
-  <h2>Bouwtekening pucks</h2>
-  <p>Padposities per puck, in millimeters vanaf het midden. Elke driehoek is ongelijkzijdig en de zijdeverhoudingen liggen ver genoeg uit elkaar om ze met een paar millimeter meetfout nog te onderscheiden.</p>
+  <button id="closeSheetTop" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+  <h2 data-i18n="sheetTitle">Bouwtekening pucks</h2>
+  <p data-i18n="sheetIntro">Padposities per puck, in millimeters vanaf het midden. Elke driehoek is ongelijkzijdig en de zijdeverhoudingen liggen ver genoeg uit elkaar om ze met een paar millimeter meetfout nog te onderscheiden.</p>
   <div class="sheetgrid" id="sheetGrid"></div>
-  <button id="closeSheet">Sluiten</button>
+  <button id="closeSheet" data-i18n="close">Sluiten</button>
 </div></div>
 
 </body>

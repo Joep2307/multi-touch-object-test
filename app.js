@@ -1,5 +1,5 @@
 import { kg, loadKG, ensureKG, drawKG, drawGaps, kgAt, kgDescribe, onKgChange,
-         nearby, formatDistance, buildQuestion, ask,
+         nearby, formatDistance, buildQuestion, ask, setKgLang, kgStatusText,
          fileUrl, knowledgeOf, relevantDocs } from "./kg.js";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -21,25 +21,210 @@ const CFG = {
   jitterPX:22, rearmPX:70, ringPX:110,
   retina:0            // use the visible zoom level; avoids four times as many tile requests
 };
+/* ── Taal ────────────────────────────────────────────────────────────────
+   Eén tabel voor alles wat er op het scherm te lezen valt. De HTML draagt de
+   Nederlandse tekst als bron én als terugval; `data-i18n` (en de varianten
+   -html, -ph, -aria, -title, -label) koppelt een element aan een sleutel
+   hieronder, en applyLang() zet ze in één keer om. Waarden mogen functies
+   zijn — dat scheelt losse regels voor meervoud en ingevulde getallen. */
 const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
        topics:["Veiligheid","Verkeer","Groen","Afval","Sociaal","Anders"],
        move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
        confirmTouch:"Tik om vast te leggen", confirmMouse:"Klik om vast te leggen",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
-       touchHint:"Sleep met één vinger, draai met twee voor het thema, tik om vast te leggen.",
-       laptopHint:"Sleep met de muis, draai met Shift of het scrollwiel, klik om vast te leggen.",
-       noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door." },
+       touchHint:"Sleep, draai voor het thema, tik om vast te leggen.",
+       laptopHint:"Sleep, draai met Shift of het wiel, klik om vast te leggen.",
+       flipSide:"Naar de overkant", flipNote:"Naar de overkant",
+       noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door.",
+
+       locale:"nl-NL",
+       docTitle:"Puck Table — participatie kaart",
+       appTitle:"Participatietafel", mapHead:"Kaart", settings:"Instellingen",
+       close:"Sluiten", open:"Openen",
+       show:"TOON", hide:"VERBERG",
+
+       saidWhat:"Wat is er gezegd", nothingYet:"nog niets vastgelegd",
+       tallyTotal:(n,top,c)=>`${n} markeringen · vaakst: ${top} (${c})`,
+       groundFlag:"Minder dan 3 contactpunten. Ligt er een puck? Dan koppelen de pads niet — check de aarding.",
+       recentMarks:"Laatste markeringen", noMarks:"Nog geen markeringen.",
+       untitled:"Zonder titel",
+
+       chooseBasemap:"Kaartbeeld kiezen", chooseControl:"Bediening kiezen",
+       controlSize:"Grootte van de bediening",
+       smaller:"Bediening kleiner", larger:"Bediening groter",
+       scaleHint:"Vensters en knoppen; de kaart blijft op ware grootte.",
+       twoSides:"Twee zijden",
+       sidesHint:"Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.",
+
+       dotsHint:"Zet aan en sleep dan een dot.",
+       searchPlace:"Zoek een plek", searchPh:"Breda, Ginneken…",
+       allBreda:"Heel Breda", basemap:"Kaartbeeld",
+       grpGeneral:"Algemeen", grpTheme:"Thema", grpOther:"Overig",
+       tileOsm:"OpenStreetMap", tileBrt:"Topografie — PDOK", tileGrijs:"Grijs — PDOK",
+       tilePastel:"Pastel — PDOK", tileGroen:"Groen & hoogte", tileBebouwing:"Bebouwing",
+       tileVerkeer:"Verkeer & fiets", tileWater:"Water — PDOK", tileLucht:"Luchtfoto — PDOK",
+       tileDark:"Donker (CARTO — API-sleutel nodig)",
+       tileLight:"Licht (CARTO — API-sleutel nodig)",
+       tileNone:"Geen — alleen raster",
+       layersHead:"Lagen", docDensity:"Documentdichtheid",
+       gapsNote:"Rood waar niets is vastgelegd.",
+       tileBlocked:"Kaartbeeld wordt geblokkeerd. Open dit bestand lokaal in Chrome, niet in een preview-venster.",
+       tileLoading:"Kaartbeeld laden…",
+       tilesFoot:(a,f)=>`${a} tegels gevraagd · ${f} mislukt · of sleep een kaartafbeelding hierin`,
+
+       bake:"Kaart offline bewaren", unbake:"Bewaarde kaart wissen",
+       bakeHint:"Druk hierop mét internet; daarna werkt dit kaartbeeld ook offline.",
+       bakeTainted:"<b>Dit kaartbeeld kan niet offline bewaard worden</b> — de tegelserver staat het uitlezen van de afbeelding niet toe. Kies OpenStreetMap of een PDOK-beeld en probeer het daarmee.",
+       bakeFailed:"<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw.",
+       bakeSaved:(kb)=>`Kaartbeeld bewaard (${kb} kB). Dit gebied verschijnt nu ook zonder internet.`,
+       bakeTooBig:"Bewaard voor deze sessie, maar te groot voor de browseropslag. Zoom iets verder uit en probeer opnieuw.",
+       bakeCleared:"Bewaarde kaart gewist.",
+
+       kgHead:"Kennisgraaf", kgShow:"Graaf tonen", kgThemes:"Thema's uit graaf",
+       kgUrlLabel:"Adres van de backend", kgUrlPh:"leeg = fixtures",
+       kgLoading:"Kennisgraaf wordt geladen…", kgUnreachable:"Kennisgraaf niet bereikbaar.",
+       nothingWithin:"Niets bekend binnen 1,5 km.",
+       noBackend:"Hiervoor moet coco-biblio draaien — zonder backend zijn er geen letterlijke fragmenten.",
+       searching:"Zoeken…", noExcerpts:"Geen letterlijke fragmenten gevonden.",
+       thinking:"Denkt na…",
+       basedOn:(list)=>`Op basis van: ${list}`,
+       noAnswer:(m)=>`Geen antwoord — draait de backend? (${m})`,
+       conn:(n)=>`${n} verbinding${n===1?"":"en"} — de lijnen op de kaart.`,
+       openDoc:"Document openen", whatSaidAbout:"Wat staat erover",
+
+       sessionHead:"Sessie", sessionName:"Naam van de sessie", wipe:"Alles wissen",
+       wipeConfirm:"Alle markeringen van deze sessie wissen?",
+       simulationHead:"Simulatie", simPuck:"Puck simuleren",
+       tolLabel:"Ratio-tolerantie", diagLabel:"Schermdiagonaal (inch)",
+
+       physicalPucks:"Fysieke pucks", learn:"Puck inlezen", sheetBtn:"Bouwtekening",
+       exportCfg:"Config exporteren",
+       learnHint:"Leg één puck stil op het scherm en druk op <b>Puck inlezen</b>.",
+       learnNeed:(n)=>`Precies <b>3</b> punten nodig, gevonden: <b>${n}</b>. Leg één puck neer en houd hem stil.`,
+       learnAdded:(id,a,b,mm)=>`<b>${id}</b> toegevoegd — ratio's ${a} / ${b}, langste zijde ${mm} mm.`,
+       learnClash:(id)=>` <b style="color:var(--warn)">Te dicht bij ${id}</b>: maak deze driehoek duidelijk anders.`,
+       sheetTitle:"Bouwtekening pucks",
+       sheetIntro:"Padposities per puck, in millimeters vanaf het midden. Elke driehoek is ongelijkzijdig en de zijdeverhoudingen liggen ver genoeg uit elkaar om ze met een paar millimeter meetfout nog te onderscheiden.",
+       sheetPad:"Pad", sheetRatios:"Ratio's", sheetLongest:"Langste",
+
+       deselect:"Deselecteren",
+       newNote:"Nieuwe bijdrage", fTitle:"Titel", titlePh:"Geef deze bijdrage een titel",
+       fDescription:"Beschrijving", descPh:"Wat is hier aan de hand?",
+       del:"Verwijderen", saveBtn:"Bewaren",
+       alreadyKnown:"Wat is hier al bekend", aboutWhatYouSay:"Gaat over wat je zegt",
+       askSolution:"Vraag om een oplossing",
+       onscreenKeyboard:"Schermtoetsenbord", keyboardHead:"Toetsenbord",
+       keySpace:"Spatie", keyEnter:"Enter", keyClose:"Sluiten", typeHere:"Tekst invoeren",
+       stampUpdated:(d)=>`bijgewerkt ${d}`, stampUnknown:"bijgewerkt onbekend",
+       stampLoaded:(t)=>` · geladen ${t}` },
+
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
        topics:["Safety","Traffic","Green","Waste","Social","Other"],
        move:"Freeze map", locked:"Map is frozen", placed:"Marked",
        confirmTouch:"Tap to confirm", confirmMouse:"Click to confirm",
        moveDots:"Move dots", movingDots:"Finish moving",
-       touchHint:"Drag with one finger, rotate with two for the topic, tap to confirm.",
-       laptopHint:"Drag with the mouse, rotate with Shift or the wheel, click to confirm.",
-       noNet:"No map tiles — check the connection. Marking still works." }
+       touchHint:"Drag, rotate for the topic, tap to confirm.",
+       laptopHint:"Drag, rotate with Shift or the wheel, click to confirm.",
+       flipSide:"To the other side", flipNote:"To the other side",
+       noNet:"No map tiles — check the connection. Marking still works.",
+
+       locale:"en-GB",
+       docTitle:"Puck Table — participation map",
+       appTitle:"Participation table", mapHead:"Map", settings:"Settings",
+       close:"Close", open:"Open",
+       show:"SHOW", hide:"HIDE",
+
+       saidWhat:"What was said", nothingYet:"nothing recorded yet",
+       tallyTotal:(n,top,c)=>`${n} markings · most often: ${top} (${c})`,
+       groundFlag:"Fewer than 3 contact points. Is a puck lying there? Then the pads are not coupling — check the grounding.",
+       recentMarks:"Latest markings", noMarks:"No markings yet.",
+       untitled:"Untitled",
+
+       chooseBasemap:"Choose map view", chooseControl:"Choose controls",
+       controlSize:"Size of the controls",
+       smaller:"Smaller controls", larger:"Larger controls",
+       scaleHint:"Panels and buttons; the map stays at true size.",
+       twoSides:"Two sides",
+       sidesHint:"Puck bar on both sides; panels turn towards whoever opens them.",
+
+       dotsHint:"Switch on, then drag a dot.",
+       searchPlace:"Search for a place", searchPh:"Breda, Ginneken…",
+       allBreda:"All of Breda", basemap:"Map view",
+       grpGeneral:"General", grpTheme:"Theme", grpOther:"Other",
+       tileOsm:"OpenStreetMap", tileBrt:"Topography — PDOK", tileGrijs:"Grey — PDOK",
+       tilePastel:"Pastel — PDOK", tileGroen:"Green & elevation", tileBebouwing:"Built-up area",
+       tileVerkeer:"Traffic & cycling", tileWater:"Water — PDOK", tileLucht:"Aerial photo — PDOK",
+       tileDark:"Dark (CARTO — API key required)",
+       tileLight:"Light (CARTO — API key required)",
+       tileNone:"None — grid only",
+       layersHead:"Layers", docDensity:"Document density",
+       gapsNote:"Red where nothing has been recorded.",
+       tileBlocked:"Map tiles are being blocked. Open this file locally in Chrome, not in a preview window.",
+       tileLoading:"Loading map tiles…",
+       tilesFoot:(a,f)=>`${a} tiles requested · ${f} failed · or drop a map image in here`,
+
+       bake:"Save map offline", unbake:"Clear saved map",
+       bakeHint:"Press this while online; after that this map view also works offline.",
+       bakeTainted:"<b>This map view cannot be saved offline</b> — the tile server does not allow the image to be read back. Choose OpenStreetMap or a PDOK view and try again with that.",
+       bakeFailed:"<b>Could not save the map view</b> — the tiles have not fully loaded yet. Wait a moment and try again.",
+       bakeSaved:(kb)=>`Map view saved (${kb} kB). This area now also appears without an internet connection.`,
+       bakeTooBig:"Saved for this session, but too large for browser storage. Zoom out a little and try again.",
+       bakeCleared:"Saved map cleared.",
+
+       kgHead:"Knowledge graph", kgShow:"Show graph", kgThemes:"Themes from graph",
+       kgUrlLabel:"Backend address", kgUrlPh:"empty = fixtures",
+       kgLoading:"Loading knowledge graph…", kgUnreachable:"Knowledge graph unreachable.",
+       nothingWithin:"Nothing known within 1.5 km.",
+       noBackend:"This needs coco-biblio running — without a backend there are no literal excerpts.",
+       searching:"Searching…", noExcerpts:"No literal excerpts found.",
+       thinking:"Thinking…",
+       basedOn:(list)=>`Based on: ${list}`,
+       noAnswer:(m)=>`No answer — is the backend running? (${m})`,
+       conn:(n)=>`${n} connection${n===1?"":"s"} — the lines on the map.`,
+       openDoc:"Open document", whatSaidAbout:"What is written about it",
+
+       sessionHead:"Session", sessionName:"Session name", wipe:"Clear everything",
+       wipeConfirm:"Clear all markings from this session?",
+       simulationHead:"Simulation", simPuck:"Simulate puck",
+       tolLabel:"Ratio tolerance", diagLabel:"Screen diagonal (inches)",
+
+       physicalPucks:"Physical pucks", learn:"Read puck", sheetBtn:"Build drawing",
+       exportCfg:"Export config",
+       learnHint:"Place one puck still on the screen and press <b>Read puck</b>.",
+       learnNeed:(n)=>`Exactly <b>3</b> points needed, found: <b>${n}</b>. Put down one puck and hold it still.`,
+       learnAdded:(id,a,b,mm)=>`<b>${id}</b> added — ratios ${a} / ${b}, longest side ${mm} mm.`,
+       learnClash:(id)=>` <b style="color:var(--warn)">Too close to ${id}</b>: make this triangle clearly different.`,
+       sheetTitle:"Puck build drawing",
+       sheetIntro:"Pad positions per puck, in millimetres from the centre. Every triangle is scalene and the side ratios lie far enough apart to tell them apart with a few millimetres of measurement error.",
+       sheetPad:"Pad", sheetRatios:"Ratios", sheetLongest:"Longest",
+
+       deselect:"Deselect",
+       newNote:"New contribution", fTitle:"Title", titlePh:"Give this contribution a title",
+       fDescription:"Description", descPh:"What is going on here?",
+       del:"Delete", saveBtn:"Save",
+       alreadyKnown:"What is already known here", aboutWhatYouSay:"Relates to what you say",
+       askSolution:"Ask for a solution",
+       onscreenKeyboard:"On-screen keyboard", keyboardHead:"Keyboard",
+       keySpace:"Space", keyEnter:"Enter", keyClose:"Close", typeHere:"Enter text",
+       stampUpdated:(d)=>`updated ${d}`, stampUnknown:"update time unknown",
+       stampLoaded:(t)=>` · loaded ${t}` }
 };
-let lang="nl";
+/* De keuze blijft bewaard: een tafel die in het Engels stond hoort dat na een
+   verversing nog te staan. */
+let lang=(()=>{
+  try{ const v=localStorage.getItem("pucktable-lang"); if(v==="nl"||v==="en") return v; }catch(e){}
+  return "nl";
+})();
+/* Vertalen. Niet `t` — dat is in dit bestand al de naam van een touch en van
+   een puck-sjabloon. Ontbreekt een sleutel in de gekozen taal, dan valt hij
+   terug op het Nederlands en anders op de sleutel zelf, zodat een vergeten
+   regel zichtbaar wordt in plaats van leeg. */
+const tr=(k,...a)=>{
+  const v=(L[lang]&&L[lang][k])!==undefined?L[lang][k]:L.nl[k];
+  if(v===undefined) return k;
+  return typeof v==="function"?v(...a):v;
+};
 let uiMode=(()=>{ try{return localStorage.getItem("pucktable-ui-mode");}catch(e){return null;} })();
 if(uiMode!=="touch"&&uiMode!=="laptop") uiMode=matchMedia("(pointer:coarse)").matches?"touch":"laptop";
 /* De bediening kan mee groeien met de tafel: op een 43"-scherm dat een meter
@@ -226,15 +411,15 @@ function drawMap(g){
 
   if(!drawn && MV.set!=="none"){
     const msg = tilesFailed>0
-      ? "Kaartbeeld wordt geblokkeerd. Open dit bestand lokaal in Chrome, niet in een preview-venster."
-      : "Kaartbeeld laden…";
+      ? tr("tileBlocked")
+      : tr("tileLoading");
     g.textAlign="center";
     g.fillStyle="rgba(14,18,24,.92)"; g.fillRect(W/2-320,22,640,52);
     g.strokeStyle="rgba(255,209,102,.4)"; g.lineWidth=1; g.strokeRect(W/2-320,22,640,52);
     g.fillStyle="#ffd166"; g.font="13px 'Space Grotesk',system-ui,sans-serif";
     g.fillText(msg,W/2,46);
     g.fillStyle="rgba(127,139,155,.9)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace";
-    g.fillText(tilesTried+" tegels gevraagd · "+tilesFailed+" mislukt · of sleep een kaartafbeelding hierin",W/2,64);
+    g.fillText(tr("tilesFoot",tilesTried,tilesFailed),W/2,64);
   }
   // scale bar + attribution
   const mPerPx=156543.03392*Math.cos(MV.lat*Math.PI/180)/Math.pow(2,MV.zoom);
@@ -677,6 +862,15 @@ function restore(){
        if(raw){ const a=JSON.parse(raw); pins.length=0; a.forEach(p=>pins.push(p)); } }catch(e){}
 }
 let tapStart=null, selected=null;
+/* Twee tikken kort na elkaar op dezelfde markering. Na een dubbeltik begint de
+   telling opnieuw, zodat drie tikken niet als twee dubbeltikken tellen. */
+let lastTapId=null, lastTapT=0;
+function doubleTap(id){
+  const now=performance.now();
+  const dbl=id===lastTapId && now-lastTapT<430;
+  lastTapId=dbl?null:id; lastTapT=now;
+  return dbl;
+}
 addEventListener("pointerdown",e=>{
   if(e.target.closest(".panel")||puckTouch||pinMoveMode) return;
   tapStart={x:e.clientX,y:e.clientY,t:performance.now()};
@@ -690,12 +884,23 @@ addEventListener("pointerup",e=>{
   const R=CFG.puckRadiusMM*pxPerMM;
   if(simPuckAt(e.clientX,e.clientY)) return;
   const onTrack=puckTrackAt(e.clientX,e.clientY);
-  if(onTrack){ tryConfirmPuck(e.clientX,e.clientY); return; }
+  if(onTrack){
+    if(tryConfirmPuck(e.clientX,e.clientY)) return;
+    // Een puck die al vast ligt: dubbeltikken zet zijn venster op de andere kant.
+    const own=onTrack.pinId?pins.find(p=>p.id===onTrack.pinId):null;
+    if(own&&doubleTap(own.id)) flipNote(own,onTrack.x,onTrack.y);
+    return;
+  }
   const hit=[...pins].reverse().find(p=>{
     const s=MV.project(p.lng,p.lat);
     return Math.hypot(s.x-e.clientX,s.y-e.clientY)<24;
   });
-  if(hit){ openNote(hit,e.clientX,e.clientY); closeKgInfo(); return; }
+  if(hit){
+    closeKgInfo();
+    if(doubleTap(hit.id)) flipNote(hit,e.clientX,e.clientY);
+    else openNote(hit,e.clientX,e.clientY);
+    return;
+  }
   // Geen eigen markering geraakt? Dan mag de kennisgraaf de tik hebben.
   const node=kgAt(MV,e.clientX,e.clientY);
   if(node){ closeNote(); openKgInfo(node,e.clientX,e.clientY); return; }
@@ -752,10 +957,49 @@ function positionNoteX(){
   n.classList.toggle("from-right",flip?opensRight:!opensRight);
 }
 
+/* Automatisch opent het venster naar de kant waar de tik vandaan komt, maar
+   wie aan de overkant staat kan het overnemen: de knop ⇅ in het venster of een
+   dubbeltik op de markering. Die keuze blijft bij de puck (`pin.flip`) tot
+   iemand hem terugdraait; zonder keuze geldt weer de automatische regel. */
+const flipFor=(pin,y)=>
+  sidesActive() && typeof pin?.flip==="boolean" ? pin.flip : flippedFor(y);
+
+/* Van kant wisselen zonder het venster te sluiten: het draait om zijn eigen
+   midden, de stengel zoekt de puck weer op en het toetsenbord verhuist mee
+   naar de kant waar nu getypt wordt. */
+function applyNoteFlip(flip){
+  const n=el("note");
+  if(n.style.display!=="block") return;
+  n.classList.toggle("flipped",flip);
+  n.style.setProperty("--flip",flip?"180deg":"0deg");
+  positionNoteX();
+  positionNote(false);
+  const kb=el("keyboard");
+  if(kb.classList.contains("visible")&&keyboardTarget&&!keyboardTarget.closest("#menu")){
+    kb.classList.toggle("flipped",flip);
+    requestAnimationFrame(liftEditorAboveKeyboard);
+  }
+}
+function flipNote(pin=selected,x,y){
+  if(!pin||!sidesActive()) return;
+  const n=el("note");
+  const open=selected===pin&&n.style.display==="block";
+  const anchorY=open?(+n.dataset.anchorY||innerHeight/2):(y??innerHeight/2);
+  pin.flip=!flipFor(pin,anchorY);
+  save();
+  if(open) applyNoteFlip(pin.flip);
+  else openNote(pin,x??innerWidth/2,y??innerHeight/2,true);
+}
+/* Wisselt de tafelstand terwijl er een venster open staat, dan hoort dat
+   venster mee te draaien in plaats van dicht te gaan. */
+function reorientNote(){
+  if(selected) applyNoteFlip(flipFor(selected,+el("note").dataset.anchorY||innerHeight/2));
+}
+
 function openNote(pin,x,y,fromPuck=false){
   selected=pin; const n=el("note");
   n.style.display="block";
-  const flip=flippedFor(y);
+  const flip=flipFor(pin,y);
   n.classList.toggle("flipped",flip);
   n.style.setProperty("--flip",flip?"180deg":"0deg");
   n.style.setProperty("--note-color",vColor(pin.verdict));
@@ -780,14 +1024,18 @@ function openNote(pin,x,y,fromPuck=false){
    op één item betekent volgens het contract "bestaat niet", niet "geen
    backend". Zonder coco-biblio zijn er dus geen citaten, en dat zeggen we
    liever met zoveel woorden dan met een misleidend "niets gevonden". */
-const NO_BACKEND="Hiervoor moet coco-biblio draaien — zonder backend zijn er geen letterlijke fragmenten.";
+/* Eén regel "hier staat niets" in een lijst. Als element in plaats van als
+   HTML-string, zodat vertaalde tekst nooit als opmaak wordt gelezen. */
+function emptyLine(text){
+  const p=document.createElement("p"); p.className="empty"; p.textContent=text; return p;
+}
 let askAbort=null;
 function fillNoteKnowledge(pin){
   askAbort?.abort(); askAbort=null;
   el("noteAnswer").textContent=""; el("noteAnswer").style.display="none";
   el("noteSources").textContent=""; el("noteSources").style.display="none";
   const box=el("noteNearby");
-  box.innerHTML='<p class="empty">Kennisgraaf wordt geladen…</p>';
+  box.innerHTML=""; box.appendChild(emptyLine(tr("kgLoading")));
   el("noteMatches").textContent=""; el("noteMatchHead").style.display="none";
   ensureKG(el("kgUrl").value.trim()).then(()=>{
     if(selected!==pin) return;
@@ -818,13 +1066,13 @@ async function kgReveal(row,node){
     return;
   }
   const box=document.createElement("div");
-  box.className="kg-quote"; box.textContent="Zoeken…";
+  box.className="kg-quote"; box.textContent=tr("searching");
   row.after(box);
   positionNote(false);
   const k=await knowledgeOf(node.id);
   const chunks=(k?.chunks||[]).slice(0,3);
-  if(!k){ box.textContent=NO_BACKEND; positionNote(false); return; }
-  if(!chunks.length){ box.textContent="Geen letterlijke fragmenten gevonden."; positionNote(false); return; }
+  if(!k){ box.textContent=tr("noBackend"); positionNote(false); return; }
+  if(!chunks.length){ box.textContent=tr("noExcerpts"); positionNote(false); return; }
   box.textContent="";
   const titleOf=new Map((k.documents||[]).map(d=>[d.id,d.title]));
   for(const c of chunks){
@@ -843,9 +1091,9 @@ async function kgReveal(row,node){
 function renderNearby(pin){
   const box=el("noteNearby");
   box.textContent="";
-  if(!kg.loaded){ box.innerHTML='<p class="empty">Kennisgraaf niet bereikbaar.</p>'; return; }
+  if(!kg.loaded){ box.appendChild(emptyLine(tr("kgUnreachable"))); return; }
   const near=nearby(pin.lat,pin.lng,{theme:pin.topic,limit:4});
-  if(!near.length){ box.innerHTML='<p class="empty">Niets bekend binnen 1,5 km.</p>'; return; }
+  if(!near.length){ box.appendChild(emptyLine(tr("nothingWithin"))); return; }
   for(const r of near){
     const row=kgRow(r.node.label,formatDistance(r.dist),r.match?"match":"");
     row.onclick=()=>kgReveal(row,r.node);
@@ -888,7 +1136,7 @@ async function askKnowledge(){
   const pin=selected; if(!pin) return;
   const near=kg.loaded?nearby(pin.lat,pin.lng,{theme:pin.topic,limit:4}):[];
   const out=el("noteAnswer"), src=el("noteSources");
-  out.style.display="block"; out.textContent="Denkt na…";
+  out.style.display="block"; out.textContent=tr("thinking");
   src.style.display="none"; src.textContent="";
   askAbort?.abort(); askAbort=new AbortController();
   const question=buildQuestion({
@@ -903,10 +1151,10 @@ async function askKnowledge(){
       onToken:t=>{ if(selected===pin) out.innerHTML=mdToHtml(t); },
       onSources:list=>{ if(selected!==pin||!list.length) return;
         src.style.display="block";
-        src.textContent="Op basis van: "+[...new Set(list.map(s=>s.title))].slice(0,4).join(" · "); },
+        src.textContent=tr("basedOn",[...new Set(list.map(s=>s.title))].slice(0,4).join(" · ")); },
     });
   }catch(e){
-    if(e.name!=="AbortError") out.textContent="Geen antwoord — draait de backend? ("+e.message+")";
+    if(e.name!=="AbortError") out.textContent=tr("noAnswer",e.message);
   }
 }
 function closeNote(){
@@ -1017,7 +1265,7 @@ function frame(){
     ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 15px 'Space Grotesk',system-ui,sans-serif";
     ctx.fillText(vName(t.tpl.verdict),t.x,t.y-1);
     ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle="rgba(232,237,244,.55)";
-    ctx.fillText(t.armed?L[lang][uiMode==="touch"?"confirmTouch":"confirmMouse"]:L[lang].placed,t.x,t.y+14);
+    ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+14);
     ctx.restore();
   }
 
@@ -1041,32 +1289,32 @@ function updateUI(pucks){
   }).join("");
   const byTopic={}; pins.forEach(p=>byTopic[p.topic]=(byTopic[p.topic]||0)+1);
   const top=Object.entries(byTopic).sort((a,b)=>b[1]-a[1])[0];
-  el("tallyTotal").textContent=pins.length?`${pins.length} markeringen · vaakst: ${top[0]} (${top[1]})`:"nog niets vastgelegd";
+  el("tallyTotal").textContent=pins.length?tr("tallyTotal",pins.length,top[0],top[1]):tr("nothingYet");
   const flag=el("flag");
   if(realTouches.size>=3&&!pucks.length){
     flag.style.display="block";
-    flag.textContent="Minder dan 3 contactpunten. Ligt er een puck? Dan koppelen de pads niet — check de aarding.";
+    flag.textContent=tr("groundFlag");
   } else flag.style.display="none";
 
   const safe=s=>String(s||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);
   el("recentBody").innerHTML=pins.length?pins.slice(-8).reverse().map(p=>
     `<div class="pin"><i style="background:${vColor(p.verdict)}"></i>
-     <div><b>${safe(p.title)||(lang==="nl"?"Zonder titel":"Untitled")} - ${safe(p.topic)}</b>
+     <div><b>${safe(p.title)||tr("untitled")} - ${safe(p.topic)}</b>
      ${(p.description||p.note)?`<div class="description">${safe(p.description||p.note)}</div>`:""}
      <div class="meta">${vName(p.verdict)} · ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)} · ${p.t.slice(11,16)}</div></div>
      <span class="del" data-id="${p.id}">✕</span></div>`).join("")
-    :`<p class="empty">Nog geen markeringen.</p>`;
+    :`<p class="empty">${tr("noMarks")}</p>`;
   [...document.querySelectorAll(".del")].forEach(b=>b.onclick=()=>{
     const i=pins.findIndex(p=>p.id===b.dataset.id); if(i>=0){pins.splice(i,1);save();}
   });
 }
 function applyLock(){
   el("btnMove").classList.toggle("on",mapLocked);
-  el("btnMove").textContent=mapLocked?L[lang].locked:L[lang].move;
+  el("btnMove").textContent=mapLocked?tr("locked"):tr("move");
 }
 function applyPinMoveMode(){
   el("btnMoveDots").classList.toggle("on",pinMoveMode);
-  el("btnMoveDots").textContent=pinMoveMode?L[lang].movingDots:L[lang].moveDots;
+  el("btnMoveDots").textContent=pinMoveMode?tr("movingDots"):tr("moveDots");
   document.body.classList.toggle("moving-dots",pinMoveMode);
   if(!pinMoveMode){pinDrag=null;document.body.classList.remove("dragging-dot");}
   gesture=null; mousePan=null;
@@ -1081,7 +1329,7 @@ const KEY_ROWS=[
   ["close",",","space",".","enter"]
 ];
 let keyboardTarget=null, keyboardShift=false;
-const keyboardLabel=key=>({shift:"⇧",backspace:"⌫",space:"Spatie",enter:"Enter",close:"Sluiten"})[key]||key;
+const keyboardLabel=key=>({shift:"⇧",backspace:"⌫",space:tr("keySpace"),enter:tr("keyEnter"),close:tr("keyClose")})[key]||key;
 function renderKeyboard(){
   el("keyboardKeys").innerHTML=KEY_ROWS.map(row=>`<div class="keyboard-row">${row.map(key=>{
     const wide=["shift","backspace","enter","close"].includes(key)?" key-wide":"";
@@ -1120,7 +1368,7 @@ function liftEditorAboveKeyboard(){
 function showKeyboard(target){
   if(uiMode!=="touch"||!target.classList.contains("touch-type")) return;
   keyboardTarget=target;
-  el("keyboardField").textContent=target.labels?.[0]?.textContent||target.placeholder||"Tekst invoeren";
+  el("keyboardField").textContent=target.labels?.[0]?.textContent||target.placeholder||tr("typeHere");
   renderKeyboard();
   // Het toetsenbord volgt de kant waar getypt wordt: het menu heeft zijn eigen
   // leesrichting, een notitievenster die van de puck waar het aan hangt.
@@ -1180,8 +1428,10 @@ function applyMode(mode){
     el(id).classList.toggle("active",active);
     el(id).setAttribute("aria-pressed",String(active));
   });
+  const fb=el("noteFlip");
+  fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide"));
   [...document.querySelectorAll(".puck-hint")].forEach(h=>
-    h.textContent=mode==="touch"?L[lang].touchHint:L[lang].laptopHint);
+    h.textContent=mode==="touch"?tr("touchHint"):tr("laptopHint"));
   refreshKeyboardFields();
   // Een venster dat op zijn kop staat hoort niet mee te verhuizen naar de
   // laptopstand, dus dat gaat dicht bij het wisselen.
@@ -1193,9 +1443,8 @@ function applyMode(mode){
 }
 
 el("ctrlHead").onclick=()=>{const c=el("controls");c.classList.toggle("collapsed");
-  el("chev").textContent=c.classList.contains("collapsed")?"SHOW":"HIDE";};
+  el("chev").textContent=c.classList.contains("collapsed")?tr("show"):tr("hide");};
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
-el("btnLang").onclick=e=>{lang=lang==="nl"?"en":"nl";e.target.textContent=lang==="nl"?"EN":"NL";applyLock();applyPinMoveMode();applyMode(uiMode);renderTray();};
 el("btnMoveDots").onclick=()=>{pinMoveMode=!pinMoveMode;closeNote();applyPinMoveMode();};
 function applyScale(){
   document.documentElement.style.setProperty("--ui-scale",String(uiScale));
@@ -1239,11 +1488,11 @@ function openKgInfo(node,x,y){
   if(rel){
     const p=document.createElement("p");
     p.className="kg-quote"; p.style.borderLeftColor="rgba(122,162,247,.5)";
-    p.textContent=rel+" verbinding"+(rel===1?"":"en")+" — de lijnen op de kaart.";
+    p.textContent=tr("conn",rel);
     body.appendChild(p);
   }
   const open=el("kgInfoOpen");
-  open.textContent=node.type==="document"?"Document openen":"Wat staat erover";
+  open.textContent=node.type==="document"?tr("openDoc"):tr("whatSaidAbout");
   open.onclick=()=>{
     if(node.type==="document"){ const u=fileUrl(node.id); if(u) window.open(u,"_blank","noopener"); return; }
     showKgKnowledge(node);
@@ -1253,14 +1502,14 @@ function openKgInfo(node,x,y){
 /* De letterlijke fragmenten over een plek, in het leesvenster naast het punt. */
 async function showKgKnowledge(node){
   const body=el("kgInfoBody");
-  body.textContent="Zoeken…";
+  body.textContent=tr("searching");
   const k=await knowledgeOf(node.id);
   if(kg.selected!==node) return;
   const chunks=(k?.chunks||[]).slice(0,3);
   body.textContent="";
   if(!k||!chunks.length){
     const p=document.createElement("p"); p.className="empty";
-    p.textContent=k?"Geen letterlijke fragmenten gevonden.":NO_BACKEND;
+    p.textContent=k?tr("noExcerpts"):tr("noBackend");
     body.appendChild(p); return;
   }
   const titleOf=new Map((k.documents||[]).map(d=>[d.id,d.title]));
@@ -1292,16 +1541,16 @@ async function toggleGaps(){
 }
 el("noteAsk").onclick=askKnowledge;
 onKgChange(()=>{
-  el("kgStatus").textContent=kg.status;
+  el("kgStatus").textContent=kgStatusText();
   el("btnKg").classList.toggle("on",kg.enabled);
   el("btnKgThemes").classList.toggle("on",kg.useThemes);
 });
 el("btnKg").onclick=async()=>{
   kg.enabled=!kg.enabled;
   el("btnKg").classList.toggle("on",kg.enabled);
-  if(!kg.enabled){ closeKgInfo(); kg.status="uit"; el("kgStatus").textContent=kg.status; return; }
+  if(!kg.enabled){ closeKgInfo(); kg.statusKey="off"; el("kgStatus").textContent=kgStatusText(); return; }
   if(!kg.nodes.length) await loadKG(el("kgUrl").value.trim());
-  else el("kgStatus").textContent=kg.status;
+  else el("kgStatus").textContent=kgStatusText();
 };
 el("btnKgThemes").onclick=async()=>{
   kg.useThemes=!kg.useThemes;
@@ -1329,7 +1578,7 @@ function applySides(){
   el("btnSides").setAttribute("aria-pressed",String(twoSided));
   try{ localStorage.setItem("pucktable-two-sided",twoSided?"1":"0"); }catch(e){}
 }
-el("btnSides").onclick=()=>{ twoSided=!twoSided; applySides(); reorientMenu(); };
+el("btnSides").onclick=()=>{ twoSided=!twoSided; applySides(); reorientMenu(); reorientNote(); };
 applySides();
 
 /* Staat de aanraking in de bovenste helft, dan staat de persoon aan die kant
@@ -1344,11 +1593,10 @@ function setStem(n,h,d){
   n.style.setProperty("--stem-top",Math.max(20,Math.min(h-20,local))+"px");
 }
 
-const BAKE_HINT=el("bakeHint").textContent;
 el("tiles").onchange=e=>{
   MV.set=e.target.value; tileCache.clear();
   tilesTried=0; tilesFailed=0;                 // de melding gaat over dít beeld
-  el("bakeHint").textContent=BAKE_HINT;
+  el("bakeHint").textContent=tr("bakeHint");
   markLayerMenu();
 };
 
@@ -1360,7 +1608,7 @@ el("tiles").onchange=e=>{
 function layerButton(option){
   const b=document.createElement("button");
   b.type="button"; b.className="layer"; b.dataset.set=option.value;
-  b.textContent=option.textContent;
+  b.textContent=option.dataset.i18n?tr(option.dataset.i18n):option.textContent;
   b.onclick=()=>{
     el("tiles").value=option.value;
     el("tiles").dispatchEvent(new Event("change"));
@@ -1374,22 +1622,22 @@ function buildLayerMenu(){
   /* Bovenaan de lagen die óver de kaart heen liggen. Het kaartbeeld eronder
      is een keuze uit één; dit zijn schakelaars, vandaar de scheiding. */
   const overlayHead=document.createElement("p");
-  overlayHead.className="eyebrow"; overlayHead.textContent="Lagen";
+  overlayHead.className="eyebrow"; overlayHead.textContent=tr("layersHead");
   box.appendChild(overlayHead);
 
   const gaps=document.createElement("button");
   gaps.type="button"; gaps.className="layer"; gaps.id="btnGaps";
-  gaps.textContent="Documentdichtheid";
+  gaps.textContent=tr("docDensity");
   gaps.onclick=toggleGaps;
   box.appendChild(gaps);
 
   const note=document.createElement("p");
   note.className="hint"; note.style.margin="6px 0 0";
-  note.textContent="Rood waar niets is vastgelegd.";
+  note.textContent=tr("gapsNote");
   box.appendChild(note);
 
   const mapHead=document.createElement("p");
-  mapHead.className="eyebrow"; mapHead.textContent="Kaartbeeld";
+  mapHead.className="eyebrow"; mapHead.textContent=tr("basemap");
   mapHead.style.borderTop="1px solid var(--line)";
   mapHead.style.paddingTop="14px";
   box.appendChild(mapHead);
@@ -1397,7 +1645,7 @@ function buildLayerMenu(){
   for(const child of el("tiles").children){
     if(child.tagName==="OPTGROUP"){
       const h=document.createElement("p");
-      h.className="eyebrow"; h.textContent=child.label;
+      h.className="eyebrow"; h.textContent=tr(child.dataset.i18nLabel||"")||child.label;
       box.appendChild(h);
       for(const o of child.children) box.appendChild(layerButton(o));
     }else box.appendChild(layerButton(child));
@@ -1417,31 +1665,44 @@ function markLayerMenu(){
    elk moment nodig hebt — de teller, de laatste markeringen, het kaartbeeld
    en de instellingen — zit daarom achter één knop.
 
-   Die knop staat er twee keer, diagonaal tegenover elkaar, zodat beide lange
-   zijden er één binnen handbereik hebben. Er is maar één menu; het verhuist
-   naar de knop die is ingedrukt en draait, net als het notitievenster, mee
-   met de leesrichting van die kant. */
+   Die knoppen staan er twee keer, diagonaal tegenover elkaar, zodat beide
+   lange zijden ze binnen handbereik hebben. Per hoek zijn het er twee: de
+   kaart en de instellingen worden om verschillende redenen gepakt en horen
+   dus niet achter dezelfde tik en dezelfde scroll te zitten.
+
+   Er blijft één menu. Het verhuist naar de knop die is ingedrukt, toont de
+   inhoud die bij die knop hoort, en draait — net als het notitievenster —
+   mee met de leesrichting van die kant. */
 let menuSide=null;                                    // "a" | "b" | null
+let menuView="settings";                              // "map" | "settings"
+const MENU_BTNS=[["btnMapA","a","map"],["btnSetA","a","settings"],
+                 ["btnMapB","b","map"],["btnSetB","b","settings"]];
+const MENU_TITLES={map:"mapHead",settings:"appTitle"};
 const menuFlipped=()=>menuSide==="b"&&sidesActive();
-function openMenu(side){
+function openMenu(side,view){
   menuSide=side;
+  menuView=view||menuView;
   const m=el("menu");
   m.classList.toggle("at-a",side==="a");
   m.classList.toggle("at-b",side==="b");
   m.classList.toggle("flipped",menuFlipped());
+  m.classList.toggle("view-map",menuView==="map");
+  m.classList.toggle("view-settings",menuView==="settings");
   m.classList.add("open");
-  [["btnMenuA","a"],["btnMenuB","b"]].forEach(([id,value])=>{
-    const mine=value===side;
+  el("menuTitle").textContent=tr(MENU_TITLES[menuView]);
+  MENU_BTNS.forEach(([id,s,v])=>{
+    const mine=s===side&&v===menuView;
     el(id).classList.toggle("on",mine);
     el(id).setAttribute("aria-expanded",String(mine));
   });
   markLayerMenu();
+  m.scrollTop=0;
 }
 function closeMenu(){
   if(!menuSide) return;
   menuSide=null;
   el("menu").classList.remove("open");
-  ["btnMenuA","btnMenuB"].forEach(id=>{
+  MENU_BTNS.forEach(([id])=>{
     el(id).classList.remove("on");
     el(id).setAttribute("aria-expanded","false");
   });
@@ -1453,9 +1714,12 @@ function closeMenu(){
 function closeLayers(){ closeMenu(); }
 /* Wisselt de leesrichting terwijl het menu openstaat, dan gaat het niet dicht
    maar draait het mee. */
-const reorientMenu=()=>{ if(menuSide) openMenu(menuSide); };
-el("btnMenuA").onclick=()=>menuSide==="a"?closeMenu():openMenu("a");
-el("btnMenuB").onclick=()=>menuSide==="b"?closeMenu():openMenu("b");
+const reorientMenu=()=>{ if(menuSide) openMenu(menuSide,menuView); };
+/* Dezelfde knop nog eens indrukken sluit het menu; de andere knop van hetzelfde
+   paar wisselt van inhoud zonder dat het venster tussendoor dichtgaat. */
+MENU_BTNS.forEach(([id,side,view])=>{
+  el(id).onclick=()=>(menuSide===side&&menuView===view)?closeMenu():openMenu(side,view);
+});
 el("menuClose").onclick=closeMenu;
 // Naast het menu tikken sluit het; erin tikken uiteraard niet, en het
 // schermtoetsenbord hoort erbij zolang er in een veld getypt wordt.
@@ -1486,8 +1750,9 @@ el("noteSave").onclick=()=>{ if(selected){ setTimeout(()=>{ if(selected) renderM
   selected.note=selected.description; // keep older exports and saved sessions compatible
   save();
 } closeNote(); };
+el("noteFlip").onclick=()=>flipNote();
 el("noteDel").onclick=()=>{ if(selected){const i=pins.indexOf(selected); if(i>=0)pins.splice(i,1); save();} closeNote(); };
-el("btnWipe").onclick=()=>{ if(confirm("Alle markeringen van deze sessie wissen?")){pins.length=0;save();} };
+el("btnWipe").onclick=()=>{ if(confirm(tr("wipeConfirm"))){pins.length=0;save();} };
 
 function download(name,text,type){
   const a=document.createElement("a");
@@ -1505,20 +1770,20 @@ el("btnCsv").onclick=()=>download(el("sess").value+".csv",
 
 el("btnLearn").onclick=()=>{
   const pts=[...realTouches.values()], hint=el("learnHint");
-  if(pts.length!==3){ hint.innerHTML=`Precies <b>3</b> punten nodig, gevonden: <b>${pts.length}</b>. Leg één puck neer en houd hem stil.`; return; }
+  if(pts.length!==3){ hint.innerHTML=tr("learnNeed",pts.length); return; }
   const d=describe(pts[0],pts[1],pts[2]);
   const clash=templates.find(t=>Math.hypot(t.ratios[0]-d.ratios[0],t.ratios[1]-d.ratios[1])<0.12);
   const id="puck-"+String(templates.length+1).padStart(2,"0");
   templates.push({id,verdict:VERDICTS[templates.length%VERDICTS.length].key,
                   ratios:[+d.ratios[0].toFixed(3),+d.ratios[1].toFixed(3)]});
   CFG.longestSideMM=d.longest/pxPerMM;
-  hint.innerHTML=`<b>${id}</b> toegevoegd — ratio's ${d.ratios[0].toFixed(3)} / ${d.ratios[1].toFixed(3)}, langste zijde ${(d.longest/pxPerMM).toFixed(1)} mm.`+
-    (clash?` <b style="color:var(--warn)">Te dicht bij ${clash.id}</b>: maak deze driehoek duidelijk anders.`:"");
+  hint.innerHTML=tr("learnAdded",id,d.ratios[0].toFixed(3),d.ratios[1].toFixed(3),(d.longest/pxPerMM).toFixed(1))
+                +(clash?tr("learnClash",clash.id):"");
   renderTray();
 };
 el("btnExport").onclick=()=>download("puck-config.json",
   JSON.stringify({longestSideMM:CFG.longestSideMM,tolerance,templates},null,2),"application/json");
-el("btnSheet").onclick=()=>{
+function buildSheet(){
   el("sheetGrid").innerHTML=templates.map(t=>{
     const pads=padsFor(t,CFG.longestSideMM),S=150,sc=(S*0.34)/CFG.longestSideMM*2;
     const pts=pads.map(p=>({x:S/2+p.x*sc,y:S/2+p.y*sc})),c=vColor(t.verdict);
@@ -1529,12 +1794,12 @@ el("btnSheet").onclick=()=>{
         ${pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="${c}"/>
         <text x="${(p.x+9).toFixed(1)}" y="${(p.y+4).toFixed(1)}" font-size="10" font-family="monospace" fill="#7f8b9b">${"ABC"[i]}</text>`).join("")}
       </svg>
-      <table>${pads.map((p,i)=>`<tr><td>Pad ${"ABC"[i]}</td><td>x ${p.x.toFixed(1)} mm</td><td>y ${p.y.toFixed(1)} mm</td></tr>`).join("")}
-      <tr><td>Ratio's</td><td colspan="2">${t.ratios[0]} / ${t.ratios[1]}</td></tr>
-      <tr><td>Langste</td><td colspan="2">${CFG.longestSideMM.toFixed(1)} mm</td></tr></table></div>`;
+      <table>${pads.map((p,i)=>`<tr><td>${tr("sheetPad")} ${"ABC"[i]}</td><td>x ${p.x.toFixed(1)} mm</td><td>y ${p.y.toFixed(1)} mm</td></tr>`).join("")}
+      <tr><td>${tr("sheetRatios")}</td><td colspan="2">${t.ratios[0]} / ${t.ratios[1]}</td></tr>
+      <tr><td>${tr("sheetLongest")}</td><td colspan="2">${CFG.longestSideMM.toFixed(1)} mm</td></tr></table></div>`;
   }).join("");
-  el("sheet").style.display="block";
-};
+}
+el("btnSheet").onclick=()=>{ buildSheet(); el("sheet").style.display="block"; };
 /* Vier manieren om het overzicht te sluiten: de knop onderaan, het kruisje
    bovenin, een tik naast het vel, en Escape. De knop onderaan alleen was te
    weinig — bij vier of meer pucks staat die buiten beeld. */
@@ -1579,8 +1844,8 @@ function bakeMap(){
   try{ data=off.toDataURL("image/jpeg",0.9); }
   catch(err){
     el("bakeHint").innerHTML=taintedSets.has(MV.set)
-      ? "<b>Dit kaartbeeld kan niet offline bewaard worden</b> — de tegelserver staat het uitlezen van de afbeelding niet toe. Kies OpenStreetMap of een PDOK-beeld en probeer het daarmee."
-      : "<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw.";
+      ? tr("bakeTainted")
+      : tr("bakeFailed");
     return;
   }
   const rec={data,west:nw.lng,north:nw.lat,east:se.lng,south:se.lat};
@@ -1589,9 +1854,9 @@ function bakeMap(){
   img.src=data;
   try{
     localStorage.setItem("pucktable-basemap",JSON.stringify(rec));
-    el("bakeHint").innerHTML=`Kaartbeeld bewaard (${Math.round(data.length/1024)} kB). Dit gebied verschijnt nu ook zonder internet.`;
+    el("bakeHint").innerHTML=tr("bakeSaved",Math.round(data.length/1024));
   }catch(err){
-    el("bakeHint").innerHTML="Bewaard voor deze sessie, maar te groot voor de browseropslag. Zoom iets verder uit en probeer opnieuw.";
+    el("bakeHint").innerHTML=tr("bakeTooBig");
   }
 }
 function restoreBasemap(){
@@ -1607,10 +1872,66 @@ el("btnBake").onclick=()=>{ bakePending=true; };
 el("btnUnbake").onclick=()=>{
   bgImage=null;
   try{ localStorage.removeItem("pucktable-basemap"); }catch(e){}
-  el("bakeHint").textContent="Bewaarde kaart gewist.";
+  el("bakeHint").textContent=tr("bakeCleared");
 };
 
-resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); frame();
+/* ── Taalknop ───────────────────────────────────────────────────────────
+   Boven in het menu, naast de titel. Niet permanent op de kaart: wie de tafel
+   bedient opent het menu toch, en wie eromheen staat heeft er niets aan dat
+   er nóg een knop over de plattegrond ligt. Twee vakjes in plaats van één
+   wisselknop, zodat in één oogopslag te zien is welke taal aan staat.
+
+   applyLang() gaat in één keer langs alles wat tekst draagt: de elementen met
+   een data-i18n-sleutel, en daarna de stukken die door JavaScript worden
+   opgebouwd en dus niet vanzelf mee veranderen. */
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.title=tr("docTitle");
+  setKgLang(lang);
+
+  document.querySelectorAll("[data-i18n]").forEach(n=>{ n.textContent=tr(n.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach(n=>{ n.innerHTML=tr(n.dataset.i18nHtml); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(n=>{ n.placeholder=tr(n.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(n=>{ n.setAttribute("aria-label",tr(n.dataset.i18nAria)); });
+  document.querySelectorAll("[data-i18n-title]").forEach(n=>{ n.title=tr(n.dataset.i18nTitle); });
+  document.querySelectorAll("[data-i18n-label]").forEach(n=>{ n.label=tr(n.dataset.i18nLabel); });
+
+  ["langNl","langEn"].forEach(id=>{
+    const mine=id==="langNl"?lang==="nl":lang==="en";
+    el(id).classList.toggle("on",mine);
+    el(id).setAttribute("aria-pressed",String(mine));
+  });
+
+  // Wat JavaScript zelf heeft neergezet.
+  el("chev").textContent=el("controls").classList.contains("collapsed")?tr("show"):tr("hide");
+  el("menuTitle").textContent=tr(MENU_TITLES[menuView]);
+  el("kgStatus").textContent=kgStatusText();
+  el("bakeHint").textContent=tr("bakeHint");
+  buildLayerMenu();
+  applyLock();
+  applyPinMoveMode();
+  renderTray();
+  renderKeyboard();
+  updateUI([]);
+  [...document.querySelectorAll(".puck-hint")].forEach(h=>
+    h.textContent=uiMode==="touch"?tr("touchHint"):tr("laptopHint"));
+  const fb=el("noteFlip");
+  if(fb){ fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide")); }
+  // Een open venster hoort niet eerst dicht te moeten voordat het meegaat.
+  if(selected) el("noteHead").textContent=vName(selected.verdict)+" · "+selected.topic;
+  if(el("sheet").style.display==="block") buildSheet();
+}
+function setLang(next){
+  if(next!=="nl"&&next!=="en") return;
+  if(next===lang){ applyLang(); return; }
+  lang=next;
+  try{ localStorage.setItem("pucktable-lang",lang); }catch(e){}
+  applyLang();
+}
+el("langNl").onclick=()=>setLang("nl");
+el("langEn").onclick=()=>setLang("en");
+
+resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); applyLang(); frame();
 
 /* ---- Bijgewerkt-stempel -------------------------------------------------
    Klein regeltje boven "Participatietafel": wanneer de bestanden van deze
@@ -1620,7 +1941,7 @@ resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMo
    server die niet, dan valt hij terug op document.lastModified. */
 const STAMP_FILES=["./index.html","./app.js","./styles.css","./kg.js"];
 function stampDate(d){
-  return d.toLocaleString("nl-NL",{day:"2-digit",month:"2-digit",year:"numeric",
+  return d.toLocaleString(tr("locale"),{day:"2-digit",month:"2-digit",year:"numeric",
                                    hour:"2-digit",minute:"2-digit"});
 }
 async function showBuildStamp(){
@@ -1637,7 +1958,7 @@ async function showBuildStamp(){
       if(!newest||d>newest) newest=d;
     }catch(e){}
   }));
-  const geladen=loaded.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
-  node.textContent=(newest?"bijgewerkt "+stampDate(newest):"bijgewerkt onbekend")+" · geladen "+geladen;
+  const geladen=loaded.toLocaleTimeString(tr("locale"),{hour:"2-digit",minute:"2-digit"});
+  node.textContent=(newest?tr("stampUpdated",stampDate(newest)):tr("stampUnknown"))+tr("stampLoaded",geladen);
 }
 showBuildStamp();
