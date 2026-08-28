@@ -107,6 +107,8 @@ const L = {
        analyticsRelations:"Relaties op dezelfde plek", analyticsRelationsNote:"Onderwerpen die dicht bij elkaar zijn neergelegd, kunnen samen besproken worden.",
        analyticsQuality:"Hoe compleet is de input?", analyticsNoData:"Nog geen pucks vastgelegd.",
        analyticsNotes:(done,total)=>`${done} van ${total} pucks hebben een toelichting`, analyticsLocations:(n)=>`${n} locatie${n===1?"":"s"} met meerdere pucks`,
+       analyticsHotspot:"Grootste concentratie", analyticsHotspotShare:(n,p)=>`${n} pucks · ${p}% van alle bijdragen`,
+       analyticsNoHotspot:"Nog geen buurt met meerdere pucks.",
        analyticsRelationNone:"Nog geen onderwerpen dicht genoeg bij elkaar.", analyticsAt:"rond",
        simulationHead:"Simulatie", simPuck:"Puck simuleren",
        tolLabel:"Ratio-tolerantie", diagLabel:"Schermdiagonaal (inch)",
@@ -208,6 +210,8 @@ const L = {
        analyticsRelations:"Relations at the same place", analyticsRelationsNote:"Topics placed close together can be discussed together.",
        analyticsQuality:"How complete is the input?", analyticsNoData:"No pucks have been recorded yet.",
        analyticsNotes:(done,total)=>`${done} of ${total} pucks have an explanation`, analyticsLocations:(n)=>`${n} location${n===1?"":"s"} with multiple pucks`,
+       analyticsHotspot:"Largest concentration", analyticsHotspotShare:(n,p)=>`${n} pucks · ${p}% of all contributions`,
+       analyticsNoHotspot:"There is no area with multiple pucks yet.",
        analyticsRelationNone:"No topics are close enough together yet.", analyticsAt:"around",
        simulationHead:"Simulation", simPuck:"Simulate puck",
        tolLabel:"Ratio tolerance", diagLabel:"Screen diagonal (inches)",
@@ -916,10 +920,38 @@ function drawPuckKnowledgeRelations(ctx,pucks){
   }
   ctx.restore();
 }
+
+/* Een nieuwe demo opent niet als een lege kaart. Per soort liggen er drie
+   ingevulde bijdragen rond Breda, verspreid over een paar herkenbare plekken.
+   Zodra een sessie eenmaal is opgeslagen (ook als de gebruiker haar wist),
+   wint die opgeslagen inhoud altijd van deze voorbeelden. */
+const DEMO_PINS=[
+  {id:"demo-good-1",lat:51.58918,lng:4.77620,verdict:"good",topic:"Groen",title:"Meer ruimte voor bomen",description:"De extra bomen op de Grote Markt geven schaduw en maken het plein prettiger in de zomer."},
+  {id:"demo-good-2",lat:51.58696,lng:4.77963,verdict:"good",topic:"Verkeer",title:"Fijne fietsroute langs de singel",description:"De vrijliggende route voelt veilig en sluit goed aan op het centrum."},
+  {id:"demo-good-3",lat:51.58854,lng:4.77091,verdict:"good",topic:"Sociaal",title:"Prettige ontmoetingsplek",description:"Het park wordt door jong en oud gebruikt en nodigt uit om langer te blijven."},
+
+  {id:"demo-bad-1",lat:51.59002,lng:4.77536,verdict:"bad",topic:"Afval",title:"Afval naast de containers",description:"Vooral na het weekend blijven hier zakken en losse verpakkingen liggen."},
+  {id:"demo-bad-2",lat:51.58638,lng:4.78102,verdict:"bad",topic:"Veiligheid",title:"Donkere oversteek",description:"De oversteek is in de avond slecht zichtbaar en auto's rijden hier vaak te hard."},
+  {id:"demo-bad-3",lat:51.59206,lng:4.77843,verdict:"bad",topic:"Verkeer",title:"Drukke kruising",description:"Fietsers en afslaand verkeer komen hier onduidelijk samen tijdens de spits."},
+
+  {id:"demo-talk-1",lat:51.58897,lng:4.77673,verdict:"talk",topic:"Verkeer",title:"Autoluwe binnenstad",description:"Bespreek hoe bevoorrading mogelijk blijft als er minder doorgaand autoverkeer komt."},
+  {id:"demo-talk-2",lat:51.58710,lng:4.77905,verdict:"talk",topic:"Groen",title:"Gebruik van de kade",description:"Kunnen verblijf, evenementen en meer groen hier naast elkaar bestaan?"},
+  {id:"demo-talk-3",lat:51.58812,lng:4.77156,verdict:"talk",topic:"Sociaal",title:"Ruimte voor verschillende leeftijden",description:"Bespreek welke voorzieningen zowel kinderen, jongeren als ouderen aanspreken."},
+
+  {id:"demo-idea-1",lat:51.58955,lng:4.77691,verdict:"idea",topic:"Groen",title:"Geveltuinenroute",description:"Maak een aaneengesloten route van geveltuinen en regentonnen door de binnenstad."},
+  {id:"demo-idea-2",lat:51.58672,lng:4.78012,verdict:"idea",topic:"Veiligheid",title:"Lichtlijn bij de oversteek",description:"Markeer de looproute met warme, lage verlichting die ook 's avonds goed zichtbaar is."},
+  {id:"demo-idea-3",lat:51.59172,lng:4.77784,verdict:"idea",topic:"Afval",title:"Slim inzamelpunt",description:"Plaats een compact inzamelpunt met aparte vakken en een melding wanneer een bak vol is."}
+].map((pin,i)=>({...pin,note:pin.description,t:new Date(Date.UTC(2026,7,28,9,15+i*4)).toISOString()}));
+
 function save(){ try{ localStorage.setItem("pucktable-"+el("sess").value,JSON.stringify(pins)); }catch(e){} }
 function restore(){
-  try{ const raw=localStorage.getItem("pucktable-"+el("sess").value);
-       if(raw){ const a=JSON.parse(raw); pins.length=0; a.forEach(p=>pins.push(p)); } }catch(e){}
+  pins.length=0;
+  try{
+    const session=el("sess").value;
+    const raw=localStorage.getItem("pucktable-"+session);
+    if(raw!==null){ JSON.parse(raw).forEach(p=>pins.push(p)); return; }
+    if(session==="sessie-01") DEMO_PINS.forEach(p=>pins.push({...p}));
+  }catch(e){}
 }
 let tapStart=null, selected=null;
 /* Twee tikken kort na elkaar op dezelfde markering. Na een dubbeltik begint de
@@ -1406,7 +1438,8 @@ function renderAnalytics(){
   const kpis=el("analyticsKpis"); kpis.textContent="";
   const notes=pins.filter(p=>(p.title||p.description||p.note||"").trim()).length;
   const clusters=analyticsClusters(), multi=clusters.filter(g=>g.items.length>1).length;
-  [[String(total),tr("saidWhat")],[String(new Set(pins.map(p=>p.topic)).size),tr("analyticsTopics")],
+  const largest=clusters[0]?.items.length||0, largestShare=total?Math.round(largest/total*100):0;
+  [[String(total),tr("saidWhat")],[largest>1?largest+"×":"—",largest>1?tr("analyticsHotspot"):tr("analyticsNoHotspot")],
    [total?Math.round(notes/total*100)+"%":"—",tr("analyticsNotes",notes,total)]]
     .forEach(([value,label])=>{ const d=document.createElement("div"); d.className="analytics-kpi"; d.innerHTML=`<b>${value}</b><span>${label}</span>`; kpis.appendChild(d); });
 
@@ -1416,7 +1449,13 @@ function renderAnalytics(){
   VERDICTS.forEach(v=>types.appendChild(analyticsBar(vName(v.key),pins.filter(p=>p.verdict===v.key).length,total,v.color)));
   const topicCounts=new Map(); pins.forEach(p=>topicCounts.set(p.topic,(topicCounts.get(p.topic)||0)+1));
   [...topicCounts.entries()].sort((a,b)=>b[1]-a[1]).forEach(([topic,n])=>topicsBox.appendChild(analyticsBar(topic,n,total,"#7aa2f7")));
-  clusters.slice(0,6).forEach((group,i)=>{
+  const hotspot=clusters.find(g=>g.items.length>1);
+  if(hotspot){
+    const callout=document.createElement("div"); callout.className="analytics-hotspot";
+    callout.innerHTML=`<span>${tr("analyticsHotspot")}</span><b>${tr("analyticsHotspotShare",hotspot.items.length,Math.round(hotspot.items.length/total*100))}</b>`;
+    places.appendChild(callout);
+  }
+  clusters.filter(g=>g.items.length>1).concat(clusters.filter(g=>g.items.length===1)).slice(0,6).forEach((group,i)=>{
     const item=document.createElement("button"); item.className="analytics-place";
     const themes=[...new Set(group.items.map(p=>p.topic))].join(" · ");
     item.innerHTML=`<b>${group.items.length} ${group.items.length===1?"puck":"pucks"}</b><span>${tr("analyticsAt")} ${group.center.lat.toFixed(4)}, ${group.center.lng.toFixed(4)} · ${themes}</span>`;
