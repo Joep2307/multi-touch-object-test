@@ -1509,7 +1509,6 @@ function openAnalytics(){
   el("analytics").scrollTop=0; el("analytics").querySelector(".analytics-inner").scrollTop=0;
 }
 function flipAnalytics(){
-  if(!sidesActive()) return;
   analyticsFlipped=!analyticsFlipped;
   applyAnalyticsOrientation();
 }

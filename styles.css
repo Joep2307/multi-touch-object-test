@@ -335,8 +335,7 @@ body.keyboard-open #note{z-index:45}
 .analytics-intro{margin:8px 0 25px;color:var(--ink-dim);font-size:14px}
 .analytics-actions{position:absolute;right:18px;top:18px;display:flex;gap:8px}
 .analytics-actions button{width:40px;height:40px;padding:0;flex:none;line-height:1}
-#flipAnalytics{display:none;font-size:18px}
-body.two-sided #flipAnalytics{display:block}
+#flipAnalytics{font-size:18px}
 .analytics-close{font-size:23px}
 .analytics-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .analytics-kpi{min-height:100px;padding:17px;border:1px solid var(--line);border-radius:12px;background:#111720;display:flex;flex-direction:column;justify-content:space-between}
