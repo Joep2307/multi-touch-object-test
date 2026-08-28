@@ -308,7 +308,6 @@ export function drawKG(ctx, MV, W, H) {
      bovenop omdat het er weinig zijn. */
   if (kg.relations && kg.edges.length) {
     ctx.save();
-    ctx.lineWidth = 1;
     for (const kind of ["mentions", "related"]) {
       ctx.lineWidth = kind === "related" ? 1.4 : 1;
       ctx.strokeStyle = kind === "related"
