@@ -32,6 +32,9 @@ body.dragging-dot #c{cursor:grabbing}
 .orientation-row{display:block}
 #btnOrientation{display:flex;align-items:center;justify-content:center;gap:9px;width:100%}
 .orientation-icon{font-size:18px;line-height:1;transform:rotate(90deg)}
+/* De losse `rotate`-eigenschap composeert met bestaande transforms van menu,
+   toetsenbord, notitie en analyse. Het canvas en de kaart blijven ongemoeid. */
+body.controls-flipped > :not(#c){rotate:180deg}
 button:disabled{opacity:.35;cursor:default}
 button:disabled:hover{border-color:var(--line);background:#151b24}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}

@@ -59,10 +59,8 @@ const L = {
        controlSize:"Grootte van de bediening",
        smaller:"Bediening kleiner", larger:"Bediening groter",
        scaleHint:"Vensters en knoppen; de kaart blijft op ware grootte.",
-       rotatePortrait:"Draai naar staand", rotateLandscape:"Draai naar liggend",
-       orientationHint:"Wisselt het hele scherm tussen liggend en staand.",
-       orientationBusy:"Scherm draaien…",
-       orientationUnsupported:"Dit apparaat laat de browser het scherm niet draaien. Draai het apparaat of wijzig de schermstand in de systeeminstellingen.",
+       rotateControls:"Draai bediening naar overkant", rotateControlsBack:"Draai bediening terug",
+       orientationHint:"Draait alleen de bediening, vensters en tekst; de kaart blijft staan.",
        twoSides:"Twee zijden",
        sidesHint:"Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.",
 
@@ -166,10 +164,8 @@ const L = {
        controlSize:"Size of the controls",
        smaller:"Smaller controls", larger:"Larger controls",
        scaleHint:"Panels and buttons; the map stays at true size.",
-       rotatePortrait:"Rotate to portrait", rotateLandscape:"Rotate to landscape",
-       orientationHint:"Switches the entire screen between landscape and portrait.",
-       orientationBusy:"Rotating screen…",
-       orientationUnsupported:"This device does not let the browser rotate the screen. Rotate the device or change its orientation in the system settings.",
+       rotateControls:"Turn controls to the other side", rotateControlsBack:"Turn controls back",
+       orientationHint:"Rotates only the controls, panels, and text; the map stays in place.",
        twoSides:"Two sides",
        sidesHint:"Puck bar on both sides; panels turn towards whoever opens them.",
 
@@ -330,8 +326,12 @@ const TILE_SETS = {
 // verschijnen dan wel, maar het canvas raakt "besmet" en offline bewaren
 // werkt niet meer voor dat beeld.
 const taintedSets=new Set();
+const storedNorth=(()=>{
+  try{ const v=Number(localStorage.getItem("pucktable-north")); return Number.isFinite(v)?v:0; }
+  catch(e){ return 0; }
+})();
 const MV = {
-  lng:4.7759, lat:51.5866, zoom:14, set:"osm",
+  lng:4.7759, lat:51.5866, zoom:14, set:"osm", north:((storedNorth%360)+360)%360,
   world(){ return 256*Math.pow(2,this.zoom); },
   wx(lng){ return (lng+180)/360*this.world(); },
   wy(lat){ const s=Math.sin(lat*Math.PI/180);
@@ -339,10 +339,20 @@ const MV = {
   lngAt(x){ return x/this.world()*360-180; },
   latAt(y){ const n=Math.PI-2*Math.PI*y/this.world();
             return 180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))); },
-  project(lng,lat){ return {x:this.wx(lng)-this.wx(this.lng)+W/2, y:this.wy(lat)-this.wy(this.lat)+H/2}; },
-  unproject(x,y){ return {lng:this.lngAt(x-W/2+this.wx(this.lng)), lat:this.latAt(y-H/2+this.wy(this.lat))}; },
+  projectRaw(lng,lat){ return {x:this.wx(lng)-this.wx(this.lng)+W/2, y:this.wy(lat)-this.wy(this.lat)+H/2}; },
+  rotatePoint(x,y,degrees=this.north){
+    const a=degrees*Math.PI/180,c=Math.cos(a),s=Math.sin(a),dx=x-W/2,dy=y-H/2;
+    return {x:W/2+dx*c-dy*s,y:H/2+dx*s+dy*c};
+  },
+  project(lng,lat){ const p=this.projectRaw(lng,lat); return this.rotatePoint(p.x,p.y); },
+  unproject(x,y){
+    const p=this.rotatePoint(x,y,-this.north);
+    return {lng:this.lngAt(p.x-W/2+this.wx(this.lng)), lat:this.latAt(p.y-H/2+this.wy(this.lat))};
+  },
   panBy(dx,dy){
-    const cx=this.wx(this.lng)-dx, cy=this.wy(this.lat)-dy;
+    const a=-this.north*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    const mapDx=dx*c-dy*s,mapDy=dx*s+dy*c;
+    const cx=this.wx(this.lng)-mapDx, cy=this.wy(this.lat)-mapDy;
     this.lng=this.lngAt(cx); this.lat=Math.max(-85,Math.min(85,this.latAt(cy)));
   },
   zoomBy(dz,ax,ay){
@@ -352,11 +362,22 @@ const MV = {
     const anchor=this.unproject(ax,ay);            // geo point under the cursor, at the old zoom
     this.zoom=z;
     const p=this.project(anchor.lng,anchor.lat);   // where that same point lands after zooming
-    const cx=this.wx(this.lng)+(p.x-ax), cy=this.wy(this.lat)+(p.y-ay);
-    this.lng=this.lngAt(cx);
-    this.lat=Math.max(-85,Math.min(85,this.latAt(cy)));  // correct the centre in world-pixel space
+    this.panBy(ax-p.x,ay-p.y);                     // keep the anchor fixed, also on a rotated map
   }
 };
+/* Stel in naar welke schermrand het geografische noorden wijst.
+   0° is boven, 90° rechts, 180° onder en 270° links. */
+function setNorth(degrees=0){
+  const value=Number(degrees);
+  if(!Number.isFinite(value)) throw new TypeError("setNorth verwacht een hoek in graden");
+  MV.north=((value%360)+360)%360;
+  mapRenderKey="";
+  try{ localStorage.setItem("pucktable-north",String(MV.north)); }catch(e){}
+  dispatchEvent(new CustomEvent("northchange",{detail:{degrees:MV.north}}));
+  return MV.north;
+}
+MV.setNorth=setNorth;
+window.setNorth=setNorth;
 window.MV = MV;   // handy for debugging from the console
 const tileCache=new Map(); let tilesTried=0, tilesFailed=0, tileRevision=0, tileRefreshTimer=null;
 function tileChanged(){
@@ -423,26 +444,31 @@ let bgImage=null;   // {img, west, east, north, south} — a map picture pinned 
 function drawMap(g){
   g.fillStyle="#0b0e13"; g.fillRect(0,0,W,H);
   let drawn=0;
+  const rotation=MV.north*Math.PI/180,c=Math.abs(Math.cos(rotation)),s=Math.abs(Math.sin(rotation));
+  const coverW=W*c+H*s,coverH=W*s+H*c;
+  g.save();
+  g.translate(W/2,H/2); g.rotate(rotation); g.translate(-W/2,-H/2);
 
   if(bgImage){
-    const nw=MV.project(bgImage.west,bgImage.north), se=MV.project(bgImage.east,bgImage.south);
+    const nw=MV.projectRaw(bgImage.west,bgImage.north), se=MV.projectRaw(bgImage.east,bgImage.south);
     g.drawImage(bgImage.img, nw.x, nw.y, se.x-nw.x, se.y-nw.y);
     drawn=1;
   }
 
   const z=Math.max(0,Math.min(19,Math.round(MV.zoom)+CFG.retina));
   const scale=Math.pow(2,MV.zoom-z), ts=256*scale, n=Math.pow(2,z);
-  const ox=MV.wx(MV.lng)-W/2, oy=MV.wy(MV.lat)-H/2;
-  const x0=Math.floor(ox/ts), x1=Math.floor((ox+W)/ts);
-  const y0=Math.max(0,Math.floor(oy/ts)), y1=Math.min(n-1,Math.floor((oy+H)/ts));
+  const centerX=MV.wx(MV.lng),centerY=MV.wy(MV.lat);
+  const x0=Math.floor((centerX-coverW/2)/ts), x1=Math.floor((centerX+coverW/2)/ts);
+  const y0=Math.max(0,Math.floor((centerY-coverH/2)/ts)), y1=Math.min(n-1,Math.floor((centerY+coverH/2)/ts));
   for(let ty=y0;ty<=y1;ty++) for(let tx=x0;tx<=x1;tx++){
     const wrapped=((tx%n)+n)%n;
     // snap every edge to a whole pixel so neighbouring tiles butt together with no seam and no half-pixel blur
-    const rx=Math.round(tx*ts-ox), ry=Math.round(ty*ts-oy);
-    const rw=Math.round((tx+1)*ts-ox)-rx, rh=Math.round((ty+1)*ts-oy)-ry;
+    const rx=Math.round(tx*ts-centerX+W/2), ry=Math.round(ty*ts-centerY+H/2);
+    const rw=Math.round((tx+1)*ts-centerX+W/2)-rx, rh=Math.round((ty+1)*ts-centerY+H/2)-ry;
     if(blitCovered(g,z,wrapped,ty,rx,ry,rw,rh)) drawn++;
     else if(!bgImage){ g.strokeStyle="rgba(28,35,45,.9)"; g.lineWidth=1; g.strokeRect(rx,ry,rw,rh); }
   }
+  g.restore();
 
   if(!drawn && MV.set!=="none"){
     const msg = tilesFailed>0
@@ -1291,7 +1317,7 @@ addEventListener("resize",resize);
 
 function paintMapLayer(){
   const bgKey=bgImage?[bgImage.west,bgImage.east,bgImage.north,bgImage.south].join(","):"none";
-  const key=[W,H,MV.set,MV.lng.toFixed(7),MV.lat.toFixed(7),MV.zoom.toFixed(5),tileRevision,bgKey].join("|");
+  const key=[W,H,MV.set,MV.lng.toFixed(7),MV.lat.toFixed(7),MV.zoom.toFixed(5),MV.north,tileRevision,bgKey].join("|");
   if(key!==mapRenderKey){drawMap(mapCtx);mapRenderKey=key;}
   ctx.drawImage(mapLayer,0,0,mapLayer.width,mapLayer.height,0,0,W,H);
 }
@@ -1381,7 +1407,7 @@ function frame(){
   }
 
   if(debugMode) points.forEach((pt,i)=>{
-    ctx.strokeStyle=usedIdx.has(i)?"#39d8a4":"#ffd166"; ctx.lineWidth=2;
+    ctx.strokeStyle=usedIdx.has(i)?"#39d8a4":"#ff5f56"; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(pt.x,pt.y,16,0,Math.PI*2); ctx.stroke();
     ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.textAlign="left"; ctx.fillStyle=ctx.strokeStyle;
     ctx.fillText((pt.sim?"sim ":"id ")+i,pt.x+20,pt.y+3);
@@ -1673,45 +1699,24 @@ el("btnScaleDown").onclick=()=>stepScale(-1);
 el("btnScaleUp").onclick=()=>stepScale(1);
 
 /* ── Schermstand ─────────────────────────────────────────────────────
-   Browsers staan het vastzetten van de schermstand alleen toe vanuit een
-   gebruikersactie en meestal alleen in volledig scherm. De knop handelt die
-   twee stappen samen af; de kaart krijgt daarna via het bestaande resize-
-   event meteen de nieuwe afmetingen. */
-const isLandscape=()=>matchMedia("(orientation: landscape)").matches;
-function refreshOrientationControl(resetHint=true){
-  el("orientationLabel").textContent=tr(isLandscape()?"rotatePortrait":"rotateLandscape");
+   De kaart is het gedeelde object en blijft staan; alleen de bedieningslagen
+   draaien 180° naar de persoon aan de overkant. */
+let controlsFlipped=(()=>{
+  try{ return localStorage.getItem("pucktable-controls-flipped")==="1"; }catch(e){ return false; }
+})();
+function refreshOrientationControl(){
+  document.body.classList.toggle("controls-flipped",controlsFlipped);
+  el("orientationLabel").textContent=tr(controlsFlipped?"rotateControlsBack":"rotateControls");
   el("btnOrientation").setAttribute("aria-label",el("orientationLabel").textContent);
-  if(resetHint) el("orientationHint").textContent=tr("orientationHint");
+  el("btnOrientation").setAttribute("aria-pressed",String(controlsFlipped));
+  el("orientationHint").textContent=tr("orientationHint");
 }
-async function toggleOrientation(){
-  const button=el("btnOrientation");
-  const target=isLandscape()?"portrait":"landscape";
-  let enteredFullscreen=false;
-  button.disabled=true;
-  el("orientationHint").textContent=tr("orientationBusy");
-  try{
-    if(!document.fullscreenElement){
-      if(!document.documentElement.requestFullscreen) throw new Error("fullscreen unsupported");
-      await document.documentElement.requestFullscreen();
-      enteredFullscreen=true;
-    }
-    if(!screen.orientation?.lock) throw new Error("orientation lock unsupported");
-    await screen.orientation.lock(target);
-    refreshOrientationControl();
-  }catch(error){
-    // Laat de gebruiker niet onverwacht in volledig scherm achter wanneer
-    // juist het draaien door dit apparaat of deze browser wordt geweigerd.
-    if(enteredFullscreen && document.fullscreenElement){
-      try{ await document.exitFullscreen(); }catch(e){}
-    }
-    el("orientationHint").textContent=tr("orientationUnsupported");
-  }finally{
-    button.disabled=false;
-  }
+function toggleOrientation(){
+  controlsFlipped=!controlsFlipped;
+  try{ localStorage.setItem("pucktable-controls-flipped",controlsFlipped?"1":"0"); }catch(e){}
+  refreshOrientationControl();
 }
 el("btnOrientation").onclick=toggleOrientation;
-screen.orientation?.addEventListener?.("change",()=>refreshOrientationControl());
-addEventListener("orientationchange",()=>refreshOrientationControl());
 
 el("modeTouch").onclick=()=>{applyMode("touch");reorientMenu();};
 el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();};
