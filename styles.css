@@ -133,6 +133,7 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
 #tally .total{border-top:1px solid var(--line);margin-top:8px;padding-top:9px;
   font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--ink-dim)}
 #tally .flag{margin-top:9px;font-size:11px;color:var(--warn);display:none;line-height:1.5}
+.analytics-launch{margin:12px 0 0}
 .pin{font-size:12px;line-height:1.45;padding:8px 0;border-bottom:1px solid var(--line);
   display:flex;gap:9px;align-items:flex-start}
 .pin:last-child{border-bottom:none}
