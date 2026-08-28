@@ -1880,7 +1880,12 @@ function startPanelDrag(panel,zone,e){
     panel.classList.remove("dragging");
     if(moved){
       panelDragEnd=performance.now();
-      if(Math.hypot(o.x,o.y)<=PANEL_SNAP_DISTANCE) resetPanelOffset(panel);
+      if(Math.hypot(o.x,o.y)<=PANEL_SNAP_DISTANCE){
+        /* Eerst één frame op de loslaatplek vastleggen. Daarna kan de
+           transition zichtbaar van die plek naar de oorsprong lopen. */
+        panel.getBoundingClientRect();
+        resetPanelOffset(panel);
+      }
       else panel.classList.remove("snap-home");
     }
   };
@@ -1898,17 +1903,20 @@ addEventListener("click",e=>{
 function makeDraggable(panel,headSel,loose){
   panel.classList.add("panel-draggable");
   const head=headSel?panel.querySelector(headSel):null;
-  const grip=document.createElement("div");
-  grip.className="panel-grip"+(loose?" loose":"");
-  grip.dataset.i18nTitle="movePanel"; grip.dataset.i18nAria="movePanel";
-  grip.title=tr("movePanel"); grip.setAttribute("aria-label",tr("movePanel"));
-  grip.setAttribute("role","separator");
-  const host=head||panel;
-  host.insertBefore(grip,host.firstChild);
   if(head) head.classList.add("drag-head");
-  for(const zone of head?[grip,head]:[grip]){
+  let grip=null;
+  /* Een bestaande kop is zelf de greep; daar hoeft geen extra icoon naast.
+     Alleen een paneel zonder kop krijgt een lege sleepstrook. */
+  if(!head){
+    grip=document.createElement("div");
+    grip.className="panel-grip"+(loose?" loose":"");
+    grip.dataset.i18nTitle="movePanel"; grip.dataset.i18nAria="movePanel";
+    grip.title=tr("movePanel"); grip.setAttribute("aria-label",tr("movePanel"));
+    panel.insertBefore(grip,panel.firstChild);
+  }
+  for(const zone of head?[head]:[grip]){
     zone.addEventListener("pointerdown",ev=>{
-      if(zone!==grip && dragControl(ev.target)) return;   // knop blijft knop
+      if(head && dragControl(ev.target)) return;          // knop blijft knop
       startPanelDrag(panel,zone,ev);
     });
     zone.addEventListener("dblclick",()=>resetPanelOffset(panel));

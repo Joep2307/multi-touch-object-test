@@ -465,9 +465,7 @@ body.keyboard-open #note{z-index:45}
 .panel-grip{flex:none;display:flex;align-items:center;justify-content:center;
   width:22px;height:24px;margin:-2px 4px -2px -4px;border-radius:7px;
   color:rgba(232,237,244,.34);cursor:grab;touch-action:none}
-.panel-grip::before{content:"";width:13px;height:2px;border-radius:2px;background:currentColor;
-  box-shadow:0 -4px 0 currentColor,0 4px 0 currentColor}
-.panel-grip:hover{color:rgba(232,237,244,.72);background:rgba(232,237,244,.07)}
+.panel-grip:hover{background:rgba(232,237,244,.04)}
 .panel.dragging .panel-grip{cursor:grabbing;color:#cfe0ff;background:rgba(61,123,255,.18)}
 .panel.dragging{border-color:rgba(61,123,255,.5)}
 /* In de buurt van de beginplek laat het paneel al zien dat het daar bij
@@ -477,11 +475,10 @@ body.keyboard-open #note{z-index:45}
 .panel.snap-home{border-color:rgba(57,216,164,.72);box-shadow:0 0 0 3px rgba(57,216,164,.12)}
 /* De kop vangt de sleep op, dus daar mag een veeg geen scroll of kaartgebaar
    meer worden. */
-.drag-head{touch-action:none}
+.drag-head{touch-action:none;cursor:grab}
+.panel.dragging .drag-head{cursor:grabbing}
 /* Aan een tafel wordt met vingers gesleept: dan mag de greep groter. */
 .mode-touch .panel-grip{width:34px;height:38px;border-radius:10px}
-.mode-touch .panel-grip::before{width:16px;height:2.5px;
-  box-shadow:0 -6px 0 currentColor,0 6px 0 currentColor}
 /* Zonder kop hangt de greep in de hoek van het paneel zelf. */
 .panel-grip.loose{position:absolute;top:5px;right:6px;margin:0;z-index:2}
 /* De zoomknoppen staan in een kolom: daar past de greep als eerste rij. */
