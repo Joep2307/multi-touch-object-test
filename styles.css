@@ -440,3 +440,36 @@ body.keyboard-open #note{z-index:45}
 
 /* Het leesvenster van de kennisgraaf draait mee met dezelfde regel. */
 #kgInfo{transform:rotate(var(--kg-flip,0deg));transform-origin:50% 50%}
+
+/* ── Panelen verslepen ──────────────────────────────────────────────────
+   Aan een tafel staat iedereen ergens anders: wat voor de een goed ligt,
+   ligt voor de ander over de kaart. Elk zwevend paneel heeft daarom een
+   greep aan zijn kop. Alleen daar begint het slepen — de rest van het
+   paneel blijft gewoon bedienbaar en een veeg over een lijst blijft een
+   veeg. Panelen zonder kop (de zoomknoppen, het kennisvenster, de
+   hoekknoppen) dragen dezelfde greep in een hoek. */
+.panel-grip{flex:none;display:flex;align-items:center;justify-content:center;
+  width:22px;height:24px;margin:-2px 4px -2px -4px;border-radius:7px;
+  color:rgba(232,237,244,.34);cursor:grab;touch-action:none}
+.panel-grip::before{content:"";width:13px;height:2px;border-radius:2px;background:currentColor;
+  box-shadow:0 -4px 0 currentColor,0 4px 0 currentColor}
+.panel-grip:hover{color:rgba(232,237,244,.72);background:rgba(232,237,244,.07)}
+.panel.dragging .panel-grip{cursor:grabbing;color:#cfe0ff;background:rgba(61,123,255,.18)}
+.panel.dragging{border-color:rgba(61,123,255,.5)}
+/* De kop vangt de sleep op, dus daar mag een veeg geen scroll of kaartgebaar
+   meer worden. */
+.drag-head{touch-action:none}
+/* Aan een tafel wordt met vingers gesleept: dan mag de greep groter. */
+.mode-touch .panel-grip{width:34px;height:38px;border-radius:10px}
+.mode-touch .panel-grip::before{width:16px;height:2.5px;
+  box-shadow:0 -6px 0 currentColor,0 6px 0 currentColor}
+/* Zonder kop hangt de greep in de hoek van het paneel zelf. */
+.panel-grip.loose{position:absolute;top:5px;right:6px;margin:0;z-index:2}
+.menu-btn .panel-grip.loose{top:2px;left:50%;right:auto;transform:translateX(-50%);
+  width:26px;height:14px}
+.mode-touch .menu-btn .panel-grip.loose{width:34px;height:16px}
+/* De zoomknoppen staan in een kolom: daar past de greep als eerste rij. */
+#zoom .panel-grip{width:100%;height:14px;margin:0}
+/* Zodra een venster met de hand verplaatst is wijst de stengel niet meer naar
+   zijn markering; dan hoort hij weg. */
+#note.moved::before{display:none}

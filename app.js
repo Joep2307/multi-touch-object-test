@@ -72,6 +72,7 @@ const L = {
        show:"TOON", hide:"VERBERG",
        touchscreen:"Touchscreen", exportGeo:"GeoJSON exporteren", exportCsv:"CSV exporteren",
        touchDebug:"Touch-debug",
+       appearanceHead:"Weergave", chooseTheme:"Kleurmodus kiezen", lightMode:"☀ Licht", darkMode:"☾ Donker",
 
        saidWhat:"Wat is er gezegd",
        groundFlag:"Minder dan 3 contactpunten. Ligt er een puck? Dan koppelen de pads niet — check de aarding.",
@@ -161,6 +162,7 @@ const L = {
        alreadyKnown:"Wat is hier al bekend", aboutWhatYouSay:"Gaat over wat je zegt",
        askSolution:"Vraag om een oplossing",
        onscreenKeyboard:"Schermtoetsenbord", keyboardHead:"Toetsenbord",
+       movePanel:"Verslepen \u00b7 dubbeltik zet terug",
        keySpace:"Spatie", keyEnter:"Enter", keyClose:"Sluiten", typeHere:"Tekst invoeren",
        stampUpdated:(d)=>`bijgewerkt ${d}`, stampUnknown:"bijgewerkt onbekend",
        stampLoaded:(t)=>` · geladen ${t}` },
@@ -182,6 +184,7 @@ const L = {
        show:"SHOW", hide:"HIDE",
        touchscreen:"Touchscreen", exportGeo:"Export GeoJSON", exportCsv:"Export CSV",
        touchDebug:"Touch debug",
+       appearanceHead:"Appearance", chooseTheme:"Choose colour mode", lightMode:"☀ Light", darkMode:"☾ Dark",
 
        saidWhat:"What was said",
        groundFlag:"Fewer than 3 contact points. Is a puck lying there? Then the pads are not coupling — check the grounding.",
@@ -271,6 +274,7 @@ const L = {
        alreadyKnown:"What is already known here", aboutWhatYouSay:"Relates to what you say",
        askSolution:"Ask for a solution",
        onscreenKeyboard:"On-screen keyboard", keyboardHead:"Keyboard",
+       movePanel:"Drag \u00b7 double-tap to reset",
        keySpace:"Space", keyEnter:"Enter", keyClose:"Close", typeHere:"Enter text",
        stampUpdated:(d)=>`updated ${d}`, stampUnknown:"update time unknown",
        stampLoaded:(t)=>` · loaded ${t}` }
@@ -292,6 +296,13 @@ const tr=(k,...a)=>{
 };
 let uiMode=(()=>{ try{return localStorage.getItem("pucktable-ui-mode");}catch(e){return null;} })();
 if(uiMode!=="touch"&&uiMode!=="laptop") uiMode=matchMedia("(pointer:coarse)").matches?"touch":"laptop";
+/* Kleurmodus is een bewuste tafelinstelling en volgt daarom na de eerste
+   keuze niet meer stilletjes het besturingssysteem. Zonder opgeslagen keuze
+   nemen we wel de voorkeur van het apparaat als prettig beginpunt. */
+let colorTheme=(()=>{
+  try{ const v=localStorage.getItem("pucktable-color-theme"); if(v==="light"||v==="dark") return v; }catch(e){}
+  return matchMedia("(prefers-color-scheme:light)").matches?"light":"dark";
+})();
 /* De bediening kan mee groeien met de tafel: op een 43"-scherm dat een meter
    verderop staat is 100% te klein, op een laptop is 150% belachelijk. Vaste
    trappen in plaats van een schuif, want dit wordt met een vinger bediend.
@@ -476,7 +487,7 @@ function blitCovered(g,z,x,y,rx,ry,rw,rh){
 }
 let bgImage=null;   // {img, west, east, north, south} — a map picture pinned to real coordinates
 function drawMap(g){
-  g.fillStyle="#0b0e13"; g.fillRect(0,0,W,H);
+  g.fillStyle=colorTheme==="light"?"#e8edf3":"#0b0e13"; g.fillRect(0,0,W,H);
   let drawn=0;
   const rotation=MV.north*Math.PI/180,c=Math.abs(Math.cos(rotation)),s=Math.abs(Math.sin(rotation));
   const coverW=W*c+H*s,coverH=W*s+H*c;
@@ -500,7 +511,7 @@ function drawMap(g){
     const rx=Math.round(tx*ts-centerX+W/2), ry=Math.round(ty*ts-centerY+H/2);
     const rw=Math.round((tx+1)*ts-centerX+W/2)-rx, rh=Math.round((ty+1)*ts-centerY+H/2)-ry;
     if(blitCovered(g,z,wrapped,ty,rx,ry,rw,rh)) drawn++;
-    else if(!bgImage){ g.strokeStyle="rgba(28,35,45,.9)"; g.lineWidth=1; g.strokeRect(rx,ry,rw,rh); }
+    else if(!bgImage){ g.strokeStyle=colorTheme==="light"?"rgba(115,129,147,.42)":"rgba(28,35,45,.9)"; g.lineWidth=1; g.strokeRect(rx,ry,rw,rh); }
   }
   g.restore();
 
@@ -521,13 +532,13 @@ function drawMap(g){
   let barM=Math.pow(10,Math.floor(Math.log10(mPerPx*140)));
   if(barM*2/mPerPx<160) barM*=2;
   const barPx=barM/mPerPx;
-  g.strokeStyle="rgba(232,237,244,.6)"; g.lineWidth=2;
+  g.strokeStyle=colorTheme==="light"?"rgba(23,32,45,.7)":"rgba(232,237,244,.6)"; g.lineWidth=2;
   const barX=88;                               // rechts van de kaartlagen-knop
   g.beginPath(); g.moveTo(barX,H-26); g.lineTo(barX+barPx,H-26);
   g.moveTo(barX,H-31); g.lineTo(barX,H-21); g.moveTo(barX+barPx,H-31); g.lineTo(barX+barPx,H-21); g.stroke();
-  g.fillStyle="rgba(232,237,244,.6)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace"; g.textAlign="left";
+  g.fillStyle=colorTheme==="light"?"rgba(23,32,45,.72)":"rgba(232,237,244,.6)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace"; g.textAlign="left";
   g.fillText(barM>=1000?(barM/1000)+" km":barM+" m", barX, H-36);
-  g.textAlign="center"; g.fillStyle="rgba(127,139,155,.75)"; g.font="10px 'JetBrains Mono',ui-monospace,monospace";
+  g.textAlign="center"; g.fillStyle=colorTheme==="light"?"rgba(54,68,85,.76)":"rgba(127,139,155,.75)"; g.font="10px 'JetBrains Mono',ui-monospace,monospace";
   g.fillText(TILE_SETS[MV.set]?.credit || "", W/2, H-10);
 }
 
@@ -1168,6 +1179,10 @@ function reorientNote(){
 
 function openNote(pin,x,y,fromPuck=false){
   selected=pin; const n=el("note");
+  // Een venster hangt aan een markering. Gaat het bij een andere markering
+  // open, dan hoort het weer naast díe markering te beginnen — de vorige
+  // verschuiving met de hand geldt niet voor een nieuw venster.
+  resetPanelOffset(n);
   n.style.display="block";
   const flip=flipFor(pin,y);
   n.classList.toggle("flipped",flip);
@@ -1751,6 +1766,7 @@ function applyScale(){
   positionNoteX();
   positionNote();
   positionKgInfo();
+  refreshPanelOffsets();
 }
 function stepScale(step){
   const i=UI_SCALES.indexOf(uiScale);
@@ -1759,6 +1775,125 @@ function stepScale(step){
 }
 el("btnScaleDown").onclick=()=>stepScale(-1);
 el("btnScaleUp").onclick=()=>stepScale(1);
+
+/* ── Panelen verslepen ────────────────────────────────────────────────
+   Aan een tafel staat iedereen ergens anders, en een paneel dat voor de een
+   goed ligt, ligt voor de ander midden over het stuk kaart waar het gesprek
+   over gaat. Elk zwevend paneel kan daarom opzij geschoven worden — aan zijn
+   kop, zodat een veeg in het paneel zelf gewoon een veeg blijft.
+
+   De verplaatsing zit in de losse `translate`-eigenschap en niet in
+   `transform`: het draaien voor de overkant en het kantelen van de bediening
+   staan in `transform` en blijven zo overeind. `translate` wordt vóór de
+   rotatie toegepast, dus een paneel schuift altijd de kant op die de vinger
+   gaat, ook als het op zijn kop staat.
+
+   De offsets worden bewust niet bewaard: na een verversing staat de tafel
+   weer klaar zoals hij bedoeld is. Dubbeltikken op de greep zet één paneel
+   terug. */
+const DRAG_PANELS=[
+  {id:"menu",       head:".menu-head"},
+  {id:"note",       head:".note-head"},
+  {id:"keyboard",   head:".keyboard-head"},
+  {id:"puckDock",   head:".puck-dock-head"},
+  {id:"puckDockTop",head:".puck-dock-head"},
+  {id:"zoom"},                      // greep als eerste rij boven de knoppen
+  {id:"kgInfo",  loose:true},
+  {id:"btnMapA", loose:true}, {id:"btnSetA", loose:true},
+  {id:"btnMapB", loose:true}, {id:"btnSetB", loose:true},
+];
+const panelOffsets=new Map();        // element → {x,y} in schermpixels
+let panelDragEnd=0;
+
+/* De offset staat in schermpixels, maar `translate` rekent in de eenheden van
+   het paneel zelf — en dat staat op `zoom`. Vandaar de deling: anders zou een
+   paneel bij het groter maken van de bediening ook verder wegschuiven. */
+function applyPanelOffset(panel){
+  const o=panelOffsets.get(panel);
+  if(!o||(!o.x&&!o.y)){ panel.style.translate=""; panel.classList.remove("moved"); return; }
+  panel.style.translate=(o.x/uiScale)+"px "+(o.y/uiScale)+"px";
+  panel.classList.add("moved");
+}
+/* Een paneel mag van de kaart af geschoven worden, maar nooit zó ver dat er
+   niets meer over is om het mee terug te halen. */
+function clampPanel(panel){
+  const o=panelOffsets.get(panel); if(!o) return;
+  const prev=panel.style.translate;
+  panel.style.translate="";
+  const r=panel.getBoundingClientRect();          // plek zonder verplaatsing
+  panel.style.translate=prev;
+  if(!r.width||!r.height) return;
+  const keepX=Math.min(64,r.width*.6), keepY=Math.min(64,r.height*.9);
+  o.x=Math.max(keepX-r.left-r.width, Math.min(innerWidth -keepX-r.left, o.x));
+  o.y=Math.max(keepY-r.top -r.height, Math.min(innerHeight-keepY-r.top , o.y));
+}
+function resetPanelOffset(panel){
+  if(!panel) return;
+  panelOffsets.delete(panel);
+  applyPanelOffset(panel);
+}
+function refreshPanelOffsets(){
+  for(const panel of panelOffsets.keys()){ clampPanel(panel); applyPanelOffset(panel); }
+}
+addEventListener("resize",refreshPanelOffsets);
+
+const dragControl=t=>!!t.closest("button,input,select,textarea,a,label,.traypuck");
+
+function startPanelDrag(panel,zone,e){
+  if(e.button>0) return;
+  const o=panelOffsets.get(panel)||{x:0,y:0};
+  panelOffsets.set(panel,o);
+  const sx=e.clientX, sy=e.clientY, ox=o.x, oy=o.y;
+  let moved=false;
+  try{ zone.setPointerCapture(e.pointerId); }catch(err){}
+  panel.classList.add("dragging");
+  const move=ev=>{
+    if(ev.pointerId!==e.pointerId) return;
+    o.x=ox+ev.clientX-sx; o.y=oy+ev.clientY-sy;
+    if(!moved&&Math.hypot(ev.clientX-sx,ev.clientY-sy)>4) moved=true;
+    clampPanel(panel); applyPanelOffset(panel);
+  };
+  const stop=ev=>{
+    if(ev.pointerId!==e.pointerId) return;
+    zone.removeEventListener("pointermove",move);
+    zone.removeEventListener("pointerup",stop);
+    zone.removeEventListener("pointercancel",stop);
+    panel.classList.remove("dragging");
+    if(moved) panelDragEnd=performance.now();
+  };
+  zone.addEventListener("pointermove",move);
+  zone.addEventListener("pointerup",stop);
+  zone.addEventListener("pointercancel",stop);
+  e.preventDefault(); e.stopPropagation();
+}
+/* De greep van de hoekknoppen zit ín een knop. Slepen mag daar dus niet ook
+   nog het menu openen; een tik zonder verplaatsing wél. */
+addEventListener("click",e=>{
+  if(performance.now()-panelDragEnd<300){ e.stopPropagation(); e.preventDefault(); }
+},true);
+
+function makeDraggable(panel,headSel,loose){
+  const head=headSel?panel.querySelector(headSel):null;
+  const grip=document.createElement("div");
+  grip.className="panel-grip"+(loose?" loose":"");
+  grip.dataset.i18nTitle="movePanel"; grip.dataset.i18nAria="movePanel";
+  grip.title=tr("movePanel"); grip.setAttribute("aria-label",tr("movePanel"));
+  grip.setAttribute("role","separator");
+  const host=head||panel;
+  host.insertBefore(grip,host.firstChild);
+  if(head) head.classList.add("drag-head");
+  for(const zone of head?[grip,head]:[grip]){
+    zone.addEventListener("pointerdown",ev=>{
+      if(zone!==grip && dragControl(ev.target)) return;   // knop blijft knop
+      startPanelDrag(panel,zone,ev);
+    });
+    zone.addEventListener("dblclick",()=>resetPanelOffset(panel));
+  }
+}
+for(const {id,head,loose} of DRAG_PANELS){
+  const panel=el(id);
+  if(panel) makeDraggable(panel,head,loose);
+}
 
 /* ── Schermstand ─────────────────────────────────────────────────────
    De kaart is het gedeelde object en blijft staan; alleen de bedieningslagen
@@ -1790,6 +1925,7 @@ el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",d
 function openKgInfo(node,x,y){
   kg.selected=node;
   const n=el("kgInfo");
+  resetPanelOffset(n);
   n.style.display="block";
   n.style.setProperty("--kg-flip",flippedFor(y)?"180deg":"0deg");
   n.dataset.anchorX=String(x); n.dataset.anchorY=String(y);
@@ -2042,6 +2178,7 @@ function openMenu(side,view){
   menuSide=side;
   menuView=view||menuView;
   const m=el("menu");
+  resetPanelOffset(m);
   m.classList.toggle("at-a",side==="a");
   m.classList.toggle("at-b",side==="b");
   m.classList.toggle("flipped",menuFlipped());
