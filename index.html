@@ -81,6 +81,10 @@
     <div class="row"><button id="btnMove" data-i18n="move">Kaart vastzetten</button></div>
     <div class="row"><button id="btnMoveDots" data-i18n="moveDots">Dots verplaatsen</button></div>
     <p class="hint" id="dotsHint" data-i18n="dotsHint" style="margin:0 0 9px">Zet aan en sleep dan een dot.</p>
+    <p class="eyebrow menu-subhead" data-i18n="kgHead">Kennisgraaf</p>
+    <div class="row"><button id="btnKg" data-i18n="kgShow">Graaf tonen</button></div>
+    <p class="hint" id="kgStatus">uit</p>
+
     <p class="eyebrow menu-subhead" data-i18n="placesHead">Ga naar</p>
     <label class="field" for="search" data-i18n="searchPlace">Zoek een plek</label>
     <input id="search" placeholder="Breda, Ginneken…" data-i18n-ph="searchPh" autocomplete="off">
@@ -129,29 +133,13 @@
     </div>
   </div>
 
-  <!-- ── Instellingen ──────────────────────────────────────────────────
-       De stand van de sessie en alles wat je één keer goedzet. -->
-  <div class="menu-sec collapsed" id="tally" data-view="settings">
-    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="tallyContent">
-      <span data-i18n="saidWhat">Wat is er gezegd</span><span class="accordion-chev" aria-hidden="true"></span>
-    </button>
-    <div class="accordion-body" id="tallyContent" role="region">
-    <div id="tallyBody"></div>
-    <div class="total" id="tallyTotal">nog niets vastgelegd</div>
-    <div class="flag" id="flag"></div>
-    <div class="row analytics-launch"><button id="btnAnalytics" class="primary" data-i18n="analyticsOpen">Sessie-analyse</button></div>
-    </div>
-  </div>
-
-  <div class="menu-sec collapsed" id="recent" data-view="settings">
-    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="recentContent">
-      <span data-i18n="recentMarks">Laatste markeringen</span><span class="accordion-chev" aria-hidden="true"></span>
-    </button>
-    <div class="accordion-body" id="recentContent" role="region">
-    <div id="recentBody"><p class="empty" data-i18n="noMarks">Nog geen markeringen.</p></div>
-    </div>
-  </div>
-
+  <!-- ── Instellingen ──────────────────────────────────────
+       Alleen wat je aan de tafel zelf goedzet: hoe de bediening staat en hoe
+       groot ze is. De teller en de laatste markeringen stonden hier ook, maar
+       daar stel je niets mee in — dat is de opbrengst en die staat nu in de
+       sessie-analyse. Wat je één keer per opstelling ijkt (schermdiagonaal,
+       tolerantie, het adres van de graaf) staat in CFG in app.js; het
+       gereedschap om dat te ijken verschijnt alleen als de URL ?dev bevat. -->
   <div class="menu-sec collapsed" id="controls" data-view="settings">
     <button class="accordion-head" id="ctrlHead" type="button" aria-expanded="false" aria-controls="controlsBody">
       <span data-i18n="settings">Instellingen</span><span class="accordion-chev" aria-hidden="true"></span>
@@ -177,44 +165,62 @@
       <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button" data-i18n="twoSides">Twee zijden</button></div>
       <p class="hint" id="sidesHint" data-i18n="sidesHint" style="margin:7px 0 0">Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.</p>
 
-      <p class="eyebrow" data-i18n="kgHead" style="margin-top:20px">Kennisgraaf</p>
-      <div class="row">
-        <button id="btnKg" data-i18n="kgShow">Graaf tonen</button>
-        <button id="btnKgThemes" data-i18n="kgThemes">Thema's uit graaf</button>
-      </div>
-      <label class="field" for="kgUrl" data-i18n="kgUrlLabel">Adres van de backend</label>
-      <input id="kgUrl" placeholder="leeg = fixtures" data-i18n-ph="kgUrlPh" autocomplete="off">
-      <p class="hint" id="kgStatus">uit</p>
+      <!-- Alleen de themakeuze staat hier: die bepaalt wat er op de pucks
+           komt te staan. Of de graaf zichtbaar is, is een kaartlaag en staat
+           bij de kaart. -->
+      <p class="eyebrow menu-subhead" data-i18n="kgHead">Kennisgraaf</p>
+      <div class="row"><button id="btnKgThemes" data-i18n="kgThemes">Thema's uit graaf</button></div>
+      <p class="hint" data-i18n="kgThemesHint">De onderwerpen op de pucks komen dan uit de graaf in plaats van uit de vaste lijst.</p>
 
-      <p class="eyebrow" data-i18n="sessionHead" style="margin-top:20px">Sessie</p>
+      <!-- Gereedschap voor wie de tafel bouwt of ijkt. Aan een tafel met
+           publiek eromheen zijn dit alleen maar knoppen die iets kapot kunnen
+           maken: één veeg over de tolerantieschuif en de herkenning is van
+           slag. Ze staan er daarom alleen bij met ?dev in de URL. -->
+      <div class="dev-only">
+        <p class="eyebrow menu-subhead" data-i18n="simulationHead">Simulatie</p>
+        <p class="hint" data-i18n="devNote" style="margin:0 0 9px">Zichtbaar omdat de URL ?dev bevat.</p>
+        <div class="row">
+          <button id="btnSim" class="on" data-i18n="simPuck">Puck simuleren</button>
+          <button id="btnDebug" data-i18n="touchDebug">Touch debug</button>
+        </div>
+        <label class="field" for="tol"><span data-i18n="tolLabel">Ratio-tolerantie</span> <span id="tolVal" class="mono">0.060</span></label>
+        <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
+        <label class="field" for="diag" data-i18n="diagLabel">Schermdiagonaal (inch)</label>
+        <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
+
+        <p class="eyebrow menu-subhead" data-i18n="physicalPucks">Fysieke pucks</p>
+        <div class="row"><button id="btnLearn" data-i18n="learn">Puck inlezen</button></div>
+        <div class="row">
+          <button id="btnSheet" data-i18n="sheetBtn">Bouwtekening</button>
+          <button id="btnExport" data-i18n="exportCfg">Config exporteren</button>
+        </div>
+        <p class="hint" id="learnHint" data-i18n-html="learnHint">Leg één puck stil op het scherm en druk op <b>Puck inlezen</b>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sessie ────────────────────────────────────────────
+       De naam bepaalt waaronder er bewaard wordt, dus die hoort vóór het
+       gesprek te staan. Nalezen, meenemen en wissen zitten één tik verder in
+       het analysevenster: dat zijn dingen van erna, en ze horen bij het
+       overzicht waarop je ze baseert. -->
+  <div class="menu-sec collapsed" id="sessionSec" data-view="settings">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="sessionBody">
+      <span data-i18n="sessionHead">Sessie</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="sessionBody" role="region">
       <label class="field" for="sess" data-i18n="sessionName">Naam van de sessie</label>
       <input id="sess" value="sessie-01">
-      <div class="row" style="margin-top:9px">
-        <button id="btnGeo" data-i18n="exportGeo">Export GeoJSON</button>
-        <button id="btnCsv" data-i18n="exportCsv">Export CSV</button>
-      </div>
-      <div class="row"><button id="btnWipe" class="danger" data-i18n="wipe">Alles wissen</button></div>
-
-      <p class="eyebrow" data-i18n="simulationHead" style="margin-top:20px">Simulatie</p>
-      <div class="row">
-        <button id="btnSim" class="on" data-i18n="simPuck">Puck simuleren</button>
-        <button id="btnDebug" data-i18n="touchDebug">Touch debug</button>
-      </div>
-      <label class="field" for="tol"><span data-i18n="tolLabel">Ratio-tolerantie</span> <span id="tolVal" class="mono">0.060</span></label>
-      <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
-      <label class="field" for="diag" data-i18n="diagLabel">Schermdiagonaal (inch)</label>
-      <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
-
-      <p class="eyebrow" data-i18n="physicalPucks" style="margin-top:20px">Fysieke pucks</p>
-      <div class="row"><button id="btnLearn" data-i18n="learn">Puck inlezen</button></div>
-      <div class="row">
-        <button id="btnSheet" data-i18n="sheetBtn">Bouwtekening</button>
-        <button id="btnExport" data-i18n="exportCfg">Config exporteren</button>
-      </div>
-      <p class="hint" id="learnHint" data-i18n-html="learnHint">Leg één puck stil op het scherm en druk op <b>Puck inlezen</b>.</p>
+      <div class="row analytics-launch"><button id="btnAnalytics" class="primary" data-i18n="analyticsOpen">Sessie-analyse</button></div>
+      <p class="hint" data-i18n="analyticsHint">Daar staan het overzicht, de export en het wissen bij elkaar.</p>
     </div>
   </div>
 </div>
+
+<!-- Aardingswaarschuwing bij het ijken: drie contactpunten zonder herkende
+     puck betekent meestal dat de pads niet koppelen. Installatietaal, dus
+     alleen zichtbaar in de ontwikkelstand. -->
+<div class="panel dev-only" id="flag" role="status"></div>
 
 <!-- Twee pucks-balken: één per lange zijde van de tafel. De bovenste staat
      op zijn kop, zodat hij leesbaar is voor wie aan de overkant staat. -->
@@ -322,6 +328,15 @@
       <section class="analytics-card analytics-wide"><h3 data-i18n="analyticsPlaces">Waar liggen de pucks?</h3><p class="analytics-note" data-i18n="analyticsPlacesNote">Groepen binnen ongeveer 250 meter. De grootste groepen tonen waar het gesprek zich concentreert.</p><div id="analyticsPlaces"></div></section>
       <section class="analytics-card"><h3 data-i18n="analyticsRelations">Relaties op dezelfde plek</h3><p class="analytics-note" data-i18n="analyticsRelationsNote">Onderwerpen die dicht bij elkaar zijn neergelegd, kunnen samen besproken worden.</p><div id="analyticsRelations"></div></section>
       <section class="analytics-card"><h3 data-i18n="analyticsQuality">Hoe compleet is de input?</h3><div id="analyticsQuality"></div></section>
+      <section class="analytics-card analytics-wide"><h3 data-i18n="recentMarks">Laatste markeringen</h3><div id="recentBody"><p class="empty" data-i18n="noMarks">Nog geen markeringen.</p></div></section>
+    </div>
+    <!-- Meenemen en opruimen stonden bij de instellingen, waar "Alles wissen"
+         twee tikken van een lopende sessie lag. Hier staan ze onder het
+         overzicht waarop je de beslissing neemt. -->
+    <div class="analytics-footer">
+      <button id="btnGeo" data-i18n="exportGeo">Export GeoJSON</button>
+      <button id="btnCsv" data-i18n="exportCsv">Export CSV</button>
+      <button id="btnWipe" class="danger" data-i18n="wipe">Alles wissen</button>
     </div>
   </div>
 </div>

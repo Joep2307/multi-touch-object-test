@@ -19,8 +19,32 @@ const CFG = {
   longestSideMM:60, puckRadiusMM:45,
   stableFrames:3, dropoutMS:180, smoothing:4,
   jitterPX:22, rearmPX:70, ringPX:110,
-  retina:0            // use the visible zoom level; avoids four times as many tile requests
+  retina:0,           // use the visible zoom level; avoids four times as many tile requests
+  /* Eenmalig per opstelling, niet per sessie. Deze drie stonden als invoer-
+     velden in het menu, waar ze bij elke herlaad terugsprongen naar hun
+     beginwaarde: een instelling die niets onthoudt is geen instelling. Ze
+     horen bij de tafel, dus staan ze hier, met de URL als overschrijving
+     voor wie een tweede opstelling bedient (?diag=55&tol=0.08&kg=…). */
+  screenDiagIn:43,    // schermdiagonaal in inch; bepaalt pxPerMM en dus de herkenning
+  tolerance:0.06,     // hoeveel de zijdeverhoudingen van een puck mogen afwijken
+  kgUrl:""            // adres van de kennisgraaf-backend; leeg = de fixtures
 };
+
+/* ── Ontwikkelstand ──────────────────────────────────────────────────────
+   Puck simuleren, touch-debug, een puck inlezen en de bouwtekening zijn
+   gereedschap voor wie de tafel bouwt of ijkt. Aan een tafel met publiek
+   eromheen zijn het alleen maar knoppen die iets kapot kunnen maken — één
+   veeg over de tolerantieschuif en de herkenning is van slag. Ze staan er
+   dus alleen bij als de URL erom vraagt: ?dev. Bewust niet bewaard in
+   localStorage; wie het gereedschap wil, zet het er zelf bij. */
+const QS=(()=>{ try{ return new URLSearchParams(location.search); }catch(e){ return new URLSearchParams(""); } })();
+const DEV=QS.has("dev") && QS.get("dev")!=="0";
+{ const d=parseFloat(QS.get("diag")); if(Number.isFinite(d)&&d>0) CFG.screenDiagIn=d; }
+{ const t=parseFloat(QS.get("tol"));  if(Number.isFinite(t)&&t>0) CFG.tolerance=t; }
+if(QS.get("kg")) CFG.kgUrl=QS.get("kg").trim();
+/* Alles wat de graaf laadt vraagt het adres hier op, zodat er maar één plek
+   is waar het vandaan komt. */
+const kgUrl=()=>CFG.kgUrl;
 // De bouwstempel wordt pas onderaan dit bestand ingericht. Vóór die tijd is
 // verversen van de taal veilig een no-op (ook bij de eerste paginalaad).
 let refreshBuildStamp=()=>{};
@@ -49,8 +73,7 @@ const L = {
        touchscreen:"Touchscreen", exportGeo:"GeoJSON exporteren", exportCsv:"CSV exporteren",
        touchDebug:"Touch-debug",
 
-       saidWhat:"Wat is er gezegd", nothingYet:"nog niets vastgelegd",
-       tallyTotal:(n,top,c)=>`${n} markeringen · vaakst: ${top} (${c})`,
+       saidWhat:"Wat is er gezegd",
        groundFlag:"Minder dan 3 contactpunten. Ligt er een puck? Dan koppelen de pads niet — check de aarding.",
        recentMarks:"Laatste markeringen", noMarks:"Nog geen markeringen.",
        untitled:"Zonder titel",
@@ -91,6 +114,9 @@ const L = {
        bakeCleared:"Bewaarde kaart gewist.",
 
        kgHead:"Kennisgraaf", kgShow:"Graaf tonen", kgThemes:"Thema's uit graaf",
+       kgThemesHint:"De onderwerpen op de pucks komen dan uit de graaf in plaats van uit de vaste lijst.",
+       analyticsHint:"Daar staan het overzicht, de export en het wissen bij elkaar.",
+       devNote:"Zichtbaar omdat de URL ?dev bevat.",
        kgUrlLabel:"Adres van de backend", kgUrlPh:"leeg = fixtures",
        kgLoading:"Kennisgraaf wordt geladen…", kgUnreachable:"Kennisgraaf niet bereikbaar.",
        nothingWithin:"Niets bekend binnen 1,5 km.",
@@ -156,8 +182,7 @@ const L = {
        touchscreen:"Touchscreen", exportGeo:"Export GeoJSON", exportCsv:"Export CSV",
        touchDebug:"Touch debug",
 
-       saidWhat:"What was said", nothingYet:"nothing recorded yet",
-       tallyTotal:(n,top,c)=>`${n} markings · most often: ${top} (${c})`,
+       saidWhat:"What was said",
        groundFlag:"Fewer than 3 contact points. Is a puck lying there? Then the pads are not coupling — check the grounding.",
        recentMarks:"Latest markings", noMarks:"No markings yet.",
        untitled:"Untitled",
@@ -198,6 +223,9 @@ const L = {
        bakeCleared:"Saved map cleared.",
 
        kgHead:"Knowledge graph", kgShow:"Show graph", kgThemes:"Themes from graph",
+       kgThemesHint:"Puck topics then come from the graph instead of the fixed list.",
+       analyticsHint:"The overview, the exports and clearing are together there.",
+       devNote:"Visible because the URL contains ?dev.",
        kgUrlLabel:"Backend address", kgUrlPh:"empty = fixtures",
        kgLoading:"Loading knowledge graph…", kgUnreachable:"Knowledge graph unreachable.",
        nothingWithin:"Nothing known within 1.5 km.",
@@ -281,7 +309,7 @@ let templates=[
   {id:"puck-03",ratios:[0.70,0.93],verdict:"talk"},
   {id:"puck-04",ratios:[0.85,0.90],verdict:"idea"}
 ];
-let simMode=true, debugMode=false, tolerance=0.06, pxPerMM=4, mapLocked=false;
+let simMode=DEV, debugMode=false, tolerance=CFG.tolerance, pxPerMM=4, mapLocked=false;
 let pinMoveMode=false, pinDrag=null;
 const pins=[];
 const el=id=>document.getElementById(id);
@@ -1177,7 +1205,7 @@ function fillNoteKnowledge(pin){
   const box=el("noteNearby");
   box.innerHTML=""; box.appendChild(emptyLine(tr("kgLoading")));
   el("noteMatches").textContent=""; el("noteMatchHead").style.display="none";
-  ensureKG(el("kgUrl").value.trim()).then(()=>{
+  ensureKG(kgUrl()).then(()=>{
     if(selected!==pin) return;
     renderNearby(pin);
     renderMatches(pin);
@@ -1315,7 +1343,7 @@ function resize(){
   mapRenderKey="";
   ctx.imageSmoothingQuality="high";
   mapCtx.imageSmoothingQuality="high";
-  pxPerMM=Math.hypot(W,H)/((parseFloat(el("diag").value)||43)*25.4);
+  pxPerMM=Math.hypot(W,H)/(CFG.screenDiagIn*25.4);
 }
 addEventListener("resize",resize);
 
@@ -1423,32 +1451,36 @@ function frame(){
 /* ═══════════════════════════════════════════════════════════════
    6. UI
    ═══════════════════════════════════════════════════════════════ */
+/* Wat er tijdens een sessie doorlopend moet gebeuren is weinig: de kaart
+   tekent zichzelf en de pucks staan op tafel. De teller en de lijst met
+   laatste markeringen stonden hier ook, maar dat is de opbrengst en geen
+   bediening — die worden nu pas opgebouwd als iemand de sessie-analyse
+   openslaat. Scheelt bij elke beweging acht regels HTML opnieuw opbouwen. */
 function updateUI(pucks){
-  el("tallyBody").innerHTML=VERDICTS.map(v=>{
-    const n=pins.filter(p=>p.verdict===v.key).length;
-    return `<div class="tal"><i style="background:${v.color}"></i>${vName(v.key)}<span class="n">${n}</span></div>`;
-  }).join("");
-  const byTopic={}; pins.forEach(p=>byTopic[p.topic]=(byTopic[p.topic]||0)+1);
-  const top=Object.entries(byTopic).sort((a,b)=>b[1]-a[1])[0];
-  el("tallyTotal").textContent=pins.length?tr("tallyTotal",pins.length,top[0],top[1]):tr("nothingYet");
-  const flag=el("flag");
-  if(realTouches.size>=3&&!pucks.length){
-    flag.style.display="block";
-    flag.textContent=tr("groundFlag");
-  } else flag.style.display="none";
+  /* De aardingswaarschuwing is installatietaal ("check de aarding") en hoort
+     bij het ijken van de tafel, niet bij het gesprek eromheen. */
+  const flag=el("flag"), ground=DEV&&realTouches.size>=3&&!pucks.length;
+  flag.style.display=ground?"block":"none";
+  if(ground) flag.textContent=tr("groundFlag");
+  if(el("analytics").classList.contains("open")) renderAnalytics();
+}
 
+/* De laatste markeringen, met een kruisje per regel om er één weg te halen.
+   Staat in het analysevenster: daar lees je na wat er ligt, en daar hoort
+   het opruimen dus ook. */
+function renderRecent(){
   const safe=s=>String(s||"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[ch]);
-  el("recentBody").innerHTML=pins.length?pins.slice(-8).reverse().map(p=>
+  const box=el("recentBody");
+  box.innerHTML=pins.length?pins.slice(-8).reverse().map(p=>
     `<div class="pin"><i style="background:${vColor(p.verdict)}"></i>
      <div><b>${safe(p.title)||tr("untitled")} - ${safe(p.topic)}</b>
      ${(p.description||p.note)?`<div class="description">${safe(p.description||p.note)}</div>`:""}
      <div class="meta">${vName(p.verdict)} · ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)} · ${p.t.slice(11,16)}</div></div>
      <span class="del" data-id="${p.id}">✕</span></div>`).join("")
     :`<p class="empty">${tr("noMarks")}</p>`;
-  [...document.querySelectorAll(".del")].forEach(b=>b.onclick=()=>{
-    const i=pins.findIndex(p=>p.id===b.dataset.id); if(i>=0){pins.splice(i,1);save();}
+  [...box.querySelectorAll(".del")].forEach(b=>b.onclick=()=>{
+    const i=pins.findIndex(p=>p.id===b.dataset.id); if(i>=0){pins.splice(i,1);save();renderAnalytics();}
   });
-  if(el("analytics").classList.contains("open")) renderAnalytics();
 }
 
 /* ── Sessie-analyse ────────────────────────────────────────────────────
@@ -1482,6 +1514,7 @@ function analyticsBar(label,count,total,color){
 }
 function renderAnalytics(){
   const total=pins.length;
+  renderRecent();
   el("analyticsIntro").textContent=total?tr("analyticsIntro",total):tr("analyticsNoData");
   const kpis=el("analyticsKpis"); kpis.textContent="";
   const notes=pins.filter(p=>(p.title||p.description||p.note||"").trim()).length;
@@ -1825,7 +1858,7 @@ el("documentViewer").addEventListener("pointerdown",e=>{ if(e.target===el("docum
 async function toggleGaps(){
   kg.gaps=!kg.gaps;
   markLayerMenu();
-  if(kg.gaps && !kg.loaded) await ensureKG(el("kgUrl").value.trim());
+  if(kg.gaps && !kg.loaded) await ensureKG(kgUrl());
 }
 el("noteAsk").onclick=askKnowledge;
 onKgChange(()=>{
@@ -1837,17 +1870,25 @@ el("btnKg").onclick=async()=>{
   kg.enabled=!kg.enabled;
   el("btnKg").classList.toggle("on",kg.enabled);
   if(!kg.enabled){ closeKgInfo(); kg.statusKey="off"; el("kgStatus").textContent=kgStatusText(); return; }
-  if(!kg.nodes.length) await loadKG(el("kgUrl").value.trim());
+  if(!kg.nodes.length) await loadKG(kgUrl());
   else el("kgStatus").textContent=kgStatusText();
 };
 el("btnKgThemes").onclick=async()=>{
   kg.useThemes=!kg.useThemes;
   el("btnKgThemes").classList.toggle("on",kg.useThemes);
-  if(kg.useThemes && !kg.themes.length) await loadKG(el("kgUrl").value.trim());
+  if(kg.useThemes && !kg.themes.length) await loadKG(kgUrl());
 };
-el("kgUrl").onchange=()=>{ kg.nodes.length=0; kg.themes.length=0; if(kg.enabled||kg.useThemes) loadKG(el("kgUrl").value.trim()); };
-el("tol").oninput=e=>{tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
-el("diag").oninput=resize;
+/* De ontwikkelstand zet zichzelf op de <body>; de stylesheet haalt daarmee
+   alles weg wat alleen voor de bouwer is. De twee ijkvelden beginnen bij wat
+   in CFG staat en schrijven er live overheen: wat je hier goed zet, zet je
+   daarna in CFG zodat de tafel er morgen ook zo bij staat. */
+document.body.classList.toggle("dev",DEV);
+el("tol").value=String(CFG.tolerance);
+el("tolVal").textContent=CFG.tolerance.toFixed(3);
+el("diag").value=String(CFG.screenDiagIn);
+el("btnSim").classList.toggle("on",simMode);
+el("tol").oninput=e=>{CFG.tolerance=tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
+el("diag").oninput=e=>{const v=parseFloat(e.target.value); if(Number.isFinite(v)&&v>0) CFG.screenDiagIn=v; resize();};
 /* ── Twee zijden ────────────────────────────────────────────────────────
    Een tafel ligt plat en mensen staan er omheen; wat voor de één rechtop
    staat, staat voor de ander op zijn kop. De kaart laten we met rust — dat

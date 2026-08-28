@@ -127,7 +127,10 @@ body.controls-flipped.mode-touch #menu.at-b{left:calc(100vw - 94px);top:calc(100
 #menu.view-settings .menu-sec[data-view="settings"]{display:block}
 /* De <select> met kaartbeelden is de bron waaruit de knoppenlijst wordt
    opgebouwd; zichtbaar zou hij dezelfde keuze een tweede keer aanbieden. */
-.src-only{display:none}
+/* `label.field` is specifieker dan een losse klasse, dus het label bij de
+   verborgen <select> bleef onderaan het kaartmenu staan als los woord
+   "Kaartbeeld". Vandaar de tweede, zwaardere selector. */
+.src-only,label.field.src-only{display:none}
 .menu-sec.collapsed>.accordion-body{display:none}
 .accordion-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
   width:100%;padding:11px 12px;border:0;background:transparent;color:var(--ink);
@@ -170,12 +173,19 @@ textarea{resize:none;line-height:1.5;min-height:88px}
 input[type=range]{padding:0;accent-color:var(--accent);border:none;background:none}
 .hint{font-size:11px;line-height:1.55;color:var(--ink-dim);margin:12px 0 0}
 .hint b{color:var(--ink);font-weight:500}
-.tal{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13px}
-.tal i{width:9px;height:9px;border-radius:50%;flex:none}
-.tal .n{margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:15px;font-weight:500}
-#tally .total{border-top:1px solid var(--line);margin-top:8px;padding-top:9px;
-  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--ink-dim)}
-#tally .flag{margin-top:9px;font-size:11px;color:var(--warn);display:none;line-height:1.5}
+/* Gereedschap voor wie de tafel bouwt of ijkt. Staat er alleen bij als
+   app.js de ontwikkelstand op de <body> heeft gezet (?dev in de URL). */
+.dev-only{display:none}
+body.dev .dev-only{display:block}
+/* Het blok begint met een kopje, en dat is het eerste kind van .dev-only —
+   zonder deze regel valt het onder :first-child en plakt "Simulatie" tegen de
+   hint erboven. */
+.dev-only>.menu-subhead:first-child{margin-top:18px}
+/* De aardingswaarschuwing hangt los in beeld, tegenover de zoomknoppen: hij
+   verschijnt terwijl iemand met pucks in de weer is, dus hij mag geen enkele
+   aanraking opvangen. */
+#flag{display:none;left:18px;top:50%;transform:translateY(-50%);width:220px;padding:11px 13px;
+  font-size:11px;line-height:1.5;color:var(--warn);pointer-events:none;z-index:20}
 .analytics-launch{margin:12px 0 0}
 .pin{font-size:12px;line-height:1.45;padding:8px 0;border-bottom:1px solid var(--line);
   display:flex;gap:9px;align-items:flex-start}
@@ -392,6 +402,10 @@ body.keyboard-open #note{z-index:45}
 .analytics-kpi{min-height:100px;padding:17px;border:1px solid var(--line);border-radius:12px;background:#111720;display:flex;flex-direction:column;justify-content:space-between}
 .analytics-kpi b{font:500 30px/1 var(--mono);color:#fff}.analytics-kpi span{font-size:11px;line-height:1.35;color:var(--ink-dim)}
 .analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.analytics-card{min-width:0;padding:18px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.018)}
+/* Export en wissen onder het overzicht: de knop staat naast de cijfers
+   waarop je hem indrukt, niet in het menu waar je de tafel mee bedient. */
+.analytics-footer{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px;padding-top:16px;
+  border-top:1px solid var(--line)}
 .analytics-card h3{margin:0 0 13px;font-size:15px}.analytics-wide{grid-column:1/-1}.analytics-note{margin:-5px 0 13px;color:var(--ink-dim);font-size:11px;line-height:1.45}
 .analytics-bar{padding:7px 0}.analytics-bar-head{display:flex;justify-content:space-between;gap:12px;font-size:12px}.analytics-bar-head span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.analytics-bar-head b{font:500 12px var(--mono);color:var(--ink-dim)}
 .analytics-rail{height:6px;margin-top:6px;border-radius:999px;background:#202936;overflow:hidden}.analytics-rail i{display:block;height:100%;border-radius:inherit;min-width:2px}
