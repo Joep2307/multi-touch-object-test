@@ -351,9 +351,17 @@ body.keyboard-open #note{z-index:45}
 .kg-near.match .kg-near-label::before{content:"● ";color:#7aa2f7;font-size:9px;vertical-align:2px}
 .kg-near-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kg-near-dist{flex:none;font-size:10px;color:rgba(232,237,244,.4)}
+/* Het antwoord houdt één hoogte aan. Terwijl het model doorschrijft zou het
+   venster anders bij elk woord groeien en onder de vinger vandaan schuiven;
+   nu blijft de knop op zijn plek en scrolt de tekst binnen dit kader. */
 #noteAnswer{display:none;margin-top:10px;padding:10px 11px;border-radius:8px;background:rgba(122,162,247,.09);
             font:400 12.5px/1.5 'Space Grotesk',system-ui,sans-serif;color:#e8edf4;
-            white-space:pre-wrap}
+            white-space:pre-wrap;
+            height:var(--answer-h,196px);overflow-y:auto;
+            touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#noteAnswer::-webkit-scrollbar{width:5px}
+#noteAnswer::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(232,237,244,.22)}
+#noteAnswer::-webkit-scrollbar-track{background:transparent}
 #noteSources{display:none;margin-top:7px;font:400 10px/1.4 'JetBrains Mono',ui-monospace,monospace;
              color:rgba(232,237,244,.4)}
 /* Scrollen binnen een paneel. De body staat op touch-action:none omdat

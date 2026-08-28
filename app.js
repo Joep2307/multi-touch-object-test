@@ -101,6 +101,7 @@ const L = {
        tileNone:"Geen — alleen raster",
        layersHead:"Lagen", overlaysHead:"Overlays", docDensity:"Documentdichtheid",
        gapsNote:"Rood waar niets is vastgelegd.",
+       relations:"Relaties", relationsNote:"Lijnen tussen documenten en plekken die naar elkaar verwijzen.",
        tileBlocked:"Kaartbeeld wordt geblokkeerd. Open dit bestand lokaal in Chrome, niet in een preview-venster.",
        tileLoading:"Kaartbeeld laden…",
        tilesFoot:(a,f)=>`${a} tegels gevraagd · ${f} mislukt · of sleep een kaartafbeelding hierin`,
@@ -210,6 +211,7 @@ const L = {
        tileNone:"None — grid only",
        layersHead:"Layers", overlaysHead:"Overlays", docDensity:"Document density",
        gapsNote:"Red where nothing has been recorded.",
+       relations:"Relations", relationsNote:"Lines between documents and places that refer to each other.",
        tileBlocked:"Map tiles are being blocked. Open this file locally in Chrome, not in a preview window.",
        tileLoading:"Loading map tiles…",
        tilesFoot:(a,f)=>`${a} tiles requested · ${f} failed · or drop a map image in here`,
@@ -1303,8 +1305,13 @@ async function askKnowledge(){
   const pin=selected; if(!pin) return;
   const near=kg.loaded?nearby(pin.lat,pin.lng,{theme:pin.topic,limit:4}):[];
   const out=el("noteAnswer"), src=el("noteSources");
-  out.style.display="block"; out.textContent=tr("thinking");
+  out.style.display="block"; out.textContent=tr("thinking"); out.scrollTop=0;
   src.style.display="none"; src.textContent="";
+  /* Het kader heeft een vaste hoogte, dus schuift de tekst zelf mee zolang
+     niemand zelf omhoog gescrold heeft. Wie terugleest houdt zijn plek. */
+  const atEnd=()=>out.scrollHeight-out.scrollTop-out.clientHeight<24;
+  let follow=true;
+  out.onscroll=()=>{ follow=atEnd(); };
   askAbort?.abort(); askAbort=new AbortController();
   const question=buildQuestion({
     title:pin.title, description:pin.description||pin.note, topic:pin.topic,
@@ -1315,7 +1322,9 @@ async function askKnowledge(){
   try{
     await ask(question,{
       signal:askAbort.signal,
-      onToken:t=>{ if(selected===pin) out.innerHTML=mdToHtml(t); },
+      onToken:t=>{ if(selected!==pin) return;
+        out.innerHTML=mdToHtml(t);
+        if(follow) out.scrollTop=out.scrollHeight; },
       onSources:list=>{ if(selected!==pin||!list.length) return;
         src.style.display="block";
         src.textContent=tr("basedOn",[...new Set(list.map(s=>s.title))].slice(0,4).join(" · ")); },
@@ -1860,6 +1869,16 @@ async function toggleGaps(){
   markLayerMenu();
   if(kg.gaps && !kg.loaded) await ensureKG(kgUrl());
 }
+/* Lijnen zonder punten zeggen niets, dus deze schakelaar zet de graaflaag zo
+   nodig mee aan. Andersom ook: gaat de graaf uit, dan gaan de lijnen mee. */
+async function toggleRelations(){
+  kg.relations=!kg.relations;
+  markLayerMenu();
+  if(!kg.relations) return;
+  if(!kg.enabled){ kg.enabled=true; el("btnKg").classList.add("on"); }
+  if(!kg.nodes.length) await loadKG(kgUrl());
+  else el("kgStatus").textContent=kgStatusText();
+}
 el("noteAsk").onclick=askKnowledge;
 onKgChange(()=>{
   el("kgStatus").textContent=kgStatusText();
@@ -1869,7 +1888,7 @@ onKgChange(()=>{
 el("btnKg").onclick=async()=>{
   kg.enabled=!kg.enabled;
   el("btnKg").classList.toggle("on",kg.enabled);
-  if(!kg.enabled){ closeKgInfo(); kg.statusKey="off"; el("kgStatus").textContent=kgStatusText(); return; }
+  if(!kg.enabled){ closeKgInfo(); kg.relations=false; markLayerMenu(); kg.statusKey="off"; el("kgStatus").textContent=kgStatusText(); return; }
   if(!kg.nodes.length) await loadKG(kgUrl());
   else el("kgStatus").textContent=kgStatusText();
 };
@@ -1965,6 +1984,17 @@ function buildLayerMenu(){
   note.textContent=tr("gapsNote");
   box.appendChild(note);
 
+  const rel=document.createElement("button");
+  rel.type="button"; rel.className="layer"; rel.id="btnRelations";
+  rel.textContent=tr("relations");
+  rel.onclick=toggleRelations;
+  box.appendChild(rel);
+
+  const relNote=document.createElement("p");
+  relNote.className="hint"; relNote.style.margin="6px 0 0";
+  relNote.textContent=tr("relationsNote");
+  box.appendChild(relNote);
+
   const mapHead=document.createElement("p");
   mapHead.className="eyebrow layer-basemap-head"; mapHead.textContent=tr("basemap");
   box.appendChild(mapHead);
@@ -1984,6 +2014,8 @@ function markLayerMenu(){
     .forEach(b=>b.classList.toggle("on",b.dataset.set===MV.set));
   const g=el("btnGaps");
   if(g){ g.classList.toggle("on",kg.gaps); g.setAttribute("aria-pressed",String(kg.gaps)); }
+  const r=el("btnRelations");
+  if(r){ r.classList.toggle("on",kg.relations); r.setAttribute("aria-pressed",String(kg.relations)); }
 }
 /* ── Menu ───────────────────────────────────────────────────────────────
    Aan een tafel waar mensen omheen staan is elk paneel dat blijft staan in de

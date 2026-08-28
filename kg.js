@@ -23,6 +23,8 @@ export const kg = {
   themeOf: new Map(),  // knoop-id → [thema, …]
   nodeById: new Map(),  // id → knoop mét coördinaat
   linksOf: new Map(),   // id → Set(ids) — inhoudelijke relaties
+  edges: [],            // relaties waarvan beide uiteinden op de kaart staan
+  relations: false,     // alle relaties tegelijk tonen, ook zonder selectie
   grid: new Map(),      // celsleutel → aantal knopen
   bounds: null,         // gebied waarover de graaf iets zegt
   gaps: false,          // witte vlekken tonen
@@ -123,6 +125,24 @@ export async function loadKG(baseUrl = "") {
       join(l.target, l.source);
     }
 
+    /* Wat je van die relaties daadwerkelijk kunt tekenen is een stuk minder
+       dan wat er in de graaf staat: alleen documenten en plekken hebben een
+       coördinaat, personen, organisaties en begrippen niet. Van de mentions
+       blijft daardoor ongeveer een zesde over, van de related-lijnen bijna
+       niets. Die tekenbare lijnen worden hier één keer klaargelegd — ontdubbeld,
+       want een relatie is heen en terug dezelfde lijn. */
+    const seenEdge = new Set();
+    kg.edges = [];
+    for (const l of g.links || []) {
+      if (l.type !== "mentions" && l.type !== "related") continue;
+      const a = kg.nodeById.get(l.source), b = kg.nodeById.get(l.target);
+      if (!a || !b || a === b) continue;
+      const key = a.id < b.id ? a.id + "|" + b.id : b.id + "|" + a.id;
+      if (seenEdge.has(key)) continue;
+      seenEdge.add(key);
+      kg.edges.push({ a, b, type: l.type });
+    }
+
     // Kennisdichtheid per rastercel, plus het gebied waarover de graaf
     // überhaupt iets zegt — daarbuiten is "niets bekend" geen bevinding.
     kg.grid = new Map();
@@ -145,7 +165,7 @@ export async function loadKG(baseUrl = "") {
   } catch (e) {
     console.warn("[kg] laden mislukt:", e);
     kg.nodes = []; kg.themes = []; kg.loaded = false;
-    kg.nodeById = new Map(); kg.linksOf = new Map();
+    kg.nodeById = new Map(); kg.linksOf = new Map(); kg.edges = [];
     kg.grid = new Map(); kg.bounds = null;
     kg.statusKey = "unreachable"; kg.statusArgs = []; kg.status = kgStatusText();
   }
@@ -280,6 +300,31 @@ export function drawGaps(ctx, MV, W, H) {
    Alleen wat op het scherm valt — bij 400+ punten scheelt dat merkbaar. */
 export function drawKG(ctx, MV, W, H) {
   if (!kg.enabled || !kg.nodes.length) return;
+
+  /* Het hele weefsel tegelijk, als de laag aan staat. Fijne, doorzichtige
+     lijnen: het gaat om waar het dicht wordt, niet om welke lijn precies waar
+     loopt — daarvoor tik je een punt aan. Documenten die een plek noemen zijn
+     blauw, plekken die met elkaar te maken hebben paars; die laatste liggen
+     bovenop omdat het er weinig zijn. */
+  if (kg.relations && kg.edges.length) {
+    ctx.save();
+    ctx.lineWidth = 1;
+    for (const kind of ["mentions", "related"]) {
+      ctx.lineWidth = kind === "related" ? 1.4 : 1;
+      ctx.strokeStyle = kind === "related"
+        ? "rgba(200,155,245,.50)" : "rgba(122,162,247,.14)";
+      ctx.beginPath();
+      for (const e of kg.edges) {
+        if (e.type !== kind) continue;
+        const p = MV.project(e.a.lon, e.a.lat), q = MV.project(e.b.lon, e.b.lat);
+        if (Math.max(p.x, q.x) < 0 || Math.max(p.y, q.y) < 0 ||
+            Math.min(p.x, q.x) > W || Math.min(p.y, q.y) > H) continue;
+        ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
 
   // Verbindingen van het aangetikte punt: welke plekken en documenten hebben
   // met elkaar te maken. Alleen bij een selectie, anders is het een web.
