@@ -1735,6 +1735,23 @@ function applyMode(mode){
   resize();
 }
 
+function applyColorTheme(theme){
+  colorTheme=theme==="light"?"light":"dark";
+  document.documentElement.dataset.theme=colorTheme;
+  document.documentElement.style.colorScheme=colorTheme;
+  [["themeLight","light"],["themeDark","dark"]].forEach(([id,value])=>{
+    const active=value===colorTheme;
+    el(id).classList.toggle("active",active);
+    el(id).setAttribute("aria-pressed",String(active));
+  });
+  try{ localStorage.setItem("pucktable-color-theme",colorTheme); }catch(e){}
+  // De vaste kaartlaag wordt gecachet; na een themawissel moet ook de lege
+  // achtergrond, het raster en de schaalbalk opnieuw geschilderd worden.
+  mapRenderKey="";
+}
+el("themeLight").onclick=()=>applyColorTheme("light");
+el("themeDark").onclick=()=>applyColorTheme("dark");
+
 /* Alle hoofdonderdelen van het menu zijn compacte accordeons. Ze beginnen
    dicht, zodat het menu ook op een kleiner tafelbeeld volledig te overzien
    is. De knop en aria-expanded blijven samen de toestand vertellen. */
@@ -1792,16 +1809,16 @@ el("btnScaleUp").onclick=()=>stepScale(1);
    weer klaar zoals hij bedoeld is. Dubbeltikken op de greep zet één paneel
    terug. */
 const DRAG_PANELS=[
-  {id:"menu",       head:".menu-head"},
+  /* Het lagen-/instellingenmenu en de vier knoppen waarmee het opent blijven
+     bewust op hun vaste plek: dat zijn de ankers van de tafelbediening. */
   {id:"note",       head:".note-head"},
   {id:"keyboard",   head:".keyboard-head"},
   {id:"puckDock",   head:".puck-dock-head"},
   {id:"puckDockTop",head:".puck-dock-head"},
   {id:"zoom"},                      // greep als eerste rij boven de knoppen
   {id:"kgInfo",  loose:true},
-  {id:"btnMapA", loose:true}, {id:"btnSetA", loose:true},
-  {id:"btnMapB", loose:true}, {id:"btnSetB", loose:true},
 ];
+const PANEL_SNAP_DISTANCE=72;        // schermpixels rond de beginpositie
 const panelOffsets=new Map();        // element → {x,y} in schermpixels
 let panelDragEnd=0;
 
@@ -1830,6 +1847,7 @@ function clampPanel(panel){
 function resetPanelOffset(panel){
   if(!panel) return;
   panelOffsets.delete(panel);
+  panel.classList.remove("snap-home");
   applyPanelOffset(panel);
 }
 function refreshPanelOffsets(){
@@ -1852,6 +1870,7 @@ function startPanelDrag(panel,zone,e){
     o.x=ox+ev.clientX-sx; o.y=oy+ev.clientY-sy;
     if(!moved&&Math.hypot(ev.clientX-sx,ev.clientY-sy)>4) moved=true;
     clampPanel(panel); applyPanelOffset(panel);
+    panel.classList.toggle("snap-home",Math.hypot(o.x,o.y)<=PANEL_SNAP_DISTANCE);
   };
   const stop=ev=>{
     if(ev.pointerId!==e.pointerId) return;
@@ -1859,7 +1878,11 @@ function startPanelDrag(panel,zone,e){
     zone.removeEventListener("pointerup",stop);
     zone.removeEventListener("pointercancel",stop);
     panel.classList.remove("dragging");
-    if(moved) panelDragEnd=performance.now();
+    if(moved){
+      panelDragEnd=performance.now();
+      if(Math.hypot(o.x,o.y)<=PANEL_SNAP_DISTANCE) resetPanelOffset(panel);
+      else panel.classList.remove("snap-home");
+    }
   };
   zone.addEventListener("pointermove",move);
   zone.addEventListener("pointerup",stop);
@@ -1873,6 +1896,7 @@ addEventListener("click",e=>{
 },true);
 
 function makeDraggable(panel,headSel,loose){
+  panel.classList.add("panel-draggable");
   const head=headSel?panel.querySelector(headSel):null;
   const grip=document.createElement("div");
   grip.className="panel-grip"+(loose?" loose":"");
@@ -2437,7 +2461,7 @@ function setLang(next){
 el("langNl").onclick=()=>setLang("nl");
 el("langEn").onclick=()=>setLang("en");
 
-resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); applyLang(); frame();
+applyColorTheme(colorTheme); resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); applyLang(); frame();
 
 /* ---- Bijgewerkt-stempel -------------------------------------------------
    Klein regeltje boven "Participatietafel": wanneer de bestanden van deze

@@ -1,9 +1,20 @@
 :root{
   --bg:#07090c; --surface:#0e1218; --line:#1c232d;
   --ink:#e8edf4; --ink-dim:#7f8b9b; --accent:#3d7bff;
+  --panel:rgba(14,18,24,.9); --subtle:rgba(7,9,12,.65);
+  --control:#151b24; --control-hover:#19212c; --selected:#253044;
+  --overlay:rgba(3,5,8,.88); --shadow:rgba(0,0,0,.42);
   --good:#39d8a4; --bad:#ff5f56; --talk:#c48cff; --idea:#ffd166; --warn:#ffd166;
   --display:"Space Grotesk",system-ui,-apple-system,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace;
+}
+:root[data-theme="light"]{
+  --bg:#e8edf3; --surface:#ffffff; --line:#cbd5e1;
+  --ink:#17202d; --ink-dim:#657184; --accent:#2868e6;
+  --panel:rgba(255,255,255,.92); --subtle:rgba(235,240,246,.78);
+  --control:#edf2f7; --control-hover:#e3eaf2; --selected:#dce8fb;
+  --overlay:rgba(224,231,239,.9); --shadow:rgba(31,45,61,.18);
+  --warn:#9a6500;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);
@@ -17,7 +28,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 #c{position:fixed;inset:0;width:100vw;height:100vh;display:block}
 body.moving-dots #c{cursor:grab}
 body.dragging-dot #c{cursor:grabbing}
-.panel{position:fixed;background:rgba(14,18,24,.9);backdrop-filter:blur(14px);
+.panel{position:fixed;background:var(--panel);backdrop-filter:blur(14px);
   border:1px solid var(--line);border-radius:14px;padding:14px 16px;z-index:10}
 /* ── Grootte van de bediening ─────────────────────────────────────
    Eén regelaar voor alle zwevende vensters. `zoom` schaalt maat én
@@ -107,10 +118,10 @@ body.controls-flipped.mode-touch #menu.at-b{left:calc(100vw - 94px);top:calc(100
    aan een tafel waar iemand langsloopt en even meekijkt moet in één blik
    te zien zijn welke taal aan staat, niet pas na het indrukken. */
 .lang-switch{display:flex;flex:none;gap:2px;padding:2px;border:1px solid var(--line);
-  border-radius:9px;background:rgba(255,255,255,.03)}
+  border-radius:9px;background:var(--subtle)}
 .lang-switch button{padding:5px 9px;min-height:0;border:0;background:transparent;
   color:var(--ink-dim);border-radius:7px;font-size:11px;font-weight:700;letter-spacing:.06em}
-.lang-switch button[aria-pressed="true"]{background:#253044;color:#fff;
+.lang-switch button[aria-pressed="true"]{background:var(--selected);color:var(--ink);
   box-shadow:0 1px 6px rgba(0,0,0,.25)}
 .mode-touch .lang-switch button{padding:8px 12px;font-size:13px}
 #menuClose{flex:none;width:34px;height:34px;padding:0;font-size:19px;line-height:1;border-radius:9px}
@@ -150,15 +161,18 @@ body.controls-flipped.mode-touch #menu.at-b{left:calc(100vw - 94px);top:calc(100
 .head h1,.head h2{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
 .head .chev{color:var(--ink-dim);font-size:11px}
 .mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;
-  border:1px solid var(--line);border-radius:11px;background:rgba(7,9,12,.65)}
+  border:1px solid var(--line);border-radius:11px;background:var(--subtle)}
 .mode-switch button{padding:8px 7px;border:0;background:transparent;color:var(--ink-dim);border-radius:7px}
-.mode-switch button.active{background:#253044;color:#fff;box-shadow:0 1px 6px rgba(0,0,0,.25)}
+.mode-switch button.active{background:var(--selected);color:var(--ink);box-shadow:0 1px 6px var(--shadow)}
+.theme-switch{margin-top:-1px}
+.theme-switch button{display:flex;align-items:center;justify-content:center;gap:7px}
+.theme-icon{font-size:15px;line-height:1}
 .body{margin-top:14px}
 .row{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap}
 button{font-family:inherit;font-size:12px;font-weight:500;color:var(--ink);
-  background:#151b24;border:1px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer;
+  background:var(--control);border:1px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer;
   flex:1;min-width:0;transition:border-color .15s,background .15s}
-button:hover{border-color:#2c3846;background:#19212c}
+button:hover{border-color:color-mix(in srgb,var(--line),var(--ink) 18%);background:var(--control-hover)}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button.on{background:rgba(61,123,255,.16);border-color:var(--accent);color:#cfe0ff}
 button.primary{background:#236cff;border-color:#4b89ff;color:#fff;font-weight:700;
@@ -167,7 +181,7 @@ button.primary:hover{background:#3379ff;border-color:#75a5ff}
 button.danger.on{background:rgba(255,95,86,.18);border-color:var(--bad)}
 label.field{display:block;font-size:11px;color:var(--ink-dim);margin:12px 0 5px;
   font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:.04em}
-input,select,textarea{width:100%;background:#151b24;border:1px solid var(--line);border-radius:8px;
+input,select,textarea{width:100%;background:var(--control);border:1px solid var(--line);border-radius:8px;
   color:var(--ink);padding:8px 10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
 textarea{resize:none;line-height:1.5;min-height:88px}
 input[type=range]{padding:0;accent-color:var(--accent);border:none;background:none}
@@ -456,6 +470,11 @@ body.keyboard-open #note{z-index:45}
 .panel-grip:hover{color:rgba(232,237,244,.72);background:rgba(232,237,244,.07)}
 .panel.dragging .panel-grip{cursor:grabbing;color:#cfe0ff;background:rgba(61,123,255,.18)}
 .panel.dragging{border-color:rgba(61,123,255,.5)}
+/* In de buurt van de beginplek laat het paneel al zien dat het daar bij
+   loslaten terug in valt. Buiten die zone blijft het precies staan waar het
+   is losgelaten. */
+.panel.panel-draggable:not(.dragging){transition:translate .2s cubic-bezier(.2,.85,.25,1.12)}
+.panel.snap-home{border-color:rgba(57,216,164,.72);box-shadow:0 0 0 3px rgba(57,216,164,.12)}
 /* De kop vangt de sleep op, dus daar mag een veeg geen scroll of kaartgebaar
    meer worden. */
 .drag-head{touch-action:none}
@@ -465,11 +484,47 @@ body.keyboard-open #note{z-index:45}
   box-shadow:0 -6px 0 currentColor,0 6px 0 currentColor}
 /* Zonder kop hangt de greep in de hoek van het paneel zelf. */
 .panel-grip.loose{position:absolute;top:5px;right:6px;margin:0;z-index:2}
-.menu-btn .panel-grip.loose{top:2px;left:50%;right:auto;transform:translateX(-50%);
-  width:26px;height:14px}
-.mode-touch .menu-btn .panel-grip.loose{width:34px;height:16px}
 /* De zoomknoppen staan in een kolom: daar past de greep als eerste rij. */
 #zoom .panel-grip{width:100%;height:14px;margin:0}
 /* Zodra een venster met de hand verplaatst is wijst de stengel niet meer naar
    zijn markering; dan hoort hij weg. */
 #note.moved::before{display:none}
+
+/* ── Licht thema ───────────────────────────────────────────────────────
+   De algemene componenten volgen de variabelen hierboven. Deze laatste
+   regels vangen onderdelen op die bewust een eigen, half-transparante laag
+   hebben (analyse, toetsenbord en kennisvensters). */
+:root[data-theme="light"] .menu-btn.on,
+:root[data-theme="light"] button.on{color:#174fae;background:rgba(40,104,230,.12)}
+:root[data-theme="light"] button:disabled:hover{background:var(--control);border-color:var(--line)}
+:root[data-theme="light"] .menu-sec{background:rgba(238,243,248,.7)}
+:root[data-theme="light"] .accordion-head:hover{background:rgba(23,32,45,.045);color:var(--ink)}
+:root[data-theme="light"] .menu-sec:not(.collapsed)>.accordion-head{background:rgba(40,104,230,.08);color:#174fae}
+:root[data-theme="light"] .traypuck{background:rgba(255,255,255,.96)}
+:root[data-theme="light"] #keyboard{background:rgba(248,250,252,.98);box-shadow:0 -14px 50px var(--shadow)}
+:root[data-theme="light"] #keyboard button{background:#e8eef5;border-color:#c4cfdd}
+:root[data-theme="light"] #keyboard button:active{background:#d7e1ec}
+:root[data-theme="light"] #sheet,
+:root[data-theme="light"] #documentViewer,
+:root[data-theme="light"] #analytics{background:var(--overlay)}
+:root[data-theme="light"] .document-viewer-inner{box-shadow:0 18px 60px var(--shadow)}
+:root[data-theme="light"] #kgInfo .kg-title,
+:root[data-theme="light"] .kg-near.match,
+:root[data-theme="light"] #noteAnswer,
+:root[data-theme="light"] #noteAnswer .kg-h{color:var(--ink)}
+:root[data-theme="light"] #noteNearby .empty{color:rgba(23,32,45,.48)}
+:root[data-theme="light"] .kg-near{color:rgba(23,32,45,.78);border-bottom-color:rgba(23,32,45,.08)}
+:root[data-theme="light"] .kg-near-dist,
+:root[data-theme="light"] #noteSources{color:rgba(23,32,45,.48)}
+:root[data-theme="light"] .kg-block{border-top-color:rgba(23,32,45,.12)}
+:root[data-theme="light"] .kg-quote{color:rgba(23,32,45,.82);background:rgba(40,104,230,.07)}
+:root[data-theme="light"] .kg-quote .src{color:rgba(23,32,45,.48)}
+:root[data-theme="light"] .analytics-kpi{background:#f1f5f9}
+:root[data-theme="light"] .analytics-kpi b,
+:root[data-theme="light"] .analytics-hotspot b{color:var(--ink)}
+:root[data-theme="light"] .analytics-card{background:rgba(23,32,45,.018)}
+:root[data-theme="light"] .analytics-rail{background:#dce4ed}
+:root[data-theme="light"] .analytics-hotspot span{color:#875800}
+:root[data-theme="light"] .analytics-place b{color:#174fae}
+:root[data-theme="light"] .panel-grip{color:rgba(23,32,45,.34)}
+:root[data-theme="light"] .panel-grip:hover{color:rgba(23,32,45,.7);background:rgba(23,32,45,.07)}
