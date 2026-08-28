@@ -32,9 +32,14 @@ body.dragging-dot #c{cursor:grabbing}
 .orientation-row{display:block}
 #btnOrientation{display:flex;align-items:center;justify-content:center;gap:9px;width:100%}
 .orientation-icon{font-size:18px;line-height:1;transform:rotate(90deg)}
-/* De losse `rotate`-eigenschap composeert met bestaande transforms van menu,
-   toetsenbord, notitie en analyse. Het canvas en de kaart blijven ongemoeid. */
-body.controls-flipped > :not(#c):not(#analytics):not(#sheet):not(#documentViewer){rotate:90deg}
+/* Een kwartslag verandert ook de tafelrand waar een bediening aan vastzit.
+   Alleen om het eigen midden draaien liet brede vensters buiten beeld vallen.
+   De vaste bediening krijgt daarom hieronder zowel een kwartslag als de
+   bijbehorende nieuwe randpositie. Vensters die aan een kaartpunt hangen
+   blijven om hun eigen anker draaien. */
+body.controls-flipped>#note,
+body.controls-flipped>#keyboard,
+body.controls-flipped>#kgInfo{rotate:90deg}
 button:disabled{opacity:.35;cursor:default}
 button:disabled:hover{border-color:var(--line);background:#151b24}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
@@ -67,6 +72,16 @@ body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}
 .mode-touch #btnSetA{left:90px}
 .mode-touch #btnSetB{right:90px}
 
+/* Virtuele kwartslag: onder-links wordt boven-links en boven-rechts wordt
+   onder-rechts. Zo blijven de twee knoppenparen aan een echte tafelrand in
+   plaats van alleen ter plekke zijwaarts te draaien. */
+body.controls-flipped #btnMapA{left:18px;top:18px;right:auto;bottom:auto;transform:rotate(90deg)}
+body.controls-flipped #btnSetA{left:18px;top:82px;right:auto;bottom:auto;transform:rotate(90deg)}
+body.controls-flipped #btnMapB{left:auto;top:auto;right:18px;bottom:18px;transform:rotate(-90deg)}
+body.controls-flipped #btnSetB{left:auto;top:auto;right:18px;bottom:82px;transform:rotate(-90deg)}
+body.controls-flipped.mode-touch #btnSetA{left:18px;top:90px}
+body.controls-flipped.mode-touch #btnSetB{right:18px;bottom:90px}
+
 #menu{display:none;width:320px;max-height:calc(100vh - 112px);overflow-y:auto;z-index:31;
   scrollbar-width:thin;scrollbar-color:#293443 transparent}
 #menu.open{display:block}
@@ -76,6 +91,16 @@ body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}
 .mode-touch #menu.at-a{bottom:94px}
 .mode-touch #menu.at-b{top:94px}
 #menu.flipped{transform:rotate(180deg);transform-origin:50% 50%}
+/* `translateY(-100%)` gebeurt vóór de rotatie en gebruikt daardoor de eigen,
+   dynamische menuhoogte. Dat is precies de maat die na 90° de schermbreedte
+   wordt; er zijn dus geen vaste aannames over open accordeons nodig. */
+body.controls-flipped #menu{max-height:calc(100vw - 112px);transform-origin:0 0}
+body.controls-flipped #menu.at-a{left:86px;top:18px;right:auto;bottom:auto;
+  transform:rotate(90deg) translateY(-100%)}
+body.controls-flipped #menu.at-b{left:calc(100vw - 86px);top:calc(100vh - 18px);right:auto;bottom:auto;
+  transform:rotate(-90deg) translateY(-100%)}
+body.controls-flipped.mode-touch #menu.at-a{left:94px;top:18px;bottom:auto}
+body.controls-flipped.mode-touch #menu.at-b{left:calc(100vw - 94px);top:calc(100vh - 18px);right:auto}
 .menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .menu-head h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Taalknop boven in het menu. Twee vakjes in plaats van één wisselknop:
@@ -167,6 +192,10 @@ input[type=range]{padding:0;accent-color:var(--accent);border:none;background:no
    leest daarmee rechtop voor wie aan de overkant van de tafel staat. */
 #puckDockTop{top:18px;transform:translateX(-50%) rotate(180deg);display:none}
 body.two-sided #puckDockTop{display:block}
+body.controls-flipped #puckDock{left:18px;top:50%;right:auto;bottom:auto;transform-origin:0 0;
+  transform:rotate(90deg) translate(-50%,-100%)}
+body.controls-flipped #puckDockTop{left:calc(100vw - 18px);top:50%;right:auto;bottom:auto;transform-origin:0 0;
+  transform:rotate(-90deg) translate(-50%,-100%)}
 /* Twee zijden slaat op een tafel waar mensen omheen staan. Op een laptop is
    er maar één kijkrichting, dus daar bestaat de keuze niet eens. */
 body:not(.mode-touch) #sidesRow,
@@ -187,6 +216,8 @@ body:not(.mode-touch) #sidesHint{display:none}
 .traypuck.used{opacity:.28}
 #zoom{right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;
   padding:10px}
+body.controls-flipped #zoom{left:50%;top:calc(100vh - 18px);right:auto;bottom:auto;transform-origin:0 0;
+  transform:rotate(90deg) translate(-100%,-50%)}
 #zoom button{width:44px;height:44px;font-size:18px;flex:none;padding:0}
 #note{position:fixed;z-index:20;display:none;width:310px;padding:17px 18px 16px;
   transform:rotate(var(--flip,0deg));
