@@ -971,6 +971,26 @@ function syncPlacedPinTopic(t){
    met wat er op die plek bekend is. De drie best passende knopen houden het
    beeld leesbaar; een thematische overeenkomst is een volle, heldere lijn,
    een puur nabije relatie is subtiel gestreept. */
+/* Vizier op het middelpunt van een puck. Dat middelpunt is de coordinaat die
+   bij bevestigen als markering wordt vastgelegd, dus het moet van een meter
+   afstand nog exact aanwijsbaar zijn: een ring met vier streepjes eromheen en
+   een stip in het hart. Alles schaalt mee met de puckstraal `R`. */
+function drawTarget(ctx,x,y,c,R){
+  const ring=R*0.16, gap=R*0.07, arm=R*0.27;
+  ctx.save();
+  ctx.strokeStyle=c; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(x,y,ring,0,Math.PI*2); ctx.stroke();
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    ctx.beginPath();
+    ctx.moveTo(x+dx*gap,y+dy*gap);
+    ctx.lineTo(x+dx*arm,y+dy*arm);
+    ctx.stroke();
+  }
+  ctx.fillStyle=c;
+  ctx.beginPath(); ctx.arc(x,y,Math.max(1.5,R*0.022),0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 function drawPuckKnowledgeRelations(ctx,pucks){
   if(!kg.enabled||!kg.loaded||!pucks.length) return;
   const visible=(x,y)=>x>=-24&&y>=-24&&x<=W+24&&y<=H+24;
@@ -1460,10 +1480,12 @@ function frame(){
     }
     ctx.fillStyle="rgba(9,12,17,.94)"; ctx.beginPath(); ctx.arc(t.x,t.y,R,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle=c; ctx.lineWidth=2; ctx.stroke();
+    // Het hart van de puck blijft vrij voor het vizier; de teksten wijken uit.
+    drawTarget(ctx,t.x,t.y,c,R);
     ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 15px 'Space Grotesk',system-ui,sans-serif";
-    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-1);
+    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-R*0.42);
     ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle="rgba(232,237,244,.55)";
-    ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+14);
+    ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+R*0.52);
     ctx.restore();
   }
 
