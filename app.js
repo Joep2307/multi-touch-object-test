@@ -596,7 +596,7 @@ function movePinTo(pin,x,y){
   pin.lng=+ll.lng.toFixed(6); pin.lat=+ll.lat.toFixed(6);
 }
 /* Snapshot the puck + finger geometry so the next move can be applied as a delta:
-   one finger slides the puck, two fingers twist it (and nudge it by their midpoint). */
+   one finger slides the puck, two fingers only twist it — the puck stays put. */
 function basePuckTouch(){
   const p=[...puckTouch.ptrs.values()];
   puckTouch.baseRot=puckTouch.puck.rot;
@@ -604,8 +604,6 @@ function basePuckTouch(){
     puckTouch.dx=p[0].x-puckTouch.puck.x; puckTouch.dy=p[0].y-puckTouch.puck.y;
   }else{
     puckTouch.baseAngle=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
-    puckTouch.dx=puckTouch.puck.x-(p[0].x+p[1].x)/2;
-    puckTouch.dy=puckTouch.puck.y-(p[0].y+p[1].y)/2;
   }
 }
 function syncGesture(){
@@ -632,7 +630,7 @@ addEventListener("pointerdown",e=>{
     gesture=null; return;
   }
   // A finger on a simulated puck grabs it: one finger slides, a second finger twists it
-  // to pick a theme. Once grabbed, any further finger joins the twist.
+  // to pick a theme without moving it. Once grabbed, any further finger joins the twist.
   {
     const onPuck=simPuckAt(e.clientX,e.clientY);
     if((onPuck && (!puckTouch || puckTouch.puck===onPuck)) || (puckTouch && puckTouch.ptrs.size>=1)){
@@ -658,11 +656,9 @@ addEventListener("pointermove",e=>{
     if(p.length===1){
       setSimPuckPosition(puckTouch.puck,p[0].x-puckTouch.dx,p[0].y-puckTouch.dy);
     }else{
+      // Twee vingers draaien alleen: de puck blijft staan waar hij staat.
       const ang=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
       puckTouch.puck.rot=puckTouch.baseRot+(ang-puckTouch.baseAngle);
-      setSimPuckPosition(puckTouch.puck,
-        (p[0].x+p[1].x)/2+puckTouch.dx,
-        (p[0].y+p[1].y)/2+puckTouch.dy);
     }
     return;
   }
