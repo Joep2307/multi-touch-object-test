@@ -59,7 +59,7 @@ const L = {
        controlSize:"Grootte van de bediening",
        smaller:"Bediening kleiner", larger:"Bediening groter",
        scaleHint:"Vensters en knoppen; de kaart blijft op ware grootte.",
-       rotateControls:"Draai bediening naar overkant", rotateControlsBack:"Draai bediening terug",
+       rotateControls:"Draai bediening 90 graden", rotateControlsBack:"Zet bediening terug",
        orientationHint:"Draait alleen de bediening, vensters en tekst; de kaart blijft staan.",
        twoSides:"Twee zijden",
        sidesHint:"Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.",
@@ -164,7 +164,7 @@ const L = {
        controlSize:"Size of the controls",
        smaller:"Smaller controls", larger:"Larger controls",
        scaleHint:"Panels and buttons; the map stays at true size.",
-       rotateControls:"Turn controls to the other side", rotateControlsBack:"Turn controls back",
+       rotateControls:"Rotate controls 90 degrees", rotateControlsBack:"Reset controls",
        orientationHint:"Rotates only the controls, panels, and text; the map stays in place.",
        twoSides:"Two sides",
        sidesHint:"Puck bar on both sides; panels turn towards whoever opens them.",
@@ -1700,7 +1700,7 @@ el("btnScaleUp").onclick=()=>stepScale(1);
 
 /* ── Schermstand ─────────────────────────────────────────────────────
    De kaart is het gedeelde object en blijft staan; alleen de bedieningslagen
-   draaien 180° naar de persoon aan de overkant. */
+   draaien een kwartslag zonder de kaart te veranderen. */
 let controlsFlipped=(()=>{
   try{ return localStorage.getItem("pucktable-controls-flipped")==="1"; }catch(e){ return false; }
 })();
