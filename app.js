@@ -41,8 +41,10 @@ const L = {
        locale:"nl-NL",
        docTitle:"Puck Table — participatie kaart",
        appTitle:"Participatietafel", mapHead:"Kaart", settings:"Instellingen",
-       close:"Sluiten", open:"Openen",
+       menu:"Menu", language:"Taal / Language", close:"Sluiten", open:"Openen",
        show:"TOON", hide:"VERBERG",
+       touchscreen:"Touchscreen", exportGeo:"GeoJSON exporteren", exportCsv:"CSV exporteren",
+       touchDebug:"Touch-debug",
 
        saidWhat:"Wat is er gezegd", nothingYet:"nog niets vastgelegd",
        tallyTotal:(n,top,c)=>`${n} markeringen · vaakst: ${top} (${c})`,
@@ -132,8 +134,10 @@ const L = {
        locale:"en-GB",
        docTitle:"Puck Table — participation map",
        appTitle:"Participation table", mapHead:"Map", settings:"Settings",
-       close:"Close", open:"Open",
+       menu:"Menu", language:"Language / Taal", close:"Close", open:"Open",
        show:"SHOW", hide:"HIDE",
+       touchscreen:"Touchscreen", exportGeo:"Export GeoJSON", exportCsv:"Export CSV",
+       touchDebug:"Touch debug",
 
        saidWhat:"What was said", nothingYet:"nothing recorded yet",
        tallyTotal:(n,top,c)=>`${n} markings · most often: ${top} (${c})`,
@@ -1919,7 +1923,11 @@ function applyLang(){
   if(fb){ fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide")); }
   // Een open venster hoort niet eerst dicht te moeten voordat het meegaat.
   if(selected) el("noteHead").textContent=vName(selected.verdict)+" · "+selected.topic;
+  if(el("kgInfo").style.display==="block" && kg.selected){
+    openKgInfo(kg.selected,+el("kgInfo").dataset.anchorX,+el("kgInfo").dataset.anchorY);
+  }
   if(el("sheet").style.display==="block") buildSheet();
+  refreshBuildStamp();
 }
 function setLang(next){
   if(next!=="nl"&&next!=="en") return;
@@ -1940,6 +1948,7 @@ resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMo
    van wijzigen komt uit de Last-Modified-header van de bestanden; levert de
    server die niet, dan valt hij terug op document.lastModified. */
 const STAMP_FILES=["./index.html","./app.js","./styles.css","./kg.js"];
+let refreshBuildStamp=()=>{};
 function stampDate(d){
   return d.toLocaleString(tr("locale"),{day:"2-digit",month:"2-digit",year:"numeric",
                                    hour:"2-digit",minute:"2-digit"});
@@ -1961,4 +1970,5 @@ async function showBuildStamp(){
   const geladen=loaded.toLocaleTimeString(tr("locale"),{hour:"2-digit",minute:"2-digit"});
   node.textContent=(newest?tr("stampUpdated",stampDate(newest)):tr("stampUnknown"))+tr("stampLoaded",geladen);
 }
+refreshBuildStamp=showBuildStamp;
 showBuildStamp();

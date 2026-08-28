@@ -49,13 +49,13 @@
   </svg>
 </button>
 
-<div class="panel" id="menu" role="dialog" aria-label="Menu">
+<div class="panel" id="menu" role="dialog" aria-label="Menu" data-i18n-aria="menu">
   <div class="menu-head">
     <h1 id="menuTitle">Participatietafel</h1>
     <!-- Taal. De tafel staat op plekken waar niet iedereen Nederlands leest;
          de knop staat boven in het menu zodat hij bij het openen meteen in
          beeld is, maar niet permanent over de kaart ligt. -->
-    <div class="lang-switch" id="langSwitch" role="group" aria-label="Taal / Language">
+    <div class="lang-switch" id="langSwitch" role="group" aria-label="Taal / Language" data-i18n-aria="language">
       <button id="langNl" type="button" lang="nl" aria-pressed="true">NL</button>
       <button id="langEn" type="button" lang="en" aria-pressed="false">EN</button>
     </div>
@@ -69,8 +69,8 @@
 
   <div class="menu-sec" id="mapSec" data-view="map">
     <p class="eyebrow" data-i18n="mapHead">Kaart</p>
-    <div class="row"><button id="btnMove">Kaart verplaatsen</button></div>
-    <div class="row"><button id="btnMoveDots">Dots verplaatsen</button></div>
+    <div class="row"><button id="btnMove" data-i18n="move">Kaart vastzetten</button></div>
+    <div class="row"><button id="btnMoveDots" data-i18n="moveDots">Dots verplaatsen</button></div>
     <p class="hint" id="dotsHint" data-i18n="dotsHint" style="margin:0 0 9px">Zet aan en sleep dan een dot.</p>
     <label class="field" for="search" data-i18n="searchPlace">Zoek een plek</label>
     <input id="search" placeholder="Breda, Ginneken…" data-i18n-ph="searchPh" autocomplete="off">
@@ -135,7 +135,7 @@
     <div class="head" id="ctrlHead"><h2 data-i18n="settings">Instellingen</h2><span class="chev mono" id="chev">HIDE</span></div>
     <div class="body">
       <div class="mode-switch" aria-label="Bediening kiezen" data-i18n-aria="chooseControl">
-        <button id="modeTouch" type="button">Touchscreen</button>
+        <button id="modeTouch" type="button" data-i18n="touchscreen">Touchscreen</button>
         <button id="modeLaptop" type="button">Laptop</button>
       </div>
       <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening" data-i18n-aria="controlSize">
@@ -160,15 +160,15 @@
       <label class="field" for="sess" data-i18n="sessionName">Naam van de sessie</label>
       <input id="sess" value="sessie-01">
       <div class="row" style="margin-top:9px">
-        <button id="btnGeo">Export GeoJSON</button>
-        <button id="btnCsv">Export CSV</button>
+        <button id="btnGeo" data-i18n="exportGeo">Export GeoJSON</button>
+        <button id="btnCsv" data-i18n="exportCsv">Export CSV</button>
       </div>
       <div class="row"><button id="btnWipe" class="danger" data-i18n="wipe">Alles wissen</button></div>
 
       <p class="eyebrow" data-i18n="simulationHead" style="margin-top:20px">Simulatie</p>
       <div class="row">
         <button id="btnSim" class="on" data-i18n="simPuck">Puck simuleren</button>
-        <button id="btnDebug">Touch debug</button>
+        <button id="btnDebug" data-i18n="touchDebug">Touch debug</button>
       </div>
       <label class="field" for="tol"><span data-i18n="tolLabel">Ratio-tolerantie</span> <span id="tolVal" class="mono">0.060</span></label>
       <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
