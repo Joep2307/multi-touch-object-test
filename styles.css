@@ -34,7 +34,7 @@ body.dragging-dot #c{cursor:grabbing}
 .orientation-icon{font-size:18px;line-height:1;transform:rotate(90deg)}
 /* De losse `rotate`-eigenschap composeert met bestaande transforms van menu,
    toetsenbord, notitie en analyse. Het canvas en de kaart blijven ongemoeid. */
-body.controls-flipped > :not(#c){rotate:90deg}
+body.controls-flipped > :not(#c):not(#analytics):not(#sheet):not(#documentViewer){rotate:90deg}
 button:disabled{opacity:.35;cursor:default}
 button:disabled:hover{border-color:var(--line);background:#151b24}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
@@ -102,8 +102,16 @@ body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}
 /* De <select> met kaartbeelden is de bron waaruit de knoppenlijst wordt
    opgebouwd; zichtbaar zou hij dezelfde keuze een tweede keer aanbieden. */
 .src-only{display:none}
-#controls.collapsed .body{display:none}
-#controls .head h2{margin:0}
+.menu-sec.collapsed>.accordion-body{display:none}
+.accordion-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;padding:4px 0;border:0;background:transparent;color:var(--ink);
+  border-radius:4px;font-size:15px;font-weight:700;text-align:left}
+.accordion-head:hover{border-color:transparent;background:transparent;color:#fff}
+.accordion-head:focus-visible{outline-offset:4px}
+.accordion-chev{width:9px;height:9px;flex:none;border-right:2px solid var(--ink-dim);
+  border-bottom:2px solid var(--ink-dim);transform:rotate(45deg);transition:transform .18s ease}
+.menu-sec:not(.collapsed)>.accordion-head .accordion-chev{transform:rotate(225deg)}
+.accordion-body{margin-top:14px}
 .stamp{margin:0 0 7px;font-size:10px;line-height:1.3;color:var(--ink-dim);opacity:.75;
   letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
@@ -331,9 +339,12 @@ body.keyboard-open #note{z-index:45}
 #analytics.open{display:flex;justify-content:center}
 #analytics.at-a{align-items:flex-end}
 #analytics.at-b{align-items:flex-start}
+#analytics.quarter-turn{align-items:center}
 .analytics-inner{position:relative;width:min(1040px,100%);max-height:100%;overflow:auto;padding:36px;
   border:1px solid var(--line);border-radius:20px;background:var(--surface);
   transform:rotate(var(--analytics-flip,0deg));transform-origin:50% 50%}
+#analytics.quarter-turn .analytics-inner{width:min(1040px,calc(100vh - 56px));
+  height:min(1040px,calc(100vw - 56px));max-height:none}
 .analytics-inner h2{margin:0;font-size:28px;letter-spacing:-.035em}
 .analytics-intro{margin:8px 0 25px;color:var(--ink-dim);font-size:14px}
 .analytics-actions{position:absolute;right:18px;top:18px;display:flex;gap:8px}
@@ -351,7 +362,7 @@ body.keyboard-open #note{z-index:45}
 .analytics-hotspot span{font-size:11px;color:#ffe18b;text-transform:uppercase;letter-spacing:.08em}.analytics-hotspot b{font:500 12px var(--mono);color:#fff}
 .analytics-place{display:flex;width:100%;padding:10px 0;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;align-items:baseline;gap:12px}.analytics-place:last-child{border-bottom:0}.analytics-place:hover{background:rgba(61,123,255,.08)}
 .analytics-place b{flex:none;font:500 12px var(--mono);color:#cfe0ff}.analytics-place span{color:var(--ink-dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mode-touch #analytics{padding:16px}.mode-touch .analytics-inner{padding:28px 20px}.mode-touch .analytics-inner h2{font-size:25px}.mode-touch .analytics-kpi{min-height:110px}.mode-touch .analytics-card h3{font-size:17px}.mode-touch .analytics-bar-head,.mode-touch .analytics-place b{font-size:14px}.mode-touch .analytics-place span{font-size:13px}.mode-touch .analytics-actions button{width:46px;height:46px}
+.mode-touch #analytics{padding:16px}.mode-touch .analytics-inner{padding:28px 20px}.mode-touch #analytics.quarter-turn .analytics-inner{width:min(1040px,calc(100vh - 32px));height:min(1040px,calc(100vw - 32px))}.mode-touch .analytics-inner h2{font-size:25px}.mode-touch .analytics-kpi{min-height:110px}.mode-touch .analytics-card h3{font-size:17px}.mode-touch .analytics-bar-head,.mode-touch .analytics-place b{font-size:14px}.mode-touch .analytics-place span{font-size:13px}.mode-touch .analytics-actions button{width:46px;height:46px}
 @media (max-width:700px){.analytics-kpis,.analytics-grid{grid-template-columns:1fr}.analytics-wide{grid-column:auto}.analytics-inner{padding:30px 16px}.analytics-kpi{min-height:80px}.analytics-actions{right:10px;top:10px}}
 
 /* ── Aanklikbare graafitems ─────────────────────────────────────────────

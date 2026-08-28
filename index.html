@@ -65,10 +65,18 @@
   <!-- ── Kaart ─────────────────────────────────────────────────────────
        Wat je tijdens een sessie aan de kaart doet: welk beeld eronder ligt,
        hem vastzetten of verschuiven, ergens heen springen, offline bewaren. -->
-  <div class="menu-sec" id="layersMenu" data-view="map" role="group" aria-label="Kaartbeeld kiezen" data-i18n-aria="chooseBasemap"></div>
+  <div class="menu-sec collapsed" id="layersMenu" data-view="map">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="layersBody">
+      <span data-i18n="layersHead">Lagen</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="layersBody" role="region"></div>
+  </div>
 
-  <div class="menu-sec" id="mapSec" data-view="map">
-    <p class="eyebrow" data-i18n="mapHead">Kaart</p>
+  <div class="menu-sec collapsed" id="mapSec" data-view="map">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="mapBody">
+      <span data-i18n="mapHead">Kaart</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="mapBody" role="region">
     <div class="row"><button id="btnMove" data-i18n="move">Kaart vastzetten</button></div>
     <div class="row"><button id="btnMoveDots" data-i18n="moveDots">Dots verplaatsen</button></div>
     <p class="hint" id="dotsHint" data-i18n="dotsHint" style="margin:0 0 9px">Zet aan en sleep dan een dot.</p>
@@ -115,26 +123,37 @@
         <option value="none" data-i18n="tileNone">Geen — alleen raster</option>
       </optgroup>
     </select>
+    </div>
   </div>
 
   <!-- ── Instellingen ──────────────────────────────────────────────────
        De stand van de sessie en alles wat je één keer goedzet. -->
-  <div class="menu-sec" id="tally" data-view="settings">
-    <p class="eyebrow" data-i18n="saidWhat">Wat is er gezegd</p>
+  <div class="menu-sec collapsed" id="tally" data-view="settings">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="tallyContent">
+      <span data-i18n="saidWhat">Wat is er gezegd</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="tallyContent" role="region">
     <div id="tallyBody"></div>
     <div class="total" id="tallyTotal">nog niets vastgelegd</div>
     <div class="flag" id="flag"></div>
     <div class="row analytics-launch"><button id="btnAnalytics" class="primary" data-i18n="analyticsOpen">Sessie-analyse</button></div>
+    </div>
   </div>
 
-  <div class="menu-sec" id="recent" data-view="settings">
-    <p class="eyebrow" data-i18n="recentMarks">Laatste markeringen</p>
+  <div class="menu-sec collapsed" id="recent" data-view="settings">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="recentContent">
+      <span data-i18n="recentMarks">Laatste markeringen</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="recentContent" role="region">
     <div id="recentBody"><p class="empty" data-i18n="noMarks">Nog geen markeringen.</p></div>
+    </div>
   </div>
 
-  <div class="menu-sec" id="controls" data-view="settings">
-    <div class="head" id="ctrlHead"><h2 data-i18n="settings">Instellingen</h2><span class="chev mono" id="chev">HIDE</span></div>
-    <div class="body">
+  <div class="menu-sec collapsed" id="controls" data-view="settings">
+    <button class="accordion-head" id="ctrlHead" type="button" aria-expanded="false" aria-controls="controlsBody">
+      <span data-i18n="settings">Instellingen</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="controlsBody" role="region">
       <div class="mode-switch" aria-label="Bediening kiezen" data-i18n-aria="chooseControl">
         <button id="modeTouch" type="button" data-i18n="touchscreen">Touchscreen</button>
         <button id="modeLaptop" type="button">Laptop</button>
@@ -287,7 +306,7 @@
 <div id="analytics" role="dialog" aria-modal="true" aria-label="Sessie-analyse" data-i18n-aria="analyticsTitle">
   <div class="analytics-inner">
     <div class="analytics-actions">
-      <button type="button" id="flipAnalytics" aria-label="Naar de overkant" title="Naar de overkant" data-i18n-aria="flipSide" data-i18n-title="flipSide" aria-pressed="false">⇅</button>
+      <button type="button" id="flipAnalytics" aria-label="Draai 90 graden" title="Draai 90 graden" data-i18n-aria="rotateQuarter" data-i18n-title="rotateQuarter">↻</button>
       <button type="button" id="closeAnalytics" class="analytics-close" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
     </div>
     <p class="eyebrow" data-i18n="analyticsEyebrow">SESSIE-OVERZICHT</p>

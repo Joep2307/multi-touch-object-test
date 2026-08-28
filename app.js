@@ -60,6 +60,7 @@ const L = {
        smaller:"Bediening kleiner", larger:"Bediening groter",
        scaleHint:"Vensters en knoppen; de kaart blijft op ware grootte.",
        rotateControls:"Draai bediening 90 graden", rotateControlsBack:"Zet bediening terug",
+       rotateQuarter:"Draai 90 graden",
        orientationHint:"Draait alleen de bediening, vensters en tekst; de kaart blijft staan.",
        twoSides:"Twee zijden",
        sidesHint:"Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.",
@@ -165,6 +166,7 @@ const L = {
        smaller:"Smaller controls", larger:"Larger controls",
        scaleHint:"Panels and buttons; the map stays at true size.",
        rotateControls:"Rotate controls 90 degrees", rotateControlsBack:"Reset controls",
+       rotateQuarter:"Rotate 90 degrees",
        orientationHint:"Rotates only the controls, panels, and text; the map stays in place.",
        twoSides:"Two sides",
        sidesHint:"Puck bar on both sides; panels turn towards whoever opens them.",
@@ -1516,26 +1518,27 @@ function renderAnalytics(){
   quality.appendChild(analyticsBar(tr("analyticsLocations",multi),multi,Math.max(1,clusters.length),"#ffd166"));
 }
 let analyticsSide="a";
-let analyticsFlipped=false;
+let analyticsRotation=0;
 function applyAnalyticsOrientation(){
   const a=el("analytics");
   a.classList.toggle("at-a",analyticsSide==="a");
   a.classList.toggle("at-b",analyticsSide==="b");
-  a.classList.toggle("flipped",analyticsFlipped);
-  a.style.setProperty("--analytics-flip",analyticsFlipped?"180deg":"0deg");
-  el("flipAnalytics").setAttribute("aria-pressed",String(analyticsFlipped));
+  a.classList.toggle("quarter-turn",analyticsRotation%180!==0);
+  a.style.setProperty("--analytics-flip",analyticsRotation+"deg");
+  el("flipAnalytics").setAttribute("aria-label",tr("rotateQuarter"));
+  el("flipAnalytics").title=tr("rotateQuarter");
 }
 function openAnalytics(){
   // Bewaar de herkomst voordat closeMenu() die wist: het overzicht hoort bij
   // dezelfde tafelrand te verschijnen en in de leesrichting daarvan te staan.
   analyticsSide=menuSide||"a";
-  analyticsFlipped=analyticsSide==="b"&&sidesActive();
+  analyticsRotation=analyticsSide==="b"&&sidesActive()?180:0;
   closeMenu(); closeNote(); renderAnalytics(); applyAnalyticsOrientation();
   const a=el("analytics"); a.classList.add("open");
   el("analytics").scrollTop=0; el("analytics").querySelector(".analytics-inner").scrollTop=0;
 }
 function flipAnalytics(){
-  analyticsFlipped=!analyticsFlipped;
+  analyticsRotation=(analyticsRotation+90)%360;
   applyAnalyticsOrientation();
 }
 function closeAnalytics(){ el("analytics").classList.remove("open"); }
@@ -1673,8 +1676,16 @@ function applyMode(mode){
   resize();
 }
 
-el("ctrlHead").onclick=()=>{const c=el("controls");c.classList.toggle("collapsed");
-  el("chev").textContent=c.classList.contains("collapsed")?tr("show"):tr("hide");};
+/* Alle hoofdonderdelen van het menu zijn compacte accordeons. Ze beginnen
+   dicht, zodat het menu ook op een kleiner tafelbeeld volledig te overzien
+   is. De knop en aria-expanded blijven samen de toestand vertellen. */
+document.querySelectorAll("#menu .menu-sec>.accordion-head").forEach(head=>{
+  head.onclick=()=>{
+    const section=head.parentElement;
+    const collapsed=section.classList.toggle("collapsed");
+    head.setAttribute("aria-expanded",String(!collapsed));
+  };
+});
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
 el("btnMoveDots").onclick=()=>{pinMoveMode=!pinMoveMode;closeNote();applyPinMoveMode();};
 function applyScale(){
@@ -1885,7 +1896,7 @@ function layerButton(option){
   return b;
 }
 function buildLayerMenu(){
-  const box=el("layersMenu"); box.innerHTML="";
+  const box=el("layersBody"); box.innerHTML="";
 
   /* Bovenaan de lagen die óver de kaart heen liggen. Het kaartbeeld eronder
      is een keuze uit één; dit zijn schakelaars, vandaar de scheiding. */
@@ -2177,7 +2188,6 @@ function applyLang(){
   });
 
   // Wat JavaScript zelf heeft neergezet.
-  el("chev").textContent=el("controls").classList.contains("collapsed")?tr("show"):tr("hide");
   el("menuTitle").textContent=tr(MENU_TITLES[menuView]);
   el("kgStatus").textContent=kgStatusText();
   el("bakeHint").textContent=tr("bakeHint");
