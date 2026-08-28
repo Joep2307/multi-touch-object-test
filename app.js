@@ -18,28 +18,39 @@ import { kg, loadKG, ensureKG, drawKG, drawGaps, kgAt, kgDescribe, onKgChange,
 const CFG = {
   longestSideMM:60, puckRadiusMM:45,
   stableFrames:3, dropoutMS:180, smoothing:4,
-  dwellMS:1200, jitterPX:22, rearmPX:70, ringPX:110,
+  jitterPX:22, rearmPX:70, ringPX:110,
   retina:0            // use the visible zoom level; avoids four times as many tile requests
 };
 const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
        topics:["Veiligheid","Verkeer","Groen","Afval","Sociaal","Anders"],
-       move:"Kaart vastzetten", locked:"Kaart staat vast", hold:"Stilhouden…", placed:"Vastgelegd",
+       move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
+       confirmTouch:"Tik om vast te leggen", confirmMouse:"Klik om vast te leggen",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
-       touchHint:"Sleep met één vinger. Draai met twee vingers om het thema te kiezen, ook na het vastleggen.",
-       laptopHint:"Sleep met de muis. Kies het thema met Shift + slepen of het scrollwiel, ook na het vastleggen.",
+       touchHint:"Sleep met één vinger. Draai met twee vingers naar het juiste thema en tik daarna op de puck om vast te leggen. Draaien blijft het thema aanpassen.",
+       laptopHint:"Sleep met de muis. Draai naar het juiste thema met Shift + slepen of het scrollwiel en klik daarna op de puck om vast te leggen. Draaien blijft het thema aanpassen.",
        noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door." },
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
        topics:["Safety","Traffic","Green","Waste","Social","Other"],
-       move:"Freeze map", locked:"Map is frozen", hold:"Hold still…", placed:"Marked",
+       move:"Freeze map", locked:"Map is frozen", placed:"Marked",
+       confirmTouch:"Tap to confirm", confirmMouse:"Click to confirm",
        moveDots:"Move dots", movingDots:"Finish moving",
-       touchHint:"Drag with one finger. Rotate with two fingers to choose a topic, even after marking.",
-       laptopHint:"Drag with the mouse. Choose the topic with Shift + drag or the scroll wheel, even after marking.",
+       touchHint:"Drag with one finger. Rotate with two fingers to the right topic, then tap the puck to confirm. Rotating keeps changing the topic afterwards.",
+       laptopHint:"Drag with the mouse. Rotate to the right topic with Shift + drag or the scroll wheel, then click the puck to confirm. Rotating keeps changing the topic afterwards.",
        noNet:"No map tiles — check the connection. Marking still works." }
 };
 let lang="nl";
 let uiMode=(()=>{ try{return localStorage.getItem("pucktable-ui-mode");}catch(e){return null;} })();
 if(uiMode!=="touch"&&uiMode!=="laptop") uiMode=matchMedia("(pointer:coarse)").matches?"touch":"laptop";
+/* De bediening kan mee groeien met de tafel: op een 43"-scherm dat een meter
+   verderop staat is 100% te klein, op een laptop is 150% belachelijk. Vaste
+   trappen in plaats van een schuif, want dit wordt met een vinger bediend.
+   `zoom` doet het werk in CSS; hier zit alleen de waarde. Alle plaatsing die
+   in JavaScript gebeurt rekent in schermpixels en moet dus door deze factor
+   gedeeld worden voordat ze als style.left/top op een venster belandt. */
+const UI_SCALES=[0.8,0.9,1,1.15,1.3,1.5,1.75,2];
+let uiScale=(()=>{ try{ const v=parseFloat(localStorage.getItem("pucktable-ui-scale"));
+                        return UI_SCALES.includes(v)?v:1; }catch(e){ return 1; } })();
 const VERDICTS=[{key:"good",color:"#39d8a4"},{key:"bad",color:"#ff5f56"},
                 {key:"talk",color:"#c48cff"},{key:"idea",color:"#ffd166"}];
 const vName=k=>L[lang][k], vColor=k=>VERDICTS.find(v=>v.key===k).color;
@@ -325,10 +336,11 @@ addEventListener("pointerdown",e=>{
   }
   // A finger on a simulated puck grabs it: one finger slides, a second finger twists it
   // to pick a theme. Once grabbed, any further finger joins the twist.
-  if(tracks.size===0){
+  {
     const onPuck=simPuckAt(e.clientX,e.clientY);
     if((onPuck && (!puckTouch || puckTouch.puck===onPuck)) || (puckTouch && puckTouch.ptrs.size>=1)){
-      if(!puckTouch) puckTouch={puck:onPuck,ptrs:new Map()};
+      if(!puckTouch) puckTouch={puck:onPuck,ptrs:new Map(),
+                                t0:performance.now(),px:onPuck.x,py:onPuck.y,rot0:onPuck.rot};
       puckTouch.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
       basePuckTouch(); gesture=null;
       return;
@@ -379,7 +391,10 @@ function endPointer(e){
   }
   if(puckTouch && puckTouch.ptrs.has(e.pointerId)){
     puckTouch.ptrs.delete(e.pointerId);
-    if(puckTouch.ptrs.size===0) puckTouch=null; else basePuckTouch();
+    if(puckTouch.ptrs.size===0){
+      if(wasTap(puckTouch)) tryConfirmPuck(puckTouch.puck.x,puckTouch.puck.y);
+      puckTouch=null;
+    } else basePuckTouch();
     return;
   }
   realTouches.delete(e.pointerId); syncGesture();
@@ -422,8 +437,8 @@ function clearPucks(){
 let trayDrag=null;
 function moveGhost(e){
   if(!trayDrag) return;
-  trayDrag.ghost.style.left=(e.clientX-27)+"px";
-  trayDrag.ghost.style.top=(e.clientY-27)+"px";
+  trayDrag.ghost.style.left=(e.clientX/uiScale-27)+"px";
+  trayDrag.ghost.style.top=(e.clientY/uiScale-27)+"px";
 }
 function endTrayDrag(e){
   if(!trayDrag) return;
@@ -454,7 +469,7 @@ function onTrayDown(e){
   if(!tpl) return;
   e.preventDefault();
   const ghost=node.cloneNode(true);
-  ghost.style.cssText="position:fixed;z-index:60;margin:0;pointer-events:none;opacity:.9";
+  ghost.style.cssText="position:fixed;z-index:60;margin:0;pointer-events:none;opacity:.9;zoom:"+uiScale;
   document.body.appendChild(ghost);
   trayDrag={tpl,ghost,node,x0:e.clientX,y0:e.clientY};
   moveGhost(e);
@@ -508,7 +523,8 @@ addEventListener("mousedown",e=>{
     return;
   }
   drag={puck:hit,rotate:(e.button===2||e.shiftKey),ox:e.clientX-hit.x,oy:e.clientY-hit.y,
-        r0:hit.rot,a0:Math.atan2(e.clientY-hit.y,e.clientX-hit.x)};
+        r0:hit.rot,a0:Math.atan2(e.clientY-hit.y,e.clientX-hit.x),
+        t0:performance.now(),px:hit.x,py:hit.y,rot0:hit.rot};
   gesture=null; mousePan=null;
 });
 addEventListener("mousemove",e=>{
@@ -526,6 +542,7 @@ addEventListener("mouseup",e=>{
     movePinTo(pinDrag.pin,e.clientX,e.clientY); pinDrag=null;
     document.body.classList.remove("dragging-dot"); save();
   }
+  if(drag && wasTap(drag)) tryConfirmPuck(drag.puck.x,drag.puck.y);
   drag=null; mousePan=null;
 });
 addEventListener("wheel",e=>{
@@ -573,7 +590,7 @@ function track(dets,now){
   for(const d of dets){
     let t=tracks.get(d.id);
     if(!t){ t={id:d.id,tpl:d.tpl,x:d.x,y:d.y,angle:d.angle,frames:0,state:"candidate",buf:[],
-               conf:d.conf,dwellFrom:now,anchorX:d.x,anchorY:d.y,armed:true,flash:0}; tracks.set(d.id,t); }
+               conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0}; tracks.set(d.id,t); }
     t.frames++; t.lastSeen=now; t.conf=t.conf*.7+d.conf*.3;
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
     t.x=t.buf.reduce((s,p)=>s+p.x,0)/t.buf.length;
@@ -582,8 +599,10 @@ function track(dets,now){
     t.angle+=dl*0.35;
     t.state=t.frames>=CFG.stableFrames?"recognised":"candidate";
     const moved=Math.hypot(t.x-t.anchorX,t.y-t.anchorY);
-    if(moved>CFG.jitterPX){ t.anchorX=t.x; t.anchorY=t.y; t.dwellFrom=now; }
-    if(moved>CFG.rearmPX) t.armed=true;
+    if(moved>CFG.jitterPX){ t.anchorX=t.x; t.anchorY=t.y; }
+    // Een puck die duidelijk verplaatst wordt, wordt een nieuwe bijdrage: opnieuw
+    // een thema draaien en opnieuw bevestigen. De vorige markering blijft staan.
+    if(moved>CFG.rearmPX && !t.armed){ t.armed=true; t.pinId=null; }
   }
   const seen=new Set(dets.map(d=>d.id));
   for(const [id,t] of tracks){
@@ -602,6 +621,30 @@ const topicOf=angle=>{
   const n=topics().length; let a=(angle+Math.PI)/(Math.PI*2); a=(a%1+1)%1;
   return Math.floor(a*n)%n;
 };
+/* Een tik of klik op de puck legt de markering vast. Wat een tik is: kort
+   aangeraakt, nauwelijks verschoven en nauwelijks gedraaid — zo blijft slepen
+   en draaien gewoon slepen en draaien. */
+function wasTap(g){
+  return performance.now()-g.t0<400
+      && Math.hypot(g.puck.x-g.px,g.puck.y-g.py)<10
+      && Math.abs(g.puck.rot-g.rot0)<0.08;
+}
+function puckTrackAt(x,y){
+  const R=CFG.puckRadiusMM*pxPerMM;
+  let best=null,bd=Infinity;
+  for(const t of tracks.values()){
+    if(t.state==="candidate") continue;
+    const d=Math.hypot(t.x-x,t.y-y);
+    if(d<R*1.3&&d<bd){ bd=d; best=t; }
+  }
+  return best;
+}
+function tryConfirmPuck(x,y){
+  const t=puckTrackAt(x,y);
+  if(!t||!t.armed||t.state!=="recognised") return false;
+  dropPin(t);
+  return true;
+}
 function dropPin(t){
   const ll=MV.unproject(t.x,t.y);
   const pin={id:Date.now()+"-"+Math.random().toString(36).slice(2,6),
@@ -610,9 +653,9 @@ function dropPin(t){
              title:"", description:"", note:"", t:new Date().toISOString()};
   pins.push(pin);
   // Keep the mark linked to this puck while it remains on the table. Rotating
-  // the puck can then correct its topic after the initial dwell/drop as well.
+  // the puck can then correct its topic after confirming as well.
   t.pinId=pin.id;
-  t.armed=false; t.flash=1; t.dwellFrom=performance.now(); save();
+  t.armed=false; t.flash=1; save();
   openNote(pin,t.x,t.y,true);
 }
 function syncPlacedPinTopic(t){
@@ -643,7 +686,8 @@ addEventListener("pointerup",e=>{
   // A tap that lands on a puck (simulated or detected) belongs to that puck.
   const R=CFG.puckRadiusMM*pxPerMM;
   if(simPuckAt(e.clientX,e.clientY)) return;
-  if([...tracks.values()].some(t=>Math.hypot(t.x-e.clientX,t.y-e.clientY)<R*1.3)) return;
+  const onTrack=puckTrackAt(e.clientX,e.clientY);
+  if(onTrack){ tryConfirmPuck(e.clientX,e.clientY); return; }
   const hit=[...pins].reverse().find(p=>{
     const s=MV.project(p.lng,p.lat);
     return Math.hypot(s.x-e.clientX,s.y-e.clientY)<24;
@@ -667,40 +711,56 @@ addEventListener("pointerup",e=>{
 function positionNote(recentre=true){
   const n=el("note");
   if(n.style.display!=="block") return;
-  const y=+n.dataset.anchorY||innerHeight/2;
-  const h=n.offsetHeight;
+  const s=uiScale;
+  const y=+n.dataset.anchorY||innerHeight/2;   // schermpixels
+  const h=n.offsetHeight*s;                    // idem: offsetHeight telt ongeschaald
   const max=Math.max(12,innerHeight-h-12);
-  const wanted=recentre?y-h/2:(parseFloat(n.style.top)||y-h/2);
+  const prev=parseFloat(n.style.top);
+  const wanted=recentre?y-h/2:(Number.isFinite(prev)?prev*s:y-h/2);
   const top=Math.max(12,Math.min(max,wanted));
-  n.style.top=top+"px";
-  setStem(n,h,y-top);
+  n.style.top=(top/s)+"px";
+  setStem(n,h/s,(y-top)/s);
 }
 // Eén waarnemer voor de hele levensduur van de pagina: elke hoogtewijziging
 // trekt het venster zo nodig terug binnen beeld.
 if(typeof ResizeObserver!=="undefined")
   new ResizeObserver(()=>positionNote(false)).observe(el("note"));
 
+/* Aan welke kant van de markering het venster opengaat hangt af van waar nog
+   ruimte is. Die ruimte verandert zodra de bediening groter of kleiner wordt,
+   dus dit staat los van openNote en kan opnieuw gedraaid worden. */
+function positionNoteX(){
+  const n=el("note");
+  if(n.style.display!=="block") return;
+  const s=uiScale;
+  const x=+n.dataset.anchorX||innerWidth/2;
+  const reach=+n.dataset.puckReach||34;
+  const width=n.offsetWidth*s;                 // schermpixels
+  const opensRight=x+width+reach<innerWidth-12;
+  const left=opensRight?x+reach:x-reach-width;
+  n.style.left=(Math.max(12,Math.min(innerWidth-width-12,left))/s)+"px";
+  n.style.setProperty("--stem-width",Math.max(26,reach/s-4)+"px");
+  n.style.setProperty("--origin-x",opensRight?"0":"100%");
+  n.style.setProperty("--enter-x",opensRight?"-28px":"28px");
+  // In een gedraaid venster wisselt links en rechts van plek, dus de stengel
+  // moet aan de andere kant beginnen om nog naar de puck te wijzen.
+  const flip=n.classList.contains("flipped");
+  n.classList.toggle("from-left",flip?!opensRight:opensRight);
+  n.classList.toggle("from-right",flip?opensRight:!opensRight);
+}
+
 function openNote(pin,x,y,fromPuck=false){
   selected=pin; const n=el("note");
   n.style.display="block";
-  const width=310;
   const flip=flippedFor(y);
   n.classList.toggle("flipped",flip);
   n.style.setProperty("--flip",flip?"180deg":"0deg");
-  const puckReach=fromPuck?CFG.puckRadiusMM*pxPerMM+46:34;
-  const opensRight=x+width+puckReach<innerWidth-12;
-  const left=opensRight?x+puckReach:x-puckReach-width;
-  n.style.left=Math.max(12,Math.min(innerWidth-width-12,left))+"px";
-  n.style.setProperty("--stem-width",Math.max(26,puckReach-4)+"px");
   n.style.setProperty("--note-color",vColor(pin.verdict));
-  n.style.setProperty("--origin-x",opensRight?"0":"100%");
-  n.style.setProperty("--enter-x",opensRight?"-28px":"28px");
+  n.dataset.anchorX=String(x);
   n.dataset.anchorY=String(y);
+  n.dataset.puckReach=String(fromPuck?CFG.puckRadiusMM*pxPerMM+46:34);
+  positionNoteX();
   positionNote();
-  // In een gedraaid venster wisselt links en rechts van plek, dus de stengel
-  // moet aan de andere kant beginnen om nog naar de puck te wijzen.
-  n.classList.toggle("from-left",flip?!opensRight:opensRight);
-  n.classList.toggle("from-right",flip?opensRight:!opensRight);
   n.classList.remove("opening");
   if(fromPuck){ void n.offsetWidth; n.classList.add("opening"); }
   el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
@@ -937,12 +997,12 @@ function frame(){
       ctx.fillText(list[k],lx,ly+.5);
     }
     ctx.textBaseline="alphabetic";
-    const prog=Math.min(1,(now-t.dwellFrom)/CFG.dwellMS);
     if(t.armed&&t.state==="recognised"){
-      if(prog<1){
-        ctx.beginPath(); ctx.arc(t.x,t.y,R+9,-Math.PI/2,-Math.PI/2+prog*Math.PI*2);
-        ctx.strokeStyle=c; ctx.lineWidth=4; ctx.lineCap="round"; ctx.stroke(); ctx.lineCap="butt";
-      } else dropPin(t);
+      const pulse=0.45+0.35*(0.5+0.5*Math.sin(now/380));
+      ctx.beginPath(); ctx.arc(t.x,t.y,R+9,0,Math.PI*2);
+      ctx.strokeStyle=c+Math.round(pulse*255).toString(16).padStart(2,"0");
+      ctx.lineWidth=3; ctx.setLineDash([7,7]); ctx.lineDashOffset=-now/45;
+      ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset=0;
     }
     if(t.flash>0){
       ctx.beginPath(); ctx.arc(t.x,t.y,R+9+(1-t.flash)*60,0,Math.PI*2);
@@ -954,7 +1014,7 @@ function frame(){
     ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 15px 'Space Grotesk',system-ui,sans-serif";
     ctx.fillText(vName(t.tpl.verdict),t.x,t.y-1);
     ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle="rgba(232,237,244,.55)";
-    ctx.fillText(t.armed?(prog<1?L[lang].hold:""):L[lang].placed,t.x,t.y+14);
+    ctx.fillText(t.armed?L[lang][uiMode==="touch"?"confirmTouch":"confirmMouse"]:L[lang].placed,t.x,t.y+14);
     ctx.restore();
   }
 
@@ -1050,9 +1110,9 @@ function liftEditorAboveKeyboard(){
   if(flip && nr.top<kr.bottom+12) top=Math.min(innerHeight-nr.height-12,kr.bottom+12);
   else if(!flip && nr.bottom>kr.top-12) top=Math.max(12,kr.top-nr.height-12);
   if(top===null) return;
-  n.style.top=Math.max(12,top)+"px";
+  n.style.top=(Math.max(12,top)/uiScale)+"px";
   const anchorY=Number(n.dataset.anchorY)||top+nr.height/2;
-  setStem(n,nr.height,anchorY-top);
+  setStem(n,nr.height/uiScale,(anchorY-top)/uiScale);
 }
 function showKeyboard(target){
   if(uiMode!=="touch"||!target.classList.contains("touch-type")) return;
@@ -1132,6 +1192,27 @@ el("ctrlHead").onclick=()=>{const c=el("controls");c.classList.toggle("collapsed
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
 el("btnLang").onclick=e=>{lang=lang==="nl"?"en":"nl";e.target.textContent=lang==="nl"?"EN":"NL";applyLock();applyPinMoveMode();applyMode(uiMode);renderTray();};
 el("btnMoveDots").onclick=()=>{pinMoveMode=!pinMoveMode;closeNote();applyPinMoveMode();};
+function applyScale(){
+  document.documentElement.style.setProperty("--ui-scale",String(uiScale));
+  el("scaleVal").textContent=Math.round(uiScale*100)+"%";
+  const i=UI_SCALES.indexOf(uiScale);
+  el("btnScaleDown").disabled=i<=0;
+  el("btnScaleUp").disabled=i>=UI_SCALES.length-1;
+  try{localStorage.setItem("pucktable-ui-scale",String(uiScale));}catch(e){}
+  // Een open venster hangt aan een punt op de kaart; dat punt verschuift niet
+  // mee, dus beide vensters gaan opnieuw langs hun anker liggen.
+  positionNoteX();
+  positionNote();
+  positionKgInfo();
+}
+function stepScale(step){
+  const i=UI_SCALES.indexOf(uiScale);
+  uiScale=UI_SCALES[Math.max(0,Math.min(UI_SCALES.length-1,(i<0?2:i)+step))];
+  applyScale();
+}
+el("btnScaleDown").onclick=()=>stepScale(-1);
+el("btnScaleUp").onclick=()=>stepScale(1);
+
 el("modeTouch").onclick=()=>applyMode("touch");
 el("modeLaptop").onclick=()=>applyMode("laptop");
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
@@ -1144,9 +1225,8 @@ function openKgInfo(node,x,y){
   const n=el("kgInfo");
   n.style.display="block";
   n.style.setProperty("--kg-flip",flippedFor(y)?"180deg":"0deg");
-  const width=280, height=120;
-  n.style.left=Math.max(12,Math.min(innerWidth-width-12,x+26))+"px";
-  n.style.top=Math.max(12,Math.min(innerHeight-height-12,y-height/2))+"px";
+  n.dataset.anchorX=String(x); n.dataset.anchorY=String(y);
+  positionKgInfo();
   el("kgInfoType").textContent=kgDescribe(node);
   el("kgInfoLabel").textContent=node.label;
   const body=el("kgInfoBody"); body.textContent="";
@@ -1190,6 +1270,14 @@ async function showKgKnowledge(node){
     body.appendChild(q);
   }
 }
+function positionKgInfo(){
+  const n=el("kgInfo");
+  if(n.style.display!=="block") return;
+  const s=uiScale, width=280*s, height=120*s;
+  const x=+n.dataset.anchorX||innerWidth/2, y=+n.dataset.anchorY||innerHeight/2;
+  n.style.left=(Math.max(12,Math.min(innerWidth-width-12,x+26))/s)+"px";
+  n.style.top=(Math.max(12,Math.min(innerHeight-height-12,y-height/2))/s)+"px";
+}
 function closeKgInfo(){ kg.selected=null; el("kgInfo").style.display="none"; }
 el("kgInfoClose").onclick=closeKgInfo;
 async function toggleGaps(){
@@ -1216,7 +1304,6 @@ el("btnKgThemes").onclick=async()=>{
   if(kg.useThemes && !kg.themes.length) await loadKG(el("kgUrl").value.trim());
 };
 el("kgUrl").onchange=()=>{ kg.nodes.length=0; kg.themes.length=0; if(kg.enabled||kg.useThemes) loadKG(el("kgUrl").value.trim()); };
-el("dwell").oninput=e=>{CFG.dwellMS=parseFloat(e.target.value)*1000;el("dwellVal").textContent=(+e.target.value).toFixed(1)+" s";};
 el("tol").oninput=e=>{tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
 el("diag").oninput=resize;
 /* ── Twee zijden ────────────────────────────────────────────────────────
@@ -1484,4 +1571,4 @@ el("btnUnbake").onclick=()=>{
   el("bakeHint").textContent="Bewaarde kaart gewist.";
 };
 
-resize(); restore(); restoreBasemap(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); frame();
+resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); frame();

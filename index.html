@@ -17,6 +17,12 @@
     <button id="modeTouch" type="button">Touchscreen</button>
     <button id="modeLaptop" type="button">Laptop</button>
   </div>
+  <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening">
+    <button id="btnScaleDown" type="button" aria-label="Bediening kleiner">&minus;</button>
+    <span class="scale-val mono" id="scaleVal" aria-live="polite">100%</span>
+    <button id="btnScaleUp" type="button" aria-label="Bediening groter">+</button>
+  </div>
+  <p class="hint" id="scaleHint" style="margin:7px 0 0">Alle vensters en knoppen worden groter of kleiner. De kaart blijft op ware grootte.</p>
   <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button">Twee zijden</button></div>
   <p class="hint" id="sidesHint" style="margin:7px 0 0">Voor een tafel waar mensen aan weerszijden staan: een pucks-balk aan beide kanten, en vensters draaien naar wie ze opent.</p>
   <div class="body">
@@ -92,8 +98,6 @@
       <button id="btnSim" class="on">Puck simuleren</button>
       <button id="btnDebug">Touch debug</button>
     </div>
-    <label class="field" for="dwell">Hoe lang stilhouden <span id="dwellVal" class="mono">1.2 s</span></label>
-    <input type="range" id="dwell" min="0.4" max="3" step="0.1" value="1.2">
     <label class="field" for="tol">Ratio-tolerantie <span id="tolVal" class="mono">0.060</span></label>
     <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
     <label class="field" for="diag">Schermdiagonaal (inch)</label>
