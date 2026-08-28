@@ -21,6 +21,9 @@ const CFG = {
   jitterPX:22, rearmPX:70, ringPX:110,
   retina:0            // use the visible zoom level; avoids four times as many tile requests
 };
+// De bouwstempel wordt pas onderaan dit bestand ingericht. Vóór die tijd is
+// verversen van de taal veilig een no-op (ook bij de eerste paginalaad).
+let refreshBuildStamp=()=>{};
 /* ── Taal ────────────────────────────────────────────────────────────────
    Eén tabel voor alles wat er op het scherm te lezen valt. De HTML draagt de
    Nederlandse tekst als bron én als terugval; `data-i18n` (en de varianten
@@ -41,7 +44,7 @@ const L = {
        locale:"nl-NL",
        docTitle:"Puck Table — participatie kaart",
        appTitle:"Participatietafel", mapHead:"Kaart", settings:"Instellingen",
-       menu:"Menu", language:"Taal / Language", close:"Sluiten", open:"Openen",
+       menu:"Menu", language:"Taal / Language", close:"Sluiten", open:"Openen", document:"Document",
        show:"TOON", hide:"VERBERG",
        touchscreen:"Touchscreen", exportGeo:"GeoJSON exporteren", exportCsv:"CSV exporteren",
        touchDebug:"Touch-debug",
@@ -97,6 +100,14 @@ const L = {
 
        sessionHead:"Sessie", sessionName:"Naam van de sessie", wipe:"Alles wissen",
        wipeConfirm:"Alle markeringen van deze sessie wissen?",
+       analyticsOpen:"Sessie-analyse", analyticsEyebrow:"SESSIE-OVERZICHT", analyticsTitle:"Analyse van de pucks",
+       analyticsIntro:(n)=>`${n} vastgelegde ${n===1?"puck":"pucks"} in deze sessie.`,
+       analyticsTypes:"Wat is er gelegd?", analyticsTopics:"Welke onderwerpen?", analyticsPlaces:"Waar liggen de pucks?",
+       analyticsPlacesNote:"Groepen binnen ongeveer 250 meter. De grootste groepen tonen waar het gesprek zich concentreert.",
+       analyticsRelations:"Relaties op dezelfde plek", analyticsRelationsNote:"Onderwerpen die dicht bij elkaar zijn neergelegd, kunnen samen besproken worden.",
+       analyticsQuality:"Hoe compleet is de input?", analyticsNoData:"Nog geen pucks vastgelegd.",
+       analyticsNotes:(done,total)=>`${done} van ${total} pucks hebben een toelichting`, analyticsLocations:(n)=>`${n} locatie${n===1?"":"s"} met meerdere pucks`,
+       analyticsRelationNone:"Nog geen onderwerpen dicht genoeg bij elkaar.", analyticsAt:"rond",
        simulationHead:"Simulatie", simPuck:"Puck simuleren",
        tolLabel:"Ratio-tolerantie", diagLabel:"Schermdiagonaal (inch)",
 
@@ -134,7 +145,7 @@ const L = {
        locale:"en-GB",
        docTitle:"Puck Table — participation map",
        appTitle:"Participation table", mapHead:"Map", settings:"Settings",
-       menu:"Menu", language:"Language / Taal", close:"Close", open:"Open",
+       menu:"Menu", language:"Language / Taal", close:"Close", open:"Open", document:"Document",
        show:"SHOW", hide:"HIDE",
        touchscreen:"Touchscreen", exportGeo:"Export GeoJSON", exportCsv:"Export CSV",
        touchDebug:"Touch debug",
@@ -190,6 +201,14 @@ const L = {
 
        sessionHead:"Session", sessionName:"Session name", wipe:"Clear everything",
        wipeConfirm:"Clear all markings from this session?",
+       analyticsOpen:"Session analytics", analyticsEyebrow:"SESSION OVERVIEW", analyticsTitle:"Puck analytics",
+       analyticsIntro:(n)=>`${n} recorded ${n===1?"puck":"pucks"} in this session.`,
+       analyticsTypes:"What was placed?", analyticsTopics:"Which topics?", analyticsPlaces:"Where are the pucks?",
+       analyticsPlacesNote:"Groups within about 250 metres. The largest groups show where the conversation is concentrated.",
+       analyticsRelations:"Relations at the same place", analyticsRelationsNote:"Topics placed close together can be discussed together.",
+       analyticsQuality:"How complete is the input?", analyticsNoData:"No pucks have been recorded yet.",
+       analyticsNotes:(done,total)=>`${done} of ${total} pucks have an explanation`, analyticsLocations:(n)=>`${n} location${n===1?"":"s"} with multiple pucks`,
+       analyticsRelationNone:"No topics are close enough together yet.", analyticsAt:"around",
        simulationHead:"Simulation", simPuck:"Simulate puck",
        tolLabel:"Ratio tolerance", diagLabel:"Screen diagonal (inches)",
 
@@ -860,6 +879,43 @@ function syncPlacedPinTopic(t){
   save();
   if(selected===pin) el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
 }
+
+/* Als de kennisgraaf open staat, krijgt een puck ook een zichtbare relatie
+   met wat er op die plek bekend is. De drie best passende knopen houden het
+   beeld leesbaar; een thematische overeenkomst is een volle, heldere lijn,
+   een puur nabije relatie is subtiel gestreept. */
+function drawPuckKnowledgeRelations(ctx,pucks){
+  if(!kg.enabled||!kg.loaded||!pucks.length) return;
+  const visible=(x,y)=>x>=-24&&y>=-24&&x<=W+24&&y<=H+24;
+
+  ctx.save();
+  for(const puck of pucks){
+    if(puck.state!=="recognised"&&puck.state!=="incomplete") continue;
+    const ll=MV.unproject(puck.x,puck.y);
+    const topic=topics()[topicOf(puck.angle)];
+    const relations=nearby(ll.lat,ll.lng,{theme:topic,limit:3,radiusM:1200});
+    const color=vColor(puck.tpl.verdict);
+
+    for(const relation of relations){
+      const target=MV.project(relation.node.lon,relation.node.lat);
+      if(!visible(puck.x,puck.y)&&!visible(target.x,target.y)) continue;
+      ctx.beginPath(); ctx.moveTo(puck.x,puck.y); ctx.lineTo(target.x,target.y);
+      ctx.strokeStyle=relation.match?color+"bb":color+"55";
+      ctx.lineWidth=relation.match?2.5:1.25;
+      ctx.setLineDash(relation.match?[]:[5,6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Een ring maakt ook bij een drukke kaart meteen duidelijk welk
+      // graafpunt bij deze puck hoort, zonder het normale punt te vervangen.
+      ctx.beginPath(); ctx.arc(target.x,target.y,relation.match?9:6.5,0,Math.PI*2);
+      ctx.strokeStyle=relation.match?color:"rgba(232,237,244,.6)";
+      ctx.lineWidth=relation.match?2:1;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
 function save(){ try{ localStorage.setItem("pucktable-"+el("sess").value,JSON.stringify(pins)); }catch(e){} }
 function restore(){
   try{ const raw=localStorage.getItem("pucktable-"+el("sess").value);
@@ -1065,8 +1121,7 @@ async function kgReveal(row,node){
   [...row.parentElement.querySelectorAll(".kg-quote")].forEach(q=>q.remove());
   if(open){ positionNote(false); return; }
   if(node.type==="document"){
-    const url=fileUrl(node.id);
-    if(url) window.open(url,"_blank","noopener");
+    openDocument(node.id,node.label);
     return;
   }
   const box=document.createElement("div");
@@ -1118,7 +1173,7 @@ async function renderMatches(pin){
   head.style.display="block";
   for(const d of docs){
     const row=kgRow(d.title,d.year?String(d.year):"");
-    row.onclick=()=>{ const u=fileUrl(d.id); if(u) window.open(u,"_blank","noopener"); };
+    row.onclick=()=>openDocument(d.id,d.title);
     box.appendChild(row);
   }
   positionNote(false);
@@ -1203,6 +1258,8 @@ function frame(){
   const points=[...realTouches.values(),...(simMode?simPads():[])];
   const {pucks:dets,usedIdx}=recognise(points);
   const pucks=track(dets,now);
+
+  drawPuckKnowledgeRelations(ctx,pucks);
 
   for(const p of pins){
     const s=MV.project(p.lng,p.lat);
@@ -1311,7 +1368,72 @@ function updateUI(pucks){
   [...document.querySelectorAll(".del")].forEach(b=>b.onclick=()=>{
     const i=pins.findIndex(p=>p.id===b.dataset.id); if(i>=0){pins.splice(i,1);save();}
   });
+  if(el("analytics").classList.contains("open")) renderAnalytics();
 }
+
+/* ── Sessie-analyse ────────────────────────────────────────────────────
+   De kaart is de plek om bijdragen te maken; dit venster is de plek om ze
+   samen te lezen. Groepen worden lokaal berekend uit de opgeslagen punten,
+   dus ook een offline sessie krijgt een bruikbaar overzicht. */
+const analyticsDistance=(a,b)=>{
+  const rad=Math.PI/180, lat=(a.lat+b.lat)/2*rad;
+  return Math.hypot((a.lat-b.lat)*111320,(a.lng-b.lng)*111320*Math.cos(lat));
+};
+function analyticsClusters(){
+  const groups=[];
+  for(const pin of pins){
+    let group=groups.find(g=>analyticsDistance(pin,g.center)<250);
+    if(!group){ group={items:[],center:{lat:pin.lat,lng:pin.lng}}; groups.push(group); }
+    group.items.push(pin);
+    group.center={lat:group.items.reduce((s,p)=>s+p.lat,0)/group.items.length,
+                  lng:group.items.reduce((s,p)=>s+p.lng,0)/group.items.length};
+  }
+  return groups.sort((a,b)=>b.items.length-a.items.length);
+}
+function analyticsBar(label,count,total,color){
+  const row=document.createElement("div"); row.className="analytics-bar";
+  const head=document.createElement("div"); head.className="analytics-bar-head";
+  const name=document.createElement("span"); name.textContent=label;
+  const value=document.createElement("b"); value.textContent=String(count);
+  head.append(name,value);
+  const rail=document.createElement("div"); rail.className="analytics-rail";
+  const fill=document.createElement("i"); fill.style.width=(total?count/total*100:0)+"%"; fill.style.background=color||"var(--accent)";
+  rail.appendChild(fill); row.append(head,rail); return row;
+}
+function renderAnalytics(){
+  const total=pins.length;
+  el("analyticsIntro").textContent=total?tr("analyticsIntro",total):tr("analyticsNoData");
+  const kpis=el("analyticsKpis"); kpis.textContent="";
+  const notes=pins.filter(p=>(p.title||p.description||p.note||"").trim()).length;
+  const clusters=analyticsClusters(), multi=clusters.filter(g=>g.items.length>1).length;
+  [[String(total),tr("saidWhat")],[String(new Set(pins.map(p=>p.topic)).size),tr("analyticsTopics")],
+   [total?Math.round(notes/total*100)+"%":"—",tr("analyticsNotes",notes,total)]]
+    .forEach(([value,label])=>{ const d=document.createElement("div"); d.className="analytics-kpi"; d.innerHTML=`<b>${value}</b><span>${label}</span>`; kpis.appendChild(d); });
+
+  const types=el("analyticsTypes"), topicsBox=el("analyticsTopics"), places=el("analyticsPlaces"), relations=el("analyticsRelations"), quality=el("analyticsQuality");
+  [types,topicsBox,places,relations,quality].forEach(n=>n.textContent="");
+  if(!total){ [types,topicsBox,places,relations,quality].forEach(n=>{const p=document.createElement("p");p.className="empty";p.textContent=tr("analyticsNoData");n.appendChild(p);}); return; }
+  VERDICTS.forEach(v=>types.appendChild(analyticsBar(vName(v.key),pins.filter(p=>p.verdict===v.key).length,total,v.color)));
+  const topicCounts=new Map(); pins.forEach(p=>topicCounts.set(p.topic,(topicCounts.get(p.topic)||0)+1));
+  [...topicCounts.entries()].sort((a,b)=>b[1]-a[1]).forEach(([topic,n])=>topicsBox.appendChild(analyticsBar(topic,n,total,"#7aa2f7")));
+  clusters.slice(0,6).forEach((group,i)=>{
+    const item=document.createElement("button"); item.className="analytics-place";
+    const themes=[...new Set(group.items.map(p=>p.topic))].join(" · ");
+    item.innerHTML=`<b>${group.items.length} ${group.items.length===1?"puck":"pucks"}</b><span>${tr("analyticsAt")} ${group.center.lat.toFixed(4)}, ${group.center.lng.toFixed(4)} · ${themes}</span>`;
+    item.onclick=()=>{MV.lat=group.center.lat;MV.lng=group.center.lng;MV.zoom=Math.max(MV.zoom,16);closeAnalytics();}; places.appendChild(item);
+  });
+  const pairs=new Map();
+  for(const group of clusters) for(let i=0;i<group.items.length;i++) for(let j=i+1;j<group.items.length;j++){
+    const a=group.items[i].topic,b=group.items[j].topic; if(a===b) continue;
+    const key=[a,b].sort().join("| "); pairs.set(key,(pairs.get(key)||0)+1);
+  }
+  if(!pairs.size){ const p=document.createElement("p");p.className="empty";p.textContent=tr("analyticsRelationNone");relations.appendChild(p); }
+  else [...pairs.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6).forEach(([pair,n])=>relations.appendChild(analyticsBar(pair.replace("| "," ↔ "),n,Math.max(...pairs.values()),"#c48cff")));
+  quality.appendChild(analyticsBar(tr("analyticsNotes",notes,total),notes,total,"#39d8a4"));
+  quality.appendChild(analyticsBar(tr("analyticsLocations",multi),multi,Math.max(1,clusters.length),"#ffd166"));
+}
+function openAnalytics(){ closeMenu(); closeNote(); renderAnalytics(); el("analytics").classList.add("open"); }
+function closeAnalytics(){ el("analytics").classList.remove("open"); }
 function applyLock(){
   el("btnMove").classList.toggle("on",mapLocked);
   el("btnMove").textContent=mapLocked?tr("locked"):tr("move");
@@ -1498,7 +1620,7 @@ function openKgInfo(node,x,y){
   const open=el("kgInfoOpen");
   open.textContent=node.type==="document"?tr("openDoc"):tr("whatSaidAbout");
   open.onclick=()=>{
-    if(node.type==="document"){ const u=fileUrl(node.id); if(u) window.open(u,"_blank","noopener"); return; }
+    if(node.type==="document"){ openDocument(node.id,node.label); return; }
     showKgKnowledge(node);
   };
 }
@@ -1538,6 +1660,23 @@ function positionKgInfo(){
 }
 function closeKgInfo(){ kg.selected=null; el("kgInfo").style.display="none"; }
 el("kgInfoClose").onclick=closeKgInfo;
+
+/* Keep document navigation within a closable layer. The iframe is deliberately
+   cleared on close so an error page cannot linger in the next document. */
+function openDocument(id,title){
+  const url=fileUrl(id);
+  if(!url) return;
+  el("documentViewerTitle").textContent=title||tr("document");
+  el("documentViewerFrame").src=url;
+  el("documentViewer").classList.add("open");
+  el("closeDocumentViewer").focus();
+}
+function closeDocumentViewer(){
+  el("documentViewer").classList.remove("open");
+  el("documentViewerFrame").src="about:blank";
+}
+el("closeDocumentViewer").onclick=closeDocumentViewer;
+el("documentViewer").addEventListener("pointerdown",e=>{ if(e.target===el("documentViewer")) closeDocumentViewer(); });
 async function toggleGaps(){
   kg.gaps=!kg.gaps;
   markLayerMenu();
@@ -1757,6 +1896,9 @@ el("noteSave").onclick=()=>{ if(selected){ setTimeout(()=>{ if(selected) renderM
 el("noteFlip").onclick=()=>flipNote();
 el("noteDel").onclick=()=>{ if(selected){const i=pins.indexOf(selected); if(i>=0)pins.splice(i,1); save();} closeNote(); };
 el("btnWipe").onclick=()=>{ if(confirm(tr("wipeConfirm"))){pins.length=0;save();} };
+el("btnAnalytics").onclick=openAnalytics;
+el("closeAnalytics").onclick=closeAnalytics;
+el("analytics").addEventListener("pointerdown",e=>{ if(e.target===el("analytics")) closeAnalytics(); });
 
 function download(name,text,type){
   const a=document.createElement("a");
@@ -1813,6 +1955,8 @@ el("closeSheetTop").onclick=closeSheet;
 el("sheet").addEventListener("pointerdown",e=>{ if(e.target===el("sheet")) closeSheet(); });
 addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
+  if(el("documentViewer").classList.contains("open")){ closeDocumentViewer(); return; }
+  if(el("analytics").classList.contains("open")){ closeAnalytics(); return; }
   if(el("sheet").style.display==="block"){ closeSheet(); return; }
   if(menuSide){ closeMenu(); return; }
   if(el("note").style.display==="block"){ closeNote(); return; }
@@ -1948,7 +2092,6 @@ resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMo
    van wijzigen komt uit de Last-Modified-header van de bestanden; levert de
    server die niet, dan valt hij terug op document.lastModified. */
 const STAMP_FILES=["./index.html","./app.js","./styles.css","./kg.js"];
-let refreshBuildStamp=()=>{};
 function stampDate(d){
   return d.toLocaleString(tr("locale"),{day:"2-digit",month:"2-digit",year:"numeric",
                                    hour:"2-digit",minute:"2-digit"});

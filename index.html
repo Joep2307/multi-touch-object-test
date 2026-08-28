@@ -163,6 +163,7 @@
         <button id="btnGeo" data-i18n="exportGeo">Export GeoJSON</button>
         <button id="btnCsv" data-i18n="exportCsv">Export CSV</button>
       </div>
+      <div class="row"><button id="btnAnalytics" class="primary" data-i18n="analyticsOpen">Sessie-analyse</button></div>
       <div class="row"><button id="btnWipe" class="danger" data-i18n="wipe">Alles wissen</button></div>
 
       <p class="eyebrow" data-i18n="simulationHead" style="margin-top:20px">Simulatie</p>
@@ -218,6 +219,18 @@
   </div>
 </div>
 
+<!-- Documents stay inside the table app: a failed document request can be
+     dismissed without leaving the map or relying on browser history. -->
+<div id="documentViewer" role="dialog" aria-modal="true" aria-labelledby="documentViewerTitle">
+  <div class="document-viewer-inner">
+    <div class="document-viewer-head">
+      <p class="document-viewer-title" id="documentViewerTitle"></p>
+      <button id="closeDocumentViewer" type="button" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+    </div>
+    <iframe id="documentViewerFrame" title="Document" data-i18n-title="document" referrerpolicy="no-referrer"></iframe>
+  </div>
+</div>
+
 <div class="panel" id="note">
   <div class="note-head">
     <p class="eyebrow" id="noteHead" data-i18n="newNote">Nieuwe bijdrage</p>
@@ -260,6 +273,26 @@
   <div class="sheetgrid" id="sheetGrid"></div>
   <button id="closeSheet" data-i18n="close">Sluiten</button>
 </div></div>
+
+<!-- Een afzonderlijk leesvenster voor de opbrengst van de sessie. Het is
+     bewust geen permanent dashboard: tijdens het gesprek blijft de kaart vrij,
+     en pas bij reflectie neemt dit overzicht het hele scherm over. -->
+<div id="analytics" role="dialog" aria-modal="true" aria-label="Sessie-analyse" data-i18n-aria="analyticsTitle">
+  <div class="analytics-inner">
+    <button id="closeAnalytics" class="analytics-close" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+    <p class="eyebrow" data-i18n="analyticsEyebrow">SESSIE-OVERZICHT</p>
+    <h2 data-i18n="analyticsTitle">Analyse van de pucks</h2>
+    <p class="analytics-intro" id="analyticsIntro"></p>
+    <div class="analytics-kpis" id="analyticsKpis"></div>
+    <div class="analytics-grid">
+      <section class="analytics-card"><h3 data-i18n="analyticsTypes">Wat is er gelegd?</h3><div id="analyticsTypes"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsTopics">Welke onderwerpen?</h3><div id="analyticsTopics"></div></section>
+      <section class="analytics-card analytics-wide"><h3 data-i18n="analyticsPlaces">Waar liggen de pucks?</h3><p class="analytics-note" data-i18n="analyticsPlacesNote">Groepen binnen ongeveer 250 meter. De grootste groepen tonen waar het gesprek zich concentreert.</p><div id="analyticsPlaces"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsRelations">Relaties op dezelfde plek</h3><p class="analytics-note" data-i18n="analyticsRelationsNote">Onderwerpen die dicht bij elkaar zijn neergelegd, kunnen samen besproken worden.</p><div id="analyticsRelations"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsQuality">Hoe compleet is de input?</h3><div id="analyticsQuality"></div></section>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
