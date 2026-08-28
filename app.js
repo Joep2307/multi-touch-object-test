@@ -2524,8 +2524,8 @@ el("langEn").onclick=()=>setLang("en");
 applyColorTheme(colorTheme); resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); applyLang(); frame();
 
 /* ---- Bijgewerkt-stempel -------------------------------------------------
-   Klein regeltje boven "Participatietafel": wanneer de bestanden van deze
-   pagina voor het laatst zijn gewijzigd, en hoe laat deze pagina is geladen.
+   Klein regeltje onder elke puckbalk: wanneer de bestanden van deze pagina
+   voor het laatst zijn gewijzigd, en hoe laat deze pagina is geladen.
    Zo is te zien of een verversing de nieuwe versie heeft opgepikt. De tijd
    van wijzigen komt uit de Last-Modified-header van de bestanden; levert de
    server die niet, dan valt hij terug op document.lastModified. */
@@ -2535,7 +2535,10 @@ function stampDate(d){
                                    hour:"2-digit",minute:"2-digit"});
 }
 async function showBuildStamp(){
-  const node=el("buildStamp"); if(!node) return;
+  // Eén stempel per puckbalk (de tafel heeft er twee), plus een eventueel
+  // los #buildStamp-element. Vandaar een selector in plaats van één id.
+  const nodes=[...document.querySelectorAll(".build-stamp, #buildStamp")];
+  if(!nodes.length) return;
   const loaded=new Date();
   let newest=new Date(document.lastModified);
   if(isNaN(newest.getTime())) newest=null;
@@ -2549,7 +2552,8 @@ async function showBuildStamp(){
     }catch(e){}
   }));
   const geladen=loaded.toLocaleTimeString(tr("locale"),{hour:"2-digit",minute:"2-digit"});
-  node.textContent=(newest?tr("stampUpdated",stampDate(newest)):tr("stampUnknown"))+tr("stampLoaded",geladen);
+  const txt=(newest?tr("stampUpdated",stampDate(newest)):tr("stampUnknown"))+tr("stampLoaded",geladen);
+  for(const node of nodes) node.textContent=txt;
 }
 refreshBuildStamp=showBuildStamp;
 showBuildStamp();

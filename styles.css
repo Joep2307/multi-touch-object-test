@@ -224,6 +224,12 @@ body.controls-flipped #puckDockTop{left:calc(100vw - 18px);top:50%;right:auto;bo
    er maar één kijkrichting, dus daar bestaat de keuze niet eens. */
 body:not(.mode-touch) #sidesRow,
 body:not(.mode-touch) #sidesHint{display:none}
+/* Kleine regel onder de puckbalk: wanneer deze versie is gebouwd. Bedoeld om
+   even te controleren, niet om te lezen — vandaar klein en gedempt. */
+.build-stamp{margin:9px 0 0;text-align:center;font-size:9.5px;line-height:1.3;
+  color:var(--ink-dim);opacity:.62;
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .puck-dock-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
 .puck-dock-head .hint{margin:0;line-height:1.35;flex:1;min-width:0}
 .puck-dock-head .btn-clear{flex:none;width:auto;padding:8px 11px;font-size:11px}
