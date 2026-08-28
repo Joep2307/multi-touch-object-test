@@ -573,8 +573,12 @@ const realTouches=new Map(); let peakTouches=0;
 
 /* One finger drags the map, two fingers pinch it. Three or more is a puck,
    and a recognised puck freezes the map so it can't slide out from under it. */
-let gesture=null, mousePan=null, puckTouch=null;
-const mapMovable = () => !mapLocked && !pinMoveMode && !drag && !puckTouch && tracks.size===0 && realTouches.size<3;
+let gesture=null, mousePan=null;
+/* Elke vastgehouden puck heeft zijn eigen greep, zodat twee handen twee pucks
+   tegelijk kunnen verplaatsen. */
+const puckTouches=[];
+const puckTouchByPtr = id => puckTouches.find(t=>t.ptrs.has(id));
+const mapMovable = () => !mapLocked && !pinMoveMode && !drag && !puckTouches.length && tracks.size===0 && realTouches.size<3;
 
 /* Topmost simulated puck under a screen point — a generous, finger-sized hit area. */
 function simPuckAt(x,y){
@@ -597,14 +601,23 @@ function movePinTo(pin,x,y){
 }
 /* Snapshot the puck + finger geometry so the next move can be applied as a delta:
    one finger slides the puck, two fingers only twist it — the puck stays put. */
-function basePuckTouch(){
-  const p=[...puckTouch.ptrs.values()];
-  puckTouch.baseRot=puckTouch.puck.rot;
+function basePuckTouch(pt){
+  const p=[...pt.ptrs.values()];
+  pt.baseRot=pt.puck.rot;
   if(p.length===1){
-    puckTouch.dx=p[0].x-puckTouch.puck.x; puckTouch.dy=p[0].y-puckTouch.puck.y;
+    pt.dx=p[0].x-pt.puck.x; pt.dy=p[0].y-pt.puck.y;
   }else{
-    puckTouch.baseAngle=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
+    pt.baseAngle=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
   }
+}
+/* Een vinger die naast de pucks landt hoort bij de greep die er het dichtst bij ligt. */
+function nearestPuckTouch(x,y){
+  let best=null,bd=Infinity;
+  for(const t of puckTouches){
+    const d=Math.hypot(t.puck.x-x,t.puck.y-y);
+    if(d<bd){ bd=d; best=t; }
+  }
+  return best;
 }
 function syncGesture(){
   if(!mapMovable()){ gesture=null; return; }
@@ -630,14 +643,21 @@ addEventListener("pointerdown",e=>{
     gesture=null; return;
   }
   // A finger on a simulated puck grabs it: one finger slides, a second finger twists it
-  // to pick a theme without moving it. Once grabbed, any further finger joins the twist.
+  // to pick a theme without moving it. Een vinger op een ANDERE puck begint een eigen
+  // greep — zo verplaats je twee pucks tegelijk. Een vinger naast de pucks doet mee
+  // met de dichtstbijzijnde greep.
   {
     const onPuck=simPuckAt(e.clientX,e.clientY);
-    if((onPuck && (!puckTouch || puckTouch.puck===onPuck)) || (puckTouch && puckTouch.ptrs.size>=1)){
-      if(!puckTouch) puckTouch={puck:onPuck,ptrs:new Map(),
-                                t0:performance.now(),px:onPuck.x,py:onPuck.y,rot0:onPuck.rot};
-      puckTouch.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-      basePuckTouch(); gesture=null;
+    let pt = onPuck ? puckTouches.find(t=>t.puck===onPuck)
+                    : (puckTouches.length ? nearestPuckTouch(e.clientX,e.clientY) : null);
+    if(!pt && onPuck){
+      pt={puck:onPuck,ptrs:new Map(),
+          t0:performance.now(),px:onPuck.x,py:onPuck.y,rot0:onPuck.rot};
+      puckTouches.push(pt);
+    }
+    if(pt){
+      pt.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      basePuckTouch(pt); gesture=null;
       return;
     }
   }
@@ -650,17 +670,20 @@ addEventListener("pointermove",e=>{
   if(pinDrag&&pinDrag.kind==="touch"&&pinDrag.pointerId===e.pointerId){
     movePinTo(pinDrag.pin,e.clientX,e.clientY); return;
   }
-  if(puckTouch && puckTouch.ptrs.has(e.pointerId)){
-    puckTouch.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    const p=[...puckTouch.ptrs.values()];
-    if(p.length===1){
-      setSimPuckPosition(puckTouch.puck,p[0].x-puckTouch.dx,p[0].y-puckTouch.dy);
-    }else{
-      // Twee vingers draaien alleen: de puck blijft staan waar hij staat.
-      const ang=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
-      puckTouch.puck.rot=puckTouch.baseRot+(ang-puckTouch.baseAngle);
+  {
+    const pt=puckTouchByPtr(e.pointerId);
+    if(pt){
+      pt.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      const p=[...pt.ptrs.values()];
+      if(p.length===1){
+        setSimPuckPosition(pt.puck,p[0].x-pt.dx,p[0].y-pt.dy);
+      }else{
+        // Twee vingers draaien alleen: de puck blijft staan waar hij staat.
+        const ang=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x);
+        pt.puck.rot=pt.baseRot+(ang-pt.baseAngle);
+      }
+      return;
     }
-    return;
   }
   if(!realTouches.has(e.pointerId)) return;
   realTouches.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -682,13 +705,16 @@ function endPointer(e){
     movePinTo(pinDrag.pin,e.clientX,e.clientY); pinDrag=null;
     document.body.classList.remove("dragging-dot"); save(); return;
   }
-  if(puckTouch && puckTouch.ptrs.has(e.pointerId)){
-    puckTouch.ptrs.delete(e.pointerId);
-    if(puckTouch.ptrs.size===0){
-      if(wasTap(puckTouch)) tryConfirmPuck(puckTouch.puck.x,puckTouch.puck.y);
-      puckTouch=null;
-    } else basePuckTouch();
-    return;
+  {
+    const pt=puckTouchByPtr(e.pointerId);
+    if(pt){
+      pt.ptrs.delete(e.pointerId);
+      if(pt.ptrs.size===0){
+        puckTouches.splice(puckTouches.indexOf(pt),1);
+        if(wasTap(pt)) tryConfirmPuck(pt.puck.x,pt.puck.y);
+      } else basePuckTouch(pt);
+      return;
+    }
   }
   realTouches.delete(e.pointerId); syncGesture();
 }
@@ -725,7 +751,7 @@ function markTray(){
    Marks that were already dropped stay on the map — only the selection goes. */
 function clearPucks(){
   if(simPucks.length===0 && tracks.size===0) return;
-  simPucks.length=0; tracks.clear(); puckTouch=null; drag=null; markTray();
+  simPucks.length=0; tracks.clear(); puckTouches.length=0; drag=null; markTray();
 }
 let trayDrag=null;
 function moveGhost(e){
@@ -794,7 +820,7 @@ function syncSimPucksToMap(){
     if(!Number.isFinite(s.lng)||!Number.isFinite(s.lat)){
       const ll=MV.unproject(s.x,s.y); s.lng=ll.lng; s.lat=ll.lat;
     }
-    if(drag?.puck===s||puckTouch?.puck===s) continue;
+    if(drag?.puck===s||puckTouches.some(t=>t.puck===s)) continue;
     const p=MV.project(s.lng,s.lat), dx=p.x-s.x, dy=p.y-s.y;
     if(Math.abs(dx)<0.001&&Math.abs(dy)<0.001) continue;
     s.x=p.x; s.y=p.y;
@@ -1077,7 +1103,7 @@ function doubleTap(id){
   return dbl;
 }
 addEventListener("pointerdown",e=>{
-  if(e.target.closest(".panel")||puckTouch||pinMoveMode) return;
+  if(e.target.closest(".panel")||puckTouches.length||pinMoveMode) return;
   tapStart={x:e.clientX,y:e.clientY,t:performance.now()};
 });
 addEventListener("pointerup",e=>{
