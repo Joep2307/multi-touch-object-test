@@ -921,10 +921,8 @@ function drawPuckKnowledgeRelations(ctx,pucks){
   ctx.restore();
 }
 
-/* Een nieuwe demo opent niet als een lege kaart. Per soort liggen er drie
-   ingevulde bijdragen rond Breda, verspreid over een paar herkenbare plekken.
-   Zodra een sessie eenmaal is opgeslagen (ook als de gebruiker haar wist),
-   wint die opgeslagen inhoud altijd van deze voorbeelden. */
+/* De standaarddemo opent niet als een lege kaart. Per soort liggen er drie
+   ingevulde bijdragen rond Breda, verspreid over een paar herkenbare plekken. */
 const DEMO_PINS=[
   {id:"demo-good-1",lat:51.58918,lng:4.77620,verdict:"good",topic:"Groen",title:"Meer ruimte voor bomen",description:"De extra bomen op de Grote Markt geven schaduw en maken het plein prettiger in de zomer."},
   {id:"demo-good-2",lat:51.58696,lng:4.77963,verdict:"good",topic:"Verkeer",title:"Fijne fietsroute langs de singel",description:"De vrijliggende route voelt veilig en sluit goed aan op het centrum."},
@@ -948,9 +946,21 @@ function restore(){
   pins.length=0;
   try{
     const session=el("sess").value;
-    const raw=localStorage.getItem("pucktable-"+session);
-    if(raw!==null){ JSON.parse(raw).forEach(p=>pins.push(p)); return; }
-    if(session==="sessie-01") DEMO_PINS.forEach(p=>pins.push({...p}));
+    const sessionKey="pucktable-"+session;
+    const demoKey="pucktable-demo-pins-v1";
+    const raw=localStorage.getItem(sessionKey);
+    const stored=raw===null?[]:JSON.parse(raw);
+    if(Array.isArray(stored)) stored.forEach(p=>pins.push(p));
+
+    /* Ook een sessie-01 die al vóór de demo bestond krijgt de voorbeelden
+       één keer toegevoegd. Bestaande bijdragen blijven staan. De aparte
+       sleutel voorkomt dat 'Alles wissen' ze bij een herlaadbeurt terugzet. */
+    if(session==="sessie-01" && localStorage.getItem(demoKey)!=="1"){
+      const ids=new Set(pins.map(p=>p.id));
+      DEMO_PINS.filter(p=>!ids.has(p.id)).forEach(p=>pins.push({...p}));
+      localStorage.setItem(sessionKey,JSON.stringify(pins));
+      localStorage.setItem(demoKey,"1");
+    }
   }catch(e){}
 }
 let tapStart=null, selected=null;
