@@ -35,7 +35,10 @@ const CFG = {
      horen bij de tafel, dus staan ze hier, met de URL als overschrijving
      voor wie een tweede opstelling bedient (?diag=55&tol=0.08&kg=…). */
   screenDiagIn:43,    // schermdiagonaal in inch; bepaalt pxPerMM en dus de herkenning
-  tolerance:0.06,     // hoeveel de zijdeverhoudingen van een puck mogen afwijken
+  /* Contactvlakken worden door het touchscreen bij verschillende draaihoeken
+     niet exact op hetzelfde middelpunt gemeten. 0,10 vangt die richtingsfout
+     op; de vier standaardvormen liggen nog steeds verder uit elkaar. */
+  tolerance:0.10,     // hoeveel de zijdeverhoudingen van een puck mogen afwijken
   kgUrl:""            // adres van de kennisgraaf-backend; leeg = de fixtures
 };
 
@@ -1086,11 +1089,11 @@ function recognise(points){
            Een puck die al gevolgd wordt krijgt daarom wat extra speelruimte;
            de eerste herkenning blijft op de ingestelde, strenge tolerantie. */
         const tracked=tracks.has(tpl.id);
-        const errLimit=tracked?Math.min(0.12,tolerance*1.75):tolerance;
+        const errLimit=tracked?Math.min(0.14,tolerance*1.4):tolerance;
         if(err>errLimit) continue;
         const want=tplLongest(tpl)*pxPerMM;
         const sizeErr=Math.abs(d.longest-want)/want;
-        if(sizeErr>(tracked?0.45:0.35)) continue;
+        if(sizeErr>(tracked?0.50:0.42)) continue;
         cands.push({tpl,err,idx:[i,j,k],d,conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
       }
     }
