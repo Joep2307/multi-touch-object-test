@@ -19,6 +19,11 @@ const CFG = {
   longestSideMM:60, puckRadiusMM:45,
   stableFrames:3, dropoutMS:180, smoothing:4,
   jitterPX:22, rearmPX:70, ringPX:110,
+  /* De ring om de puck is een menu geworden. Kiezen gaat door naar een optie
+     te draaien en even stil te houden: tikken blijft zo gereserveerd voor het
+     vastleggen van een markering. `puckDwellMS` is die stilstand,
+     `puckZoomPX` hoeveel je de puck vooruit moet duwen voor een zoomniveau. */
+  puckDwellMS:600, puckZoomPX:150, puckZoomDeadPX:2,
   retina:0,           // use the visible zoom level; avoids four times as many tile requests
   /* Eenmalig per opstelling, niet per sessie. Deze drie stonden als invoer-
      velden in het menu, waar ze bij elke herlaad terugsprongen naar hun
@@ -60,8 +65,10 @@ const L = {
        move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
        confirmTouch:"Tik om vast te leggen", confirmMouse:"Klik om vast te leggen",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
-       touchHint:"Sleep, draai voor het thema, tik om vast te leggen.",
-       laptopHint:"Sleep, draai met Shift of het wiel, klik om vast te leggen.",
+       touchHint:"Sleep, draai naar een keuze en houd even stil, tik om vast te leggen.",
+       laptopHint:"Sleep, draai met Shift of het wiel en houd stil, klik om vast te leggen.",
+       puckMove:"Verplaatsen", puckSelect:"Kiezen", puckZoom:"Zoomen", puckBack:"Terug",
+       modeZoom:"vooruit = inzoomen",
        flipSide:"Naar de overkant", flipNote:"Naar de overkant",
        noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door.",
 
@@ -145,12 +152,35 @@ const L = {
        simulationHead:"Simulatie", simPuck:"Puck simuleren",
        tolLabel:"Ratio-tolerantie", diagLabel:"Schermdiagonaal (inch)",
 
-       physicalPucks:"Fysieke pucks", learn:"Puck inlezen", sheetBtn:"Bouwtekening",
+       physicalPucks:"Fysieke pucks", recog:"Puck herkennen",
+       buildTools:"Bouwgereedschap", sheetBtn:"Bouwtekening",
        exportCfg:"Config exporteren",
-       learnHint:"Leg één puck stil op het scherm en druk op <b>Puck inlezen</b>.",
-       learnNeed:(n)=>`Precies <b>3</b> punten nodig, gevonden: <b>${n}</b>. Leg één puck neer en houd hem stil.`,
-       learnAdded:(id,a,b,mm)=>`<b>${id}</b> toegevoegd — ratio's ${a} / ${b}, langste zijde ${mm} mm.`,
-       learnClash:(id)=>` <b style="color:var(--warn)">Te dicht bij ${id}</b>: maak deze driehoek duidelijk anders.`,
+       recogHint:"Plak drie stukjes tape in een driehoek, leg de puck op het scherm en druk op <b>Puck herkennen</b>.",
+       recogTitle:"Puck herkennen",
+       recogIntro:"Leg de puck op het vrije vlak hieronder en houd hem stil. Zodra de drie plakkers gelezen zijn, kies je welke puck dit is.",
+       recogWait:(n)=>`Wachten op drie contactpunten — nu <b>${n}</b>. Ligt de puck er al? Dan koppelen de plakkers niet: raak de tape even aan.`,
+       recogHold:"Drie punten gevonden — stil houden…",
+       recogMoved:"De puck bewoog — stil houden…",
+       recogWhich:"Welke puck is dit?",
+       recogMeasured:(a,b,mm)=>`Gemeten: ratio's ${a} / ${b}, langste zijde ${mm} mm.`,
+       recogSaved:(name,a,b,mm)=>`<b>${name}</b> onthouden — ratio's ${a} / ${b}, langste zijde ${mm} mm. Dit scherm weet het ook na herladen.`,
+       recogClash:(name)=>` <b style="color:var(--warn)">Lijkt te veel op ${name}</b>: maak deze driehoek duidelijk anders, anders worden ze verwisseld.`,
+       recogIso:"Deze driehoek is bijna gelijkbenig. De tafel ziet dan moeilijk welke kant voor is, en het draaimenu op de puck loopt vast. Verschuif één plakker een centimeter en meet opnieuw.",
+       recogAgain:"Volgende puck", recogReset:"Metingen wissen",
+       recogExport:"Metingen exporteren",
+       recogLearned:(t)=>`ingelezen ${t}`, recogFactory:"nog niet ingelezen",
+       recogCleared:"Alle metingen gewist — de pucks staan weer op hun oorspronkelijke driehoek.",
+       modePuck:"Puck", puckAdd:"+ Puck",
+       modePuckHint:"De balk onderaan is weg. De tafel herkent alleen pucks die je zelf hebt ingelezen.",
+       sidesHintPuck:"De toevoegknop aan beide kanten; vensters draaien naar wie ze opent.",
+       recogIntroOwn:"Leg de puck op het vrije vlak hieronder en houd hem stil. Zodra de drie plakkers gelezen zijn, zeg je wat voor puck dit is; hij komt er dan bij.",
+       recogWhichKind:"Wat voor puck is dit?",
+       recogKindCount:(n)=>n===0?"nog geen puck van deze soort":n===1?"1 puck van deze soort":`${n} pucks van deze soort`,
+       recogKnown:(n)=>n===1?"1 puck ingelezen":`${n} pucks ingelezen`,
+       recogNoneYet:"Nog geen puck ingelezen. Tot die tijd herkent de tafel niets.",
+       recogRemove:"Deze puck weggooien", recogRemoved:"Puck weggegooid.",
+       recogResetOwn:"Alle pucks wissen",
+       recogClearedOwn:"Alle eigen pucks weggegooid. Lees er een in om weer iets te laten herkennen.",
        sheetTitle:"Bouwtekening pucks",
        sheetIntro:"Padposities per puck, in millimeters vanaf het midden. Elke driehoek is ongelijkzijdig en de zijdeverhoudingen liggen ver genoeg uit elkaar om ze met een paar millimeter meetfout nog te onderscheiden.",
        sheetPad:"Pad", sheetRatios:"Ratio's", sheetLongest:"Langste",
@@ -172,8 +202,10 @@ const L = {
        move:"Freeze map", locked:"Map is frozen", placed:"Marked",
        confirmTouch:"Tap to confirm", confirmMouse:"Click to confirm",
        moveDots:"Move dots", movingDots:"Finish moving",
-       touchHint:"Drag, rotate for the topic, tap to confirm.",
-       laptopHint:"Drag, rotate with Shift or the wheel, click to confirm.",
+       touchHint:"Drag, rotate to an option and hold still, tap to confirm.",
+       laptopHint:"Drag, rotate with Shift or the wheel and hold still, click to confirm.",
+       puckMove:"Move", puckSelect:"Select", puckZoom:"Zoom", puckBack:"Back",
+       modeZoom:"forward = zoom in",
        flipSide:"To the other side", flipNote:"To the other side",
        noNet:"No map tiles — check the connection. Marking still works.",
 
@@ -257,12 +289,35 @@ const L = {
        simulationHead:"Simulation", simPuck:"Simulate puck",
        tolLabel:"Ratio tolerance", diagLabel:"Screen diagonal (inches)",
 
-       physicalPucks:"Physical pucks", learn:"Read puck", sheetBtn:"Build drawing",
+       physicalPucks:"Physical pucks", recog:"Recognise puck",
+       buildTools:"Build tools", sheetBtn:"Build drawing",
        exportCfg:"Export config",
-       learnHint:"Place one puck still on the screen and press <b>Read puck</b>.",
-       learnNeed:(n)=>`Exactly <b>3</b> points needed, found: <b>${n}</b>. Put down one puck and hold it still.`,
-       learnAdded:(id,a,b,mm)=>`<b>${id}</b> added — ratios ${a} / ${b}, longest side ${mm} mm.`,
-       learnClash:(id)=>` <b style="color:var(--warn)">Too close to ${id}</b>: make this triangle clearly different.`,
+       recogHint:"Stick three pieces of tape in a triangle, put the puck on the screen and press <b>Recognise puck</b>.",
+       recogTitle:"Recognise puck",
+       recogIntro:"Put the puck on the open area below and hold it still. As soon as the three pads are read, you pick which puck this is.",
+       recogWait:(n)=>`Waiting for three contact points — now <b>${n}</b>. Is the puck already there? Then the pads are not coupling: touch the tape briefly.`,
+       recogHold:"Three points found — hold still…",
+       recogMoved:"The puck moved — hold still…",
+       recogWhich:"Which puck is this?",
+       recogMeasured:(a,b,mm)=>`Measured: ratios ${a} / ${b}, longest side ${mm} mm.`,
+       recogSaved:(name,a,b,mm)=>`<b>${name}</b> remembered — ratios ${a} / ${b}, longest side ${mm} mm. This screen keeps it after a reload.`,
+       recogClash:(name)=>` <b style="color:var(--warn)">Too much like ${name}</b>: make this triangle clearly different, or the two will be swapped.`,
+       recogIso:"This triangle is nearly isosceles. The table then struggles to see which way is forward and the ring menu on the puck stalls. Move one pad a centimetre and measure again.",
+       recogAgain:"Next puck", recogReset:"Clear measurements",
+       recogExport:"Export measurements",
+       recogLearned:(t)=>`read in ${t}`, recogFactory:"not read in yet",
+       recogCleared:"All measurements cleared — the pucks are back on their original triangles.",
+       modePuck:"Puck", puckAdd:"+ Puck",
+       modePuckHint:"The bar at the bottom is gone. The table only recognises pucks you have read in yourself.",
+       sidesHintPuck:"The add button on both sides; windows turn to whoever opens them.",
+       recogIntroOwn:"Put the puck on the open area below and hold it still. As soon as the three pads are read, you say what kind of puck this is and it is added.",
+       recogWhichKind:"What kind of puck is this?",
+       recogKindCount:(n)=>n===0?"no puck of this kind yet":n===1?"1 puck of this kind":`${n} pucks of this kind`,
+       recogKnown:(n)=>n===1?"1 puck read in":`${n} pucks read in`,
+       recogNoneYet:"No puck read in yet. Until then the table recognises nothing.",
+       recogRemove:"Throw this puck away", recogRemoved:"Puck thrown away.",
+       recogResetOwn:"Clear all pucks",
+       recogClearedOwn:"All your own pucks are gone. Read one in to have the table recognise something again.",
        sheetTitle:"Puck build drawing",
        sheetIntro:"Pad positions per puck, in millimetres from the centre. Every triangle is scalene and the side ratios lie far enough apart to tell them apart with a few millimetres of measurement error.",
        sheetPad:"Pad", sheetRatios:"Ratios", sheetLongest:"Longest",
@@ -295,7 +350,13 @@ const tr=(k,...a)=>{
   return typeof v==="function"?v(...a):v;
 };
 let uiMode=(()=>{ try{return localStorage.getItem("pucktable-ui-mode");}catch(e){return null;} })();
-if(uiMode!=="touch"&&uiMode!=="laptop") uiMode=matchMedia("(pointer:coarse)").matches?"touch":"laptop";
+if(uiMode!=="touch"&&uiMode!=="laptop"&&uiMode!=="puck") uiMode=matchMedia("(pointer:coarse)").matches?"touch":"laptop";
+/* Drie standen. `touch` en `puck` zijn allebei een tafel — grote knoppen, eigen
+   toetsenbord, vensters die meedraaien — maar in de puckstand is de balk met
+   sleepkopieen weg en telt alleen wat er echt op het glas ligt. Vandaar een
+   hulpje voor "dit is een tafel" en een voor de puckstand zelf. */
+const tableUi=()=>uiMode!=="laptop";
+const puckMode=()=>uiMode==="puck";
 /* Kleurmodus is een bewuste tafelinstelling en volgt daarom na de eerste
    keuze niet meer stilletjes het besturingssysteem. Zonder opgeslagen keuze
    nemen we wel de voorkeur van het apparaat als prettig beginpunt. */
@@ -322,6 +383,96 @@ let templates=[
   {id:"puck-03",ratios:[0.70,0.93],verdict:"talk"},
   {id:"puck-04",ratios:[0.85,0.90],verdict:"idea"}
 ];
+/* Wat hierboven staat is de fabriekswaarde: de vier pucks van de bouwtekening.
+   Een puck die je aan de tafel inleest overschrijft de driehoek van één van
+   deze vier — het aantal pucks verandert dus nooit door te meten. `TPL_FACTORY`
+   bewaart het origineel, zodat "Metingen wissen" iets heeft om naar terug te
+   keren. */
+const TPL_FACTORY=templates.map(t=>({...t,ratios:[...t.ratios]}));
+const TPL_KEY="pucktable-templates";
+/* De langste zijde hoort bij de púck, niet bij de tafel: geknipte tape is nooit
+   precies 60 mm en twee pucks mogen best verschillen. `CFG.longestSideMM` is de
+   terugval voor een puck die nog nooit is ingelezen. */
+const tplLongest=t=>(t&&Number.isFinite(t.longestMM)&&t.longestMM>0)?t.longestMM:CFG.longestSideMM;
+const maxTplLongest=()=>activeTemplates().reduce((m,t)=>Math.max(m,tplLongest(t)),CFG.longestSideMM);
+function saveTemplates(){
+  try{ localStorage.setItem(TPL_KEY,JSON.stringify(templates.map(t=>
+    ({id:t.id,ratios:t.ratios,longestMM:t.longestMM??null,learnedAt:t.learnedAt||null})))); }catch(e){}
+}
+/* Alleen de vier bekende pucks worden bijgewerkt. Wat er in localStorage staat
+   is een meting, geen nieuwe puck: een oud of vreemd bestand kan er dus nooit
+   een puck bij verzinnen die de code niet kent. */
+function restoreTemplates(){
+  let saved=null;
+  try{ saved=JSON.parse(localStorage.getItem(TPL_KEY)||"null"); }catch(e){ return; }
+  if(!Array.isArray(saved)) return;
+  for(const sv of saved){
+    const tpl=templates.find(t=>t.id===sv?.id); if(!tpl) continue;
+    if(Array.isArray(sv.ratios)&&sv.ratios.length===2&&
+       sv.ratios.every(n=>Number.isFinite(n)&&n>0&&n<=1.001)) tpl.ratios=[sv.ratios[0],sv.ratios[1]];
+    if(Number.isFinite(sv.longestMM)&&sv.longestMM>0) tpl.longestMM=sv.longestMM;
+    if(typeof sv.learnedAt==="string") tpl.learnedAt=sv.learnedAt;
+  }
+}
+function resetTemplates(){
+  for(const t of templates){
+    const f=TPL_FACTORY.find(x=>x.id===t.id); if(!f) continue;
+    t.ratios=[...f.ratios]; delete t.longestMM; delete t.learnedAt;
+  }
+  try{ localStorage.removeItem(TPL_KEY); }catch(e){}
+}
+/* -- Eigen pucks: de lijst van de puckstand ---------------------------------
+   In de puckstand bestaat er geen vaste verzameling pucks. Wat de tafel
+   herkent is precies wat er is ingelezen en niets anders: ook geen fabrieks-
+   driehoek als terugval, want dan wijst een tafel waar nog niets van jou op
+   ligt toch iets aan. De lijst staat los van `templates` en in zijn eigen
+   sleutel, zodat de vier pucks van de bouwtekening er nooit door overschreven
+   worden. Twee pucks mogen dezelfde soort hebben — twee mensen met allebei een
+   Probleem-puck is een gewone tafel, geen fout. */
+const OWN_KEY="pucktable-own-pucks";
+let ownPucks=[], ownSeq=0;
+function saveOwnPucks(){
+  try{ localStorage.setItem(OWN_KEY,JSON.stringify(ownPucks.map(t=>
+    ({id:t.id,verdict:t.verdict,ratios:t.ratios,longestMM:t.longestMM??null,
+      learnedAt:t.learnedAt||null})))); }catch(e){}
+}
+/* Alleen wat er echt uitziet als een meting komt binnen: een onbekende soort of
+   een onmogelijke ratio zou de herkenning stilletjes van slag brengen. */
+function restoreOwnPucks(){
+  let saved=null;
+  try{ saved=JSON.parse(localStorage.getItem(OWN_KEY)||"null"); }catch(e){ return; }
+  if(!Array.isArray(saved)) return;
+  for(const sv of saved){
+    if(!sv||typeof sv.id!=="string") continue;
+    if(!VERDICTS.some(v=>v.key===sv.verdict)) continue;
+    if(!Array.isArray(sv.ratios)||sv.ratios.length!==2||
+       !sv.ratios.every(n=>Number.isFinite(n)&&n>0&&n<=1.001)) continue;
+    if(ownPucks.some(t=>t.id===sv.id)) continue;
+    const p={id:sv.id,verdict:sv.verdict,ratios:[sv.ratios[0],sv.ratios[1]],
+             learnedAt:typeof sv.learnedAt==="string"?sv.learnedAt:null,own:true};
+    if(Number.isFinite(sv.longestMM)&&sv.longestMM>0) p.longestMM=sv.longestMM;
+    ownPucks.push(p);
+    const n=parseInt(String(sv.id).replace(/^\D+/,""),10);
+    if(Number.isFinite(n)) ownSeq=Math.max(ownSeq,n);
+  }
+}
+function addOwnPuck(verdict,ratios,longestMM){
+  const p={id:"eigen-"+String(++ownSeq).padStart(2,"0"),verdict,ratios,longestMM,
+           learnedAt:new Date().toISOString(),own:true};
+  ownPucks.push(p); saveOwnPucks(); return p;
+}
+/* Weggooien haalt ook de puck die op dat moment herkend wordt van tafel: anders
+   blijft er een markering hangen die bij een sjabloon hoort dat niet meer
+   bestaat. */
+function removeOwnPuck(id){
+  const i=ownPucks.findIndex(t=>t.id===id);
+  if(i<0) return;
+  ownPucks.splice(i,1); saveOwnPucks();
+  for(const [k,t] of [...tracks]) if(t.tpl&&t.tpl.id===id) tracks.delete(k);
+}
+/* Welke lijst telt hangt aan de stand: in de puckstand alleen de eigen pucks,
+   daarbuiten de vier van de bouwtekening. */
+const activeTemplates=()=>puckMode()?ownPucks:templates;
 /* `simMode` bepaalt of de contactpunten van pucks uit de balk meetellen bij de
    herkenning — en de balk is geen ontwikkelgereedschap maar de gewone manier om
    zonder fysieke puck te werken. Stond dit op `DEV`, dan liet een tafel zonder
@@ -578,7 +729,7 @@ let gesture=null, mousePan=null;
    tegelijk kunnen verplaatsen. */
 const puckTouches=[];
 const puckTouchByPtr = id => puckTouches.find(t=>t.ptrs.has(id));
-const mapMovable = () => !mapLocked && !pinMoveMode && !drag && !puckTouches.length && tracks.size===0 && realTouches.size<3;
+const mapMovable = () => !mapLocked && !pinMoveMode && !drag && !learn.open && !puckTouches.length && tracks.size===0 && realTouches.size<3;
 
 /* Topmost simulated puck under a screen point — a generous, finger-sized hit area. */
 function simPuckAt(x,y){
@@ -631,6 +782,12 @@ function syncGesture(){
   }else gesture=null;
 }
 addEventListener("pointerdown",e=>{
+  /* Het meetvenster slikt geen enkele aanraking, ook niet op zijn eigen
+     knoppen: een puck die half onder het kaartje ligt moet gewoon gelezen
+     worden, anders staat er "wachten op drie contactpunten" terwijl hij er
+     wel degelijk ligt. Een vinger die op een knop drukt telt zolang mee als
+     contactpunt en verdwijnt weer bij loslaten; de kaart staat tijdens het
+     meten toch stil (zie `mapMovable`). */
   if(e.target.closest(".panel")) return;
   if(e.pointerType==="mouse") return;
   if(pinMoveMode){
@@ -804,8 +961,8 @@ function onTrayDown(e){
 }
 
 function simPads(){
-  const out=[],Lm=CFG.longestSideMM*pxPerMM;
-  for(const s of simPucks) for(const p of padsFor(s.tpl,Lm)){
+  const out=[];
+  for(const s of simPucks) for(const p of padsFor(s.tpl,tplLongest(s.tpl)*pxPerMM)){
     const c=Math.cos(s.rot),si=Math.sin(s.rot);
     out.push({x:s.x+p.x*c-p.y*si,y:s.y+p.x*si+p.y*c,sim:true});
   }
@@ -827,13 +984,17 @@ function syncSimPucksToMap(){
     const t=tracks.get(s.tpl.id);
     if(t){
       t.x+=dx; t.y+=dy; t.anchorX+=dx; t.anchorY+=dy;
+      // Ook het zoom-ijkpunt schuift mee: een puck die door de kaart onder
+      // zich wegschuift heeft niemand vooruit geduwd, en mag dus ook niet
+      // zoomen. Anders zoomt de ene puck de andere op hol.
+      if(t.zoomRefY!=null) t.zoomRefY+=dy;
       t.buf=t.buf.map(q=>({x:q.x+dx,y:q.y+dy}));
     }
   }
 }
 let drag=null;
 addEventListener("mousedown",e=>{
-  if(e.target.closest(".panel")||e.target.closest("#sheet")) return;
+  if(e.target.closest(".panel")||e.target.closest("#sheet")||e.target.closest("#learn")) return;
   if(pinMoveMode){
     e.preventDefault();
     const pin=pinAt(e.clientX,e.clientY);
@@ -884,16 +1045,17 @@ addEventListener("wheel",e=>{
 },{passive:false});
 
 function recognise(points){
-  const cands=[],maxSpan=CFG.longestSideMM*pxPerMM*1.45;
+  const cands=[],maxSpan=maxTplLongest()*pxPerMM*1.45;
   for(let i=0;i<points.length;i++) for(let j=i+1;j<points.length;j++){
     if(dist(points[i],points[j])>maxSpan) continue;
     for(let k=j+1;k<points.length;k++){
       if(dist(points[i],points[k])>maxSpan||dist(points[j],points[k])>maxSpan) continue;
       const d=describe(points[i],points[j],points[k]); if(!d) continue;
-      for(const tpl of templates){
+      for(const tpl of activeTemplates()){
         const err=Math.hypot(d.ratios[0]-tpl.ratios[0],d.ratios[1]-tpl.ratios[1]);
         if(err>tolerance) continue;
-        const sizeErr=Math.abs(d.longest-CFG.longestSideMM*pxPerMM)/(CFG.longestSideMM*pxPerMM);
+        const want=tplLongest(tpl)*pxPerMM;
+        const sizeErr=Math.abs(d.longest-want)/want;
         if(sizeErr>0.35) continue;
         cands.push({tpl,err,idx:[i,j,k],d,conf:Math.max(0,1-err/tolerance*0.7-sizeErr*0.6)});
       }
@@ -914,7 +1076,13 @@ function track(dets,now){
   for(const d of dets){
     let t=tracks.get(d.id);
     if(!t){ t={id:d.id,tpl:d.tpl,x:d.x,y:d.y,angle:d.angle,frames:0,state:"candidate",buf:[],
-               conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0}; tracks.set(d.id,t); }
+               conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
+               // De puck begint in het hoofdmenu, in de rustigste stand.
+               // `dwellDone` staat aan zodat de stand waarin hij toevallig
+               // op tafel landt niet meteen als keuze telt.
+               menu:"root",mode:"move",topicIdx:0,
+               dwellIdx:-1,dwellT0:0,dwellDone:true,zoomRefY:d.y}; tracks.set(d.id,t);
+              t.dwellIdx=ringIndexOf(d.angle,4); }
     t.frames++; t.lastSeen=now; t.conf=t.conf*.7+d.conf*.3;
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
     t.x=t.buf.reduce((s,p)=>s+p.x,0)/t.buf.length;
@@ -927,6 +1095,9 @@ function track(dets,now){
     // Een puck die duidelijk verplaatst wordt, wordt een nieuwe bijdrage: opnieuw
     // een thema draaien en opnieuw bevestigen. De vorige markering blijft staan.
     if(moved>CFG.rearmPX && !t.armed){ t.armed=true; t.pinId=null; }
+    // Draaien bedient het menu, verschuiven bedient (in de zoomstand) de kaart.
+    if(t.state==="recognised") updatePuckMenu(t,now);
+    applyPuckZoom(t);
   }
   const seen=new Set(dets.map(d=>d.id));
   for(const [id,t] of tracks){
@@ -941,10 +1112,98 @@ function track(dets,now){
 /* ═══════════════════════════════════════════════════════════════
    4. PINS
    ═══════════════════════════════════════════════════════════════ */
-const topicOf=angle=>{
-  const n=topics().length; let a=(angle+Math.PI)/(Math.PI*2); a=(a%1+1)%1;
+/* ── Het menu om de puck ──────────────────────────────────────────────────
+   De ring om een puck was één lijst met thema's. Dat werkte zolang de puck
+   alleen markeringen plaatste, maar de kaart moet ook bediend worden en aan
+   een tafel is er geen tweede hand vrij voor een knop aan de rand. De ring
+   is daarom een menu met twee niveaus geworden:
+
+     hoofdmenu   Verplaatsen · Kiezen · Zoomen · Terug
+     kiezen      de thema's · Terug
+
+   `Terug` staat in het hoofdmenu wel op de ring maar is uitgeschakeld: zo
+   blijft de verdeling van de ring hetzelfde en zie je meteen waar hij komt
+   te staan zodra je één niveau dieper zit.
+
+   Kiezen gaat niet met een tik. Een tik legt de markering vast, en dat mag
+   niet dubbelop. Je draait naar een optie en houdt de puck even stil; na
+   `CFG.puckDwellMS` staat de keuze. Dat is ook wat een zware schijf op tafel
+   vanzelf doet — hij blijft liggen waar je hem loslaat. */
+const ringIndexOf=(angle,n)=>{
+  if(!n) return 0;
+  let a=(angle+Math.PI)/(Math.PI*2); a=(a%1+1)%1;
   return Math.floor(a*n)%n;
 };
+/* Terugval voor code die nog in thema's denkt. */
+const topicOf=angle=>ringIndexOf(angle,topics().length);
+
+function ringItems(t){
+  if(t.menu==="topics")
+    return topics().map(name=>({key:"topic",label:name}))
+                   .concat([{key:"back",label:tr("puckBack")}]);
+  return [{key:"move",  label:tr("puckMove")},
+          {key:"select",label:tr("puckSelect")},
+          {key:"zoom",  label:tr("puckZoom")},
+          {key:"back",  label:tr("puckBack"),disabled:true}];
+}
+/* Welke optie op dit niveau als gekozen geldt: in het hoofdmenu de stand
+   waar de puck in staat, in het thema-menu het gekozen thema. */
+function ringChosen(t){
+  if(t.menu==="topics") return t.topicIdx;
+  return t.mode==="zoom"?2:0;
+}
+const puckTopic=t=>{ const list=topics(); return list[(t.topicIdx||0)%list.length]||list[0]; };
+
+/* Een keuze uit de ring uitvoeren. Alleen hier verandert de stand van een
+   puck, zodat er één plek is om na te lezen wat een optie doet. */
+function commitPuckChoice(t,idx){
+  const items=ringItems(t), item=items[idx];
+  if(!item||item.disabled) return;
+  if(item.key==="topic"){
+    t.topicIdx=idx;
+    syncPlacedPinTopic(t);
+  }else if(item.key==="back"){
+    if(t.menu==="topics") t.menu="root";
+  }else if(item.key==="select"){
+    t.menu="topics";
+  }else if(item.key==="move"){
+    t.mode="move";
+  }else if(item.key==="zoom"){
+    t.mode="zoom"; t.zoomRefY=t.y;
+  }
+  // Na een sprong naar een ander niveau wijst dezelfde hoek naar een andere
+  // optie. Die telt als "al gezien", anders vuurt het volgende niveau meteen.
+  t.dwellIdx=ringIndexOf(t.angle,ringItems(t).length);
+  t.dwellDone=true;
+}
+
+/* De stilstand bijhouden. Wordt elk beeld aangeroepen zolang een puck ligt. */
+function updatePuckMenu(t,now){
+  const n=ringItems(t).length, idx=ringIndexOf(t.angle,n);
+  if(idx!==t.dwellIdx){ t.dwellIdx=idx; t.dwellT0=now; t.dwellDone=false; return; }
+  if(t.dwellDone) return;
+  if(now-t.dwellT0>=CFG.puckDwellMS){ t.dwellDone=true; commitPuckChoice(t,idx); }
+}
+/* Hoever de stilstand gevorderd is; 0 als er niets loopt. Alleen voor het beeld. */
+function puckDwellProgress(t,now){
+  if(t.dwellDone) return 0;
+  const items=ringItems(t), item=items[t.dwellIdx];
+  if(!item||item.disabled) return 0;
+  return Math.max(0,Math.min(1,(now-t.dwellT0)/CFG.puckDwellMS));
+}
+
+/* Zoomen met de puck zelf: vooruit duwen (van je af, het scherm op) zoomt in,
+   naar je toe trekken zoomt uit. Er wordt gezoomd om het hart van de puck, dus
+   de plek waar je op wijst blijft onder het vizier staan. Een kleine dode zone
+   houdt de trilling van de gemiddelde puckpositie uit het zoomniveau. */
+function applyPuckZoom(t){
+  if(t.mode!=="zoom"||t.state!=="recognised"){ t.zoomRefY=t.y; return; }
+  if(t.zoomRefY==null){ t.zoomRefY=t.y; return; }
+  const dy=t.zoomRefY-t.y;
+  if(Math.abs(dy)<CFG.puckZoomDeadPX) return;
+  MV.zoomBy(dy/CFG.puckZoomPX,t.x,t.y);
+  t.zoomRefY=t.y;
+}
 /* Een tik of klik op de puck legt de markering vast. Wat een tik is: kort
    aangeraakt, nauwelijks verschoven en nauwelijks gedraaid — zo blijft slepen
    en draaien gewoon slepen en draaien. */
@@ -973,7 +1232,7 @@ function dropPin(t){
   const ll=MV.unproject(t.x,t.y);
   const pin={id:Date.now()+"-"+Math.random().toString(36).slice(2,6),
              lng:+ll.lng.toFixed(6), lat:+ll.lat.toFixed(6),
-             verdict:t.tpl.verdict, topic:topics()[topicOf(t.angle)],
+             verdict:t.tpl.verdict, topic:puckTopic(t),
              title:"", description:"", note:"", t:new Date().toISOString()};
   pins.push(pin);
   // Keep the mark linked to this puck while it remains on the table. Rotating
@@ -986,7 +1245,7 @@ function syncPlacedPinTopic(t){
   if(!t.pinId) return;
   const pin=pins.find(p=>p.id===t.pinId);
   if(!pin){ t.pinId=null; return; }
-  const topic=topics()[topicOf(t.angle)];
+  const topic=puckTopic(t);
   if(pin.topic===topic) return;
   pin.topic=topic;
   save();
@@ -1035,7 +1294,7 @@ function drawPuckKnowledgeRelations(ctx,pucks){
   for(const puck of pucks){
     if(puck.state!=="recognised"&&puck.state!=="incomplete") continue;
     const ll=MV.unproject(puck.x,puck.y);
-    const topic=topics()[topicOf(puck.angle)];
+    const topic=puckTopic(puck);
     const relations=nearby(ll.lat,ll.lng,{theme:topic,limit:3,radiusM:1200});
     const color=vColor(puck.tpl.verdict);
 
@@ -1113,7 +1372,7 @@ function doubleTap(id){
   return dbl;
 }
 addEventListener("pointerdown",e=>{
-  if(e.target.closest(".panel")||puckTouches.length||pinMoveMode) return;
+  if(e.target.closest(".panel")||e.target.closest("#learn")||puckTouches.length||pinMoveMode||learn.open) return;
   tapStart={x:e.clientX,y:e.clientY,t:performance.now()};
 });
 addEventListener("pointerup",e=>{
@@ -1451,6 +1710,7 @@ function frame(){
   const points=[...realTouches.values(),...(simMode?simPads():[])];
   const {pucks:dets,usedIdx}=recognise(points);
   const pucks=track(dets,now);
+  if(learn.open) updateLearn(now);
 
   drawPuckKnowledgeRelations(ctx,pucks);
 
@@ -1474,32 +1734,48 @@ function frame(){
 
   for(const t of pucks){
     const c=vColor(t.tpl.verdict), R=CFG.puckRadiusMM*pxPerMM;
-    const ti=topicOf(t.angle), list=topics(), n=list.length;
+    const items=ringItems(t), n=items.length;
+    const ti=ringIndexOf(t.angle,n), chosen=ringChosen(t);
+    const dwell=puckDwellProgress(t,now);
     syncPlacedPinTopic(t);
     ctx.save(); ctx.globalAlpha=t.state==="incomplete"?0.35:1;
     for(let k=0;k<n;k++){
+      const item=items[k], off=item.disabled;
       const a0=-Math.PI+(k/n)*Math.PI*2+0.03, a1=-Math.PI+((k+1)/n)*Math.PI*2-0.03;
+      // Drie standen op de ring, en ze moeten van een meter afstand uit elkaar
+      // te houden zijn: waar de puck nú op wijst (dik), wat er gekozen ís
+      // (vol), en wat er verder te kiezen valt (dun). Uitgeschakeld is niet
+      // onzichtbaar maar flauw: je moet kunnen zien dat de optie bestaat.
       ctx.beginPath(); ctx.arc(t.x,t.y,CFG.ringPX,a0,a1);
-      ctx.strokeStyle=k===ti?c:c+"33"; ctx.lineWidth=k===ti?7:3; ctx.stroke();
+      ctx.strokeStyle=off?c+"18":(k===chosen?c:(k===ti?c+"88":c+"33"));
+      ctx.lineWidth=off?2:(k===chosen?7:(k===ti?5:3));
+      ctx.stroke();
+      // De stilstand die de keuze maakt, loopt zichtbaar vol. Zonder die
+      // terugkoppeling voelt wachten als "er gebeurt niets".
+      if(k===ti&&dwell>0){
+        ctx.beginPath(); ctx.arc(t.x,t.y,CFG.ringPX,a0,a0+(a1-a0)*dwell);
+        ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.lineWidth=9; ctx.stroke();
+      }
       const am=(a0+a1)/2, lr=CFG.ringPX+23;
       const lx=t.x+Math.cos(am)*lr, ly=t.y+Math.sin(am)*lr;
-      const selected=k===ti;
+      const selected=k===ti&&!off;
+      const label=(k===chosen&&!off?"\u2022 ":"")+item.label;
       ctx.font=selected?"700 14px 'Space Grotesk',system-ui,sans-serif":"600 13px 'Space Grotesk',system-ui,sans-serif";
       ctx.textAlign="center"; ctx.textBaseline="middle";
 
-      // Keep the topic legible over detailed map tiles. A compact opaque label
-      // also makes the active topic much easier to spot from across the table.
-      const labelW=Math.ceil(ctx.measureText(list[k]).width)+18;
+      // Keep the option legible over detailed map tiles. A compact opaque label
+      // also makes the active option much easier to spot from across the table.
+      const labelW=Math.ceil(ctx.measureText(label).width)+18;
       const labelH=selected?28:25;
       ctx.beginPath();
       ctx.roundRect(lx-labelW/2,ly-labelH/2,labelW,labelH,labelH/2);
       ctx.fillStyle=selected?"rgba(9,12,17,.98)":"rgba(9,12,17,.88)";
       ctx.fill();
-      ctx.strokeStyle=selected?c:"rgba(232,237,244,.28)";
+      ctx.strokeStyle=off?"rgba(232,237,244,.12)":(selected?c:(k===chosen?c+"88":"rgba(232,237,244,.28)"));
       ctx.lineWidth=selected?2:1;
       ctx.stroke();
-      ctx.fillStyle=selected?"#ffffff":"rgba(232,237,244,.9)";
-      ctx.fillText(list[k],lx,ly+.5);
+      ctx.fillStyle=off?"rgba(232,237,244,.32)":(selected?"#ffffff":"rgba(232,237,244,.9)");
+      ctx.fillText(label,lx,ly+.5);
     }
     ctx.textBaseline="alphabetic";
     if(t.armed&&t.state==="recognised"){
@@ -1534,6 +1810,13 @@ function frame(){
     ctx.fillText(vName(t.tpl.verdict),t.x,t.y-R*0.42);
     ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle="rgba(232,237,244,.55)";
     ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+R*0.52);
+    // Zoomen is een modale stand: wie niet ziet dat hij aan staat, duwt de
+    // kaart per ongeluk weg. Verplaatsen is de rusttoestand en zegt niets —
+    // dat staat al op de ring, en twee regels onder elkaar is te druk.
+    if(t.mode==="zoom"){
+      ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle=c;
+      ctx.fillText(tr("modeZoom"),t.x,t.y+R*0.74);
+    }
     ctx.restore();
   }
 
@@ -1713,7 +1996,7 @@ function keyboardFields(){
 function refreshKeyboardFields(){
   keyboardFields().forEach(field=>{
     field.classList.add("touch-type");
-    if(uiMode==="touch") field.setAttribute("inputmode","none");
+    if(tableUi()) field.setAttribute("inputmode","none");
     else field.removeAttribute("inputmode");
   });
 }
@@ -1787,25 +2070,39 @@ el("keyboard").addEventListener("click",e=>{
 });
 addEventListener("focusin",e=>{if(e.target.classList?.contains("touch-type")) showKeyboard(e.target);});
 
+/* Twee regels tekst gaan over de balk onderaan, en die is er in de puckstand
+   niet. Ze staan hier bij elkaar omdat zowel het wisselen van stand als het
+   wisselen van taal ze opnieuw moet zetten. */
+function refreshModeTexts(){
+  [...document.querySelectorAll(".puck-hint")].forEach(h=>
+    h.textContent=uiMode==="laptop"?tr("laptopHint"):tr("touchHint"));
+  el("sidesHint").textContent=tr(puckMode()?"sidesHintPuck":"sidesHint");
+}
 function applyMode(mode){
   uiMode=mode;
-  document.body.classList.toggle("mode-touch",mode==="touch");
+  /* `mode-touch` gaat over de maat van de bediening en geldt daarom ook voor de
+     puckstand: dat is ook een tafel. Wat de puckstand apart maakt -- de balk
+     weg, een toevoegknop op die plek -- hangt aan `mode-puck`. */
+  document.body.classList.toggle("mode-touch",mode!=="laptop");
   document.body.classList.toggle("mode-laptop",mode==="laptop");
-  [["modeTouch","touch"],["modeLaptop","laptop"]].forEach(([id,value])=>{
+  document.body.classList.toggle("mode-puck",mode==="puck");
+  [["modeTouch","touch"],["modeLaptop","laptop"],["modePuck","puck"]].forEach(([id,value])=>{
     const active=value===mode;
     el(id).classList.toggle("active",active);
     el(id).setAttribute("aria-pressed",String(active));
   });
   const fb=el("noteFlip");
   fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide"));
-  [...document.querySelectorAll(".puck-hint")].forEach(h=>
-    h.textContent=mode==="touch"?tr("touchHint"):tr("laptopHint"));
+  refreshModeTexts();
   refreshKeyboardFields();
   // Een venster dat op zijn kop staat hoort niet mee te verhuizen naar de
   // laptopstand, dus dat gaat dicht bij het wisselen.
   applySides();
   closeNote();
-  if(mode!=="touch") hideKeyboard();
+  if(mode==="laptop") hideKeyboard();
+  /* Sleepkopieen horen bij de balk. Gaat de balk weg, dan gaan zij mee: anders
+     blijft er een puck op tafel liggen die nergens meer op te pakken is. */
+  if(mode==="puck") clearPucks();
   try{localStorage.setItem("pucktable-ui-mode",mode);}catch(e){}
   resize();
 }
@@ -2025,6 +2322,10 @@ el("btnOrientation").onclick=toggleOrientation;
 
 el("modeTouch").onclick=()=>{applyMode("touch");reorientMenu();};
 el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();};
+el("modePuck").onclick=()=>{applyMode("puck");reorientMenu();};
+/* De toevoegknop staat op de plek van de verdwenen balk, aan beide zijden van
+   de tafel. Vandaar een klasse en geen id. */
+[...document.querySelectorAll(".btn-add-puck")].forEach(b=>b.onclick=openLearn);
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
 el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",debugMode);};
 [...document.querySelectorAll(".btn-clear")].forEach(b=>b.onclick=clearPucks);
@@ -2161,9 +2462,10 @@ el("diag").oninput=e=>{const v=parseFloat(e.target.value); if(Number.isFinite(v)
    aanraking vandaan kwam. */
 let twoSided=false;
 try{ twoSided=localStorage.getItem("pucktable-two-sided")==="1"; }catch(e){}
-/* De keuze blijft bewaard, maar telt alleen op een touchscreen: op een laptop
-   staat er één iemand achter het scherm en is er maar één kijkrichting. */
-const sidesActive=()=>twoSided && uiMode==="touch";
+/* De keuze blijft bewaard, maar telt alleen aan een tafel: op een laptop
+   staat er één iemand achter het scherm en is er maar één kijkrichting. De
+   puckstand is ook een tafel, al is de balk daar weg. */
+const sidesActive=()=>twoSided && tableUi();
 function applySides(){
   document.body.classList.toggle("two-sided",sidesActive());
   el("btnSides").classList.toggle("on",twoSided);
@@ -2374,24 +2676,191 @@ el("btnCsv").onclick=()=>download(el("sess").value+".csv",
     [p.lat,p.lng,p.verdict,p.topic,'"'+(p.title||"").replace(/"/g,'""')+'"',
      '"'+(p.description||p.note||"").replace(/"/g,'""')+'"',p.t].join(",")).join("\n"),"text/csv");
 
-el("btnLearn").onclick=()=>{
-  const pts=[...realTouches.values()], hint=el("learnHint");
-  if(pts.length!==3){ hint.innerHTML=tr("learnNeed",pts.length); return; }
+/* ── Puck herkennen ──────────────────────────────────────────────────────
+   Drie stukjes koperfolie in een driehoek zijn een puck; welke puck dat is,
+   staat nergens op de tape te lezen. Dit venster meet de driehoek die op tafel
+   ligt en laat je hem daarna een naam geven — Goed, Probleem, Discussie, Idee.
+   De meting overschrijft de driehoek van die ene puck en blijft in localStorage
+   staan, dus dit scherm kent hem ook na herladen. Er komt nooit een vijfde puck
+   bij: het aantal pucks is een ontwerpkeuze, geen meetresultaat.
+
+   Er wordt niet één beeldje gepakt maar een reeks: een vinger of een plakker
+   trilt een paar pixels, en de mediaan van ~50 metingen ligt veel vaster dan
+   een momentopname. Verschuift de puck tijdens het meten, dan begint de reeks
+   opnieuw — anders meet je de beweging mee. */
+const LEARN_HOLD_MS=900, LEARN_STILL_PX=9, LEARN_MIN_SAMPLES=12;
+const learn={open:false,phase:"wait",samples:[],t0:0,m:null,tplId:null,clash:null,note:"",moved:false};
+
+function learnPoints(){ return [...realTouches.values()]; }
+function openLearn(){
+  closeMenu();
+  learn.open=true; el("learn").style.display="block";
+  restartLearn();
+}
+function closeLearn(){ learn.open=false; el("learn").style.display="none"; }
+function restartLearn(){
+  learn.phase="wait"; learn.samples=[]; learn.m=null;
+  learn.tplId=null; learn.clash=null; learn.moved=false;
+  setLearnBar(0); renderLearn();
+}
+function setLearnBar(f){ el("learnBar").style.width=(Math.max(0,Math.min(1,f))*100).toFixed(1)+"%"; }
+
+/* Elk beeldje: de punten natekenen, en zolang er nog niets gemeten is de reeks
+   bijhouden. Alleen de echte aanrakingen tellen mee — een gesleepte puck uit de
+   balk is een tekening en heeft niets te leren. */
+function updateLearn(now){
+  const pts=learnPoints();
+  drawLearnPoints(pts);
+  const st=el("learnStatus");
+  if(learn.phase==="done"||learn.phase==="saved") return;
+  if(pts.length!==3){
+    if(learn.phase!=="wait"){ learn.phase="wait"; renderLearn(); }
+    learn.samples=[]; learn.moved=false; setLearnBar(0);
+    st.innerHTML=tr("recogWait",pts.length);
+    return;
+  }
   const d=describe(pts[0],pts[1],pts[2]);
-  const clash=templates.find(t=>Math.hypot(t.ratios[0]-d.ratios[0],t.ratios[1]-d.ratios[1])<0.12);
-  const id="puck-"+String(templates.length+1).padStart(2,"0");
-  templates.push({id,verdict:VERDICTS[templates.length%VERDICTS.length].key,
-                  ratios:[+d.ratios[0].toFixed(3),+d.ratios[1].toFixed(3)]});
-  CFG.longestSideMM=d.longest/pxPerMM;
-  hint.innerHTML=tr("learnAdded",id,d.ratios[0].toFixed(3),d.ratios[1].toFixed(3),(d.longest/pxPerMM).toFixed(1))
-                +(clash?tr("learnClash",clash.id):"");
-  renderTray();
+  if(!d) return;
+  const last=learn.samples[learn.samples.length-1];
+  if(last && (Math.hypot(d.cx-last.cx,d.cy-last.cy)>LEARN_STILL_PX ||
+              Math.abs(d.longest-last.longest)>LEARN_STILL_PX)){
+    learn.samples=[]; learn.moved=true;
+  }
+  if(!learn.samples.length) learn.t0=now;
+  learn.samples.push({r0:d.ratios[0],r1:d.ratios[1],longest:d.longest,cx:d.cx,cy:d.cy});
+  if(learn.phase!=="hold"){ learn.phase="hold"; learn.note=""; renderLearn(); }
+  const held=now-learn.t0;
+  setLearnBar(held/LEARN_HOLD_MS);
+  st.innerHTML=learn.moved&&held<250?tr("recogMoved"):tr("recogHold");
+  if(held>=LEARN_HOLD_MS && learn.samples.length>=LEARN_MIN_SAMPLES){
+    const med=f=>{ const a=learn.samples.map(f).sort((x,y)=>x-y); return a[a.length>>1]; };
+    learn.m={r0:med(s=>s.r0),r1:med(s=>s.r1),longest:med(s=>s.longest)};
+    learn.phase="done"; learn.moved=false; setLearnBar(1); renderLearn();
+  }
+}
+/* De gemeten driehoek staat over de kaart heen getekend: zo zie je meteen of de
+   tafel alle drie de plakkers ziet en op de goede plek. */
+function drawLearnPoints(pts){
+  const svg=el("learnPoints");
+  const poly=pts.length===3
+    ? `<polygon points="${pts.map(p=>p.x.toFixed(1)+","+p.y.toFixed(1)).join(" ")}"/>` : "";
+  const html=poly+pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="15"/>`).join("");
+  if(svg.dataset.h===html) return;
+  svg.dataset.h=html; svg.innerHTML=html;
+}
+/* Een bijna gelijkbenige driehoek heeft geen duidelijke voorkant: welke hoek de
+   "anchor" is wisselt dan van beeldje tot beeldje, en daarmee de hoek waarop het
+   hele ringmenu draait. Beter nu zeggen dan straks aan tafel ontdekken. */
+const nearlyIsosceles=(r0,r1)=>Math.abs(r0-r1)<0.06||(1-r1)<0.06;
+function learnStamp(t){
+  if(!t.learnedAt) return tr("recogFactory");
+  const d=new Date(t.learnedAt);
+  return tr("recogLearned",isNaN(d)?"":d.toLocaleDateString(L[lang].locale,{day:"numeric",month:"short"}));
+}
+/* In de puckstand is er geen balk meer die laat zien welke pucks de tafel kent.
+   Dat overzicht staat daarom hier, met een kruisje per puck: inlezen en
+   weggooien horen bij elkaar en gebeuren aan dezelfde tafel. */
+function ownPuckList(){
+  if(!ownPucks.length) return `<p class="hint">${tr("recogNoneYet")}</p>`;
+  return `<p class="learn-which">${tr("recogKnown",ownPucks.length)}</p>`+ownPucks.map(t=>
+    `<div class="own-row" style="--c:${vColor(t.verdict)}">
+       <b>${vName(t.verdict)}</b>
+       <span>${t.id} &middot; ${t.ratios[0].toFixed(3)} / ${t.ratios[1].toFixed(3)} &middot; ${tplLongest(t).toFixed(1)} mm &middot; ${learnStamp(t)}</span>
+       <button class="own-del danger" data-id="${t.id}" aria-label="${tr("recogRemove")}" title="${tr("recogRemove")}">&times;</button>
+     </div>`).join("");
+}
+function renderLearn(){
+  const body=el("learnBody"), st=el("learnStatus");
+  /* Twee zinnen die per stand verschillen: in de puckstand kies je geen puck uit
+     een lijstje maar maak je er een bij, en wissen gooit je eigen pucks weg in
+     plaats van terug te zetten naar de bouwtekening. */
+  el("learnIntro").textContent=tr(puckMode()?"recogIntroOwn":"recogIntro");
+  el("btnLearnReset").textContent=tr(puckMode()?"recogResetOwn":"recogReset");
+  if(learn.phase==="saved"){
+    const tpl=activeTemplates().find(t=>t.id===learn.tplId);
+    if(!tpl){ restartLearn(); return; }
+    st.innerHTML=tr("recogSaved",vName(tpl.verdict),tpl.ratios[0].toFixed(3),
+                    tpl.ratios[1].toFixed(3),tplLongest(tpl).toFixed(1))
+                +(learn.clash?tr("recogClash",learn.clash):"");
+    body.innerHTML=`<div class="row"><button class="primary" id="btnLearnAgain">${tr("recogAgain")}</button></div>`;
+    el("btnLearnAgain").onclick=restartLearn;
+    return;
+  }
+  if(learn.phase==="done"){
+    st.innerHTML=tr("recogMeasured",learn.m.r0.toFixed(3),learn.m.r1.toFixed(3),
+                    (learn.m.longest/pxPerMM).toFixed(1));
+    const iso=nearlyIsosceles(learn.m.r0,learn.m.r1)?`<p class="learn-warn">${tr("recogIso")}</p>`:"";
+    if(puckMode()){
+      /* Geen preset. De meting wordt een nieuwe puck; je zegt alleen nog wat
+         voor soort het is, en dezelfde soort mag vaker voorkomen. */
+      body.innerHTML=iso+`<p class="learn-which">${tr("recogWhichKind")}</p>`+VERDICTS.map(v=>
+        `<button class="learn-pick" data-verdict="${v.key}" style="--c:${v.color}">
+           <b>${vName(v.key)}</b>
+           <span>${tr("recogKindCount",ownPucks.filter(t=>t.verdict===v.key).length)}</span>
+         </button>`).join("");
+      [...body.querySelectorAll(".learn-pick")].forEach(b=>b.onclick=()=>addLearnedPuck(b.dataset.verdict));
+      return;
+    }
+    body.innerHTML=iso+`<p class="learn-which">${tr("recogWhich")}</p>`+templates.map(t=>
+      `<button class="learn-pick" data-id="${t.id}" style="--c:${vColor(t.verdict)}">
+         <b>${vName(t.verdict)}</b>
+         <span>${t.id} · ${t.ratios[0].toFixed(3)} / ${t.ratios[1].toFixed(3)} · ${tplLongest(t).toFixed(1)} mm · ${learnStamp(t)}</span>
+       </button>`).join("");
+    [...body.querySelectorAll(".learn-pick")].forEach(b=>b.onclick=()=>assignLearn(b.dataset.id));
+    return;
+  }
+  body.innerHTML=(learn.note?`<p class="hint">${learn.note}</p>`:"")+(puckMode()?ownPuckList():"");
+  [...body.querySelectorAll(".own-del")].forEach(b=>b.onclick=()=>{
+    removeOwnPuck(b.dataset.id); learn.note=tr("recogRemoved"); renderLearn(); });
+  if(learn.phase==="wait") st.innerHTML=tr("recogWait",learnPoints().length);
+}
+/* Hier gebeurt het onthouden. De driehoek van die ene puck wordt vervangen —
+   ook zijn maat, want geknipte tape is nooit precies 60 mm — en meteen
+   weggeschreven. Lijkt de nieuwe driehoek te veel op die van een andere puck,
+   dan wordt dat er hard bij gezegd: dan verwisselt de tafel ze straks. */
+function assignLearn(id){
+  const tpl=templates.find(t=>t.id===id);
+  if(!tpl||!learn.m) return;
+  const r=[+learn.m.r0.toFixed(3),+learn.m.r1.toFixed(3)];
+  const clash=templates.find(t=>t!==tpl&&Math.hypot(t.ratios[0]-r[0],t.ratios[1]-r[1])<0.12);
+  tpl.ratios=r;
+  tpl.longestMM=+(learn.m.longest/pxPerMM).toFixed(1);
+  tpl.learnedAt=new Date().toISOString();
+  saveTemplates();
+  learn.tplId=id; learn.clash=clash?vName(clash.verdict):null; learn.phase="saved";
+  renderLearn(); renderTray();
+  if(el("sheet").style.display==="block") buildSheet();
+}
+/* De puckstand kent geen vaste vier: elke meting komt er als nieuwe puck bij.
+   Lijkt de driehoek te veel op een puck die je al hebt, dan wordt dat gezegd --
+   die twee verwisselt de tafel straks. */
+function addLearnedPuck(verdict){
+  if(!learn.m||!VERDICTS.some(v=>v.key===verdict)) return;
+  const r=[+learn.m.r0.toFixed(3),+learn.m.r1.toFixed(3)];
+  const clash=ownPucks.find(t=>Math.hypot(t.ratios[0]-r[0],t.ratios[1]-r[1])<0.12);
+  const p=addOwnPuck(verdict,r,+(learn.m.longest/pxPerMM).toFixed(1));
+  learn.tplId=p.id; learn.clash=clash?vName(clash.verdict):null; learn.phase="saved";
+  renderLearn();
+  if(el("sheet").style.display==="block") buildSheet();
+}
+el("btnRecognise").onclick=openLearn;
+el("closeLearn").onclick=closeLearn;
+el("closeLearnTop").onclick=closeLearn;
+el("btnLearnReset").onclick=()=>{
+  if(puckMode()){ ownPucks.length=0; saveOwnPucks(); tracks.clear(); learn.note=tr("recogClearedOwn"); }
+  else{ resetTemplates(); renderTray(); learn.note=tr("recogCleared"); }
+  restartLearn();
 };
+el("btnLearnExport").onclick=()=>download("puck-metingen.json",JSON.stringify({
+  screenDiagIn:CFG.screenDiagIn, pxPerMM:+pxPerMM.toFixed(3), tolerance,
+  templates:activeTemplates().map(t=>({id:t.id,verdict:t.verdict,ratios:t.ratios,
+                               longestMM:+tplLongest(t).toFixed(1),learnedAt:t.learnedAt||null}))
+},null,2),"application/json");
 el("btnExport").onclick=()=>download("puck-config.json",
-  JSON.stringify({longestSideMM:CFG.longestSideMM,tolerance,templates},null,2),"application/json");
+  JSON.stringify({longestSideMM:CFG.longestSideMM,tolerance,templates:activeTemplates()},null,2),"application/json");
 function buildSheet(){
-  el("sheetGrid").innerHTML=templates.map(t=>{
-    const pads=padsFor(t,CFG.longestSideMM),S=150,sc=(S*0.34)/CFG.longestSideMM*2;
+  el("sheetGrid").innerHTML=activeTemplates().map(t=>{
+    const Lmm=tplLongest(t), pads=padsFor(t,Lmm),S=150,sc=(S*0.34)/Lmm*2;
     const pts=pads.map(p=>({x:S/2+p.x*sc,y:S/2+p.y*sc})),c=vColor(t.verdict);
     return `<div class="sheetcard"><h3 style="color:${c}">${t.id} · ${vName(t.verdict)}</h3>
       <svg width="100%" viewBox="0 0 ${S} ${S}">
@@ -2402,7 +2871,7 @@ function buildSheet(){
       </svg>
       <table>${pads.map((p,i)=>`<tr><td>${tr("sheetPad")} ${"ABC"[i]}</td><td>x ${p.x.toFixed(1)} mm</td><td>y ${p.y.toFixed(1)} mm</td></tr>`).join("")}
       <tr><td>${tr("sheetRatios")}</td><td colspan="2">${t.ratios[0]} / ${t.ratios[1]}</td></tr>
-      <tr><td>${tr("sheetLongest")}</td><td colspan="2">${CFG.longestSideMM.toFixed(1)} mm</td></tr></table></div>`;
+      <tr><td>${tr("sheetLongest")}</td><td colspan="2">${Lmm.toFixed(1)} mm</td></tr></table></div>`;
   }).join("");
 }
 el("btnSheet").onclick=()=>{ buildSheet(); el("sheet").style.display="block"; };
@@ -2417,6 +2886,7 @@ addEventListener("keydown",e=>{
   if(e.key!=="Escape") return;
   if(el("documentViewer").classList.contains("open")){ closeDocumentViewer(); return; }
   if(el("analytics").classList.contains("open")){ closeAnalytics(); return; }
+  if(learn.open){ closeLearn(); return; }
   if(el("sheet").style.display==="block"){ closeSheet(); return; }
   if(menuSide){ closeMenu(); return; }
   if(el("note").style.display==="block"){ closeNote(); return; }
@@ -2520,8 +2990,7 @@ function applyLang(){
   renderTray();
   renderKeyboard();
   updateUI([]);
-  [...document.querySelectorAll(".puck-hint")].forEach(h=>
-    h.textContent=uiMode==="touch"?tr("touchHint"):tr("laptopHint"));
+  refreshModeTexts();
   const fb=el("noteFlip");
   if(fb){ fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide")); }
   refreshOrientationControl();
@@ -2531,6 +3000,7 @@ function applyLang(){
     openKgInfo(kg.selected,+el("kgInfo").dataset.anchorX,+el("kgInfo").dataset.anchorY);
   }
   if(el("sheet").style.display==="block") buildSheet();
+  if(learn.open) renderLearn();
   refreshBuildStamp();
 }
 function setLang(next){
@@ -2543,6 +3013,7 @@ function setLang(next){
 el("langNl").onclick=()=>setLang("nl");
 el("langEn").onclick=()=>setLang("en");
 
+restoreTemplates(); restoreOwnPucks();
 applyColorTheme(colorTheme); resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); applyLang(); frame();
 
 /* ---- Bijgewerkt-stempel -------------------------------------------------

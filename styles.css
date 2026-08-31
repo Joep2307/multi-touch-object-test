@@ -36,7 +36,7 @@ body.dragging-dot #c{cursor:grabbing}
    scherm loopt; de kaart eronder is geen paneel en blijft dus op ware
    grootte. Het bouwtekening-vel bedekt het hele scherm, dus daar
    schaalt alleen de kaart-in-het-midden, niet de overlay zelf. */
-.panel,#sheet .inner{zoom:var(--ui-scale,1)}
+.panel,#sheet .inner,.learn-card{zoom:var(--ui-scale,1)}
 .scale-row{align-items:center;gap:6px;margin:9px 0 0}
 .scale-row button{flex:none;width:38px;padding:8px 0;font-size:15px;line-height:1}
 .scale-val{flex:1;text-align:center;font-size:11px;color:var(--ink-dim)}
@@ -50,7 +50,8 @@ body.dragging-dot #c{cursor:grabbing}
    blijven om hun eigen anker draaien. */
 body.controls-flipped>#note,
 body.controls-flipped>#keyboard,
-body.controls-flipped>#kgInfo{rotate:90deg}
+body.controls-flipped>#kgInfo,
+body.controls-flipped .learn-card{rotate:90deg}
 button:disabled{opacity:.35;cursor:default}
 button:disabled:hover{border-color:var(--line);background:#151b24}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
@@ -160,7 +161,7 @@ body.controls-flipped.mode-touch #menu.at-b{left:calc(100vw - 94px);top:calc(100
 .head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
 .head h1,.head h2{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
 .head .chev{color:var(--ink-dim);font-size:11px}
-.mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;
+.mode-switch{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;padding:3px;
   border:1px solid var(--line);border-radius:11px;background:var(--subtle)}
 .mode-switch button{padding:8px 7px;border:0;background:transparent;color:var(--ink-dim);border-radius:7px}
 .mode-switch button.active{background:var(--selected);color:var(--ink);box-shadow:0 1px 6px var(--shadow)}
@@ -531,3 +532,62 @@ body.keyboard-open #note{z-index:45}
 :root[data-theme="light"] .analytics-place b{color:#174fae}
 :root[data-theme="light"] .panel-grip{color:rgba(23,32,45,.34)}
 :root[data-theme="light"] .panel-grip:hover{color:rgba(23,32,45,.7);background:rgba(23,32,45,.07)}
+
+/* ── Puck herkennen ───────────────────────────────────────────────
+   Het vel ligt over de kaart maar hoort de tafel niet doof te maken: de
+   plakkers van de puck moeten juist gelezen blijven worden. Alleen het
+   kaartje vangt aanrakingen af (dat gebeurt in app.js, aan `#learnCard`);
+   de rest van het vel is dekking en verder niets. */
+#learn{position:fixed;inset:0;z-index:52;display:none;background:rgba(3,5,8,.82);touch-action:none}
+#learnPoints{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+#learnPoints circle{fill:rgba(57,216,164,.2);stroke:#39d8a4;stroke-width:2}
+#learnPoints polygon{fill:rgba(57,216,164,.07);stroke:rgba(57,216,164,.7);stroke-width:2;stroke-dasharray:5 4}
+.learn-card{position:absolute;left:50%;top:24px;translate:-50% 0;width:min(560px,calc(100vw - 40px));
+  max-height:calc(100vh - 48px);overflow:auto;
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;
+  box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.learn-card h2{font-size:20px;margin:0 0 6px;letter-spacing:-.02em}
+.learn-intro{font-size:13px;line-height:1.6;color:var(--ink-dim);margin:0 0 12px}
+.learn-status{font-size:13px;line-height:1.5;margin:0 0 9px;min-height:2.7em}
+.learn-bar{height:4px;border-radius:3px;background:var(--line);overflow:hidden;margin:0 0 14px}
+.learn-bar i{display:block;height:100%;width:0;background:#39d8a4;transition:width .09s linear}
+.learn-warn{font-size:12.5px;line-height:1.55;color:var(--warn);margin:0 0 12px;
+  border-left:2px solid var(--warn);padding-left:10px}
+.learn-which{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-dim);margin:0 0 9px}
+.learn-pick{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;
+  text-align:left;border-color:var(--c);margin:0 0 8px;padding:11px 13px}
+.learn-pick b{color:var(--c);font-size:14px;font-weight:700}
+.learn-pick span{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--ink-dim)}
+.learn-foot{margin-top:14px;margin-bottom:0}
+.learn-foot #closeLearn{margin-left:auto}
+#closeLearnTop{position:absolute;top:9px;right:11px;border:0;background:none;
+  color:var(--ink-dim);font-size:22px;line-height:1;padding:4px 9px}
+
+
+/* ---- Puckstand ---------------------------------------------------------
+   De balk onderaan is er niet meer: geen sleepkopieen, geen deselecteerknop,
+   want er staat niets meer in de weg dat je zelf hebt neergelegd. Wat blijft
+   is het paneel zelf, gekrompen tot een toevoegknop -- zo houdt het dezelfde
+   plek, dezelfde spiegeling bij twee zijden en dezelfde draai bij gedraaide
+   bediening als de balk die het vervangt. */
+.dock-add{display:none;margin:0}
+.dock-add button{width:100%}
+body.mode-puck .dock .puck-dock-head,
+body.mode-puck .dock .tray{display:none}
+body.mode-puck .dock-add{display:flex}
+body.mode-puck .dock{width:auto;min-width:150px;padding:10px 12px 11px}
+body:not(.mode-puck) .puck-mode-hint{display:none}
+
+/* Het overzicht van ingelezen pucks in het meetvel: soort, meting en een
+   kruisje om hem weg te gooien. */
+.own-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;
+  width:100%;margin:0 0 7px;padding:9px 11px;border-radius:11px;
+  border:1px solid var(--line);background:rgba(9,12,17,.5)}
+.own-row b{color:var(--c);font-size:14px;font-weight:700}
+.own-row span{grid-column:1;font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11px;color:var(--ink-dim)}
+.own-row .own-del{grid-column:2;grid-row:1 / span 2;width:38px;height:38px;
+  padding:0;font-size:18px;line-height:1}
+:root[data-theme="light"] .own-row{background:rgba(255,255,255,.6)}
+.mode-touch .own-row .own-del{width:44px;height:44px}
