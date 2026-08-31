@@ -80,6 +80,7 @@ const L = {
        touchscreen:"Touchscreen", exportGeo:"GeoJSON exporteren", exportCsv:"CSV exporteren",
        touchDebug:"Touch-debug",
        appearanceHead:"Weergave", chooseTheme:"Kleurmodus kiezen", lightMode:"☀ Licht", darkMode:"☾ Donker",
+       fullscreen:"Volledig scherm", fullscreenOff:"Uit volledig scherm",
 
        saidWhat:"Wat is er gezegd",
        groundFlag:"Minder dan 3 contactpunten. Ligt er een puck? Dan koppelen de pads niet — check de aarding.",
@@ -206,6 +207,7 @@ const L = {
        touchscreen:"Touchscreen", exportGeo:"Export GeoJSON", exportCsv:"Export CSV",
        touchDebug:"Touch debug",
        appearanceHead:"Appearance", chooseTheme:"Choose colour mode", lightMode:"☀ Light", darkMode:"☾ Dark",
+       fullscreen:"Full screen", fullscreenOff:"Leave full screen",
 
        saidWhat:"What was said",
        groundFlag:"Fewer than 3 contact points. Is a puck lying there? Then the pads are not coupling — check the grounding.",
@@ -2235,6 +2237,21 @@ function toggleOrientation(){
 }
 el("btnOrientation").onclick=toggleOrientation;
 
+/* ── Volledig scherm ─────────────────────────────────────────────────────
+   Alleen de browserbalk. De gebaren van de bureaubladomgeving — drie vingers
+   die een werkblad wegschuiven — zitten vóór de browser en gaan hier níét mee
+   weg; daarvoor is deploy/KIOSK.md. */
+function refreshFullscreenLabel(){
+  const on=!!document.fullscreenElement;
+  el("btnFullscreen").textContent=tr(on?"fullscreenOff":"fullscreen");
+  el("btnFullscreen").classList.toggle("on",on);
+}
+el("btnFullscreen").onclick=()=>{
+  if(document.fullscreenElement) document.exitFullscreen?.();
+  else document.documentElement.requestFullscreen?.().catch(()=>{});
+};
+addEventListener("fullscreenchange",refreshFullscreenLabel);
+
 el("modeTouch").onclick=()=>{applyMode("touch");reorientMenu();};
 el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();};
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
@@ -2858,6 +2875,7 @@ function applyLang(){
   const fb=el("noteFlip");
   if(fb){ fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide")); }
   refreshOrientationControl();
+  refreshFullscreenLabel();
   // Een open venster hoort niet eerst dicht te moeten voordat het meegaat.
   if(selected) el("noteHead").textContent=vName(selected.verdict)+" · "+selected.topic;
   if(el("kgInfo").style.display==="block" && kg.selected){

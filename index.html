@@ -158,6 +158,10 @@
           <span class="theme-icon" aria-hidden="true">☾</span> Donker
         </button>
       </div>
+      <!-- Aan een tafel zonder toetsenbord is F11 geen knop. Volledig scherm
+           haalt de browserbalk weg; de gebaren van het bureaublad zelf gaan
+           daar niet mee weg — zie deploy/KIOSK.md. -->
+      <div class="row" style="margin:9px 0 0"><button id="btnFullscreen" data-i18n="fullscreen">Volledig scherm</button></div>
       <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening" data-i18n-aria="controlSize">
         <button id="btnScaleDown" type="button" aria-label="Bediening kleiner" data-i18n-aria="smaller">&minus;</button>
         <span class="scale-val mono" id="scaleVal" aria-live="polite">100%</span>
