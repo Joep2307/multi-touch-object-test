@@ -63,10 +63,10 @@ const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
        topics:["Veiligheid","Verkeer","Groen","Afval","Sociaal","Anders"],
        move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
-       confirmTouch:"Tik om vast te leggen", confirmMouse:"Klik om vast te leggen",
+       confirmTouch:"Draaien testen", confirmMouse:"Draaien testen",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
-       touchHint:"Sleep, draai naar een keuze en houd even stil, tik om vast te leggen.",
-       laptopHint:"Sleep, draai met Shift of het wiel en houd stil, klik om vast te leggen.",
+       touchHint:"Sleep en draai de puck om de herkenning en richting te testen.",
+       laptopHint:"Sleep en draai met Shift of het wiel om de herkenning en richting te testen.",
        puckMove:"Verplaatsen", puckSelect:"Kiezen", puckZoom:"Zoomen", puckBack:"Terug",
        modeZoom:"vooruit = inzoomen",
        flipSide:"Naar de overkant", flipNote:"Naar de overkant",
@@ -201,10 +201,10 @@ const L = {
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
        topics:["Safety","Traffic","Green","Waste","Social","Other"],
        move:"Freeze map", locked:"Map is frozen", placed:"Marked",
-       confirmTouch:"Tap to confirm", confirmMouse:"Click to confirm",
+       confirmTouch:"Test rotation", confirmMouse:"Test rotation",
        moveDots:"Move dots", movingDots:"Finish moving",
-       touchHint:"Drag, rotate to an option and hold still, tap to confirm.",
-       laptopHint:"Drag, rotate with Shift or the wheel and hold still, click to confirm.",
+       touchHint:"Drag and rotate the puck to test recognition and direction.",
+       laptopHint:"Drag and rotate with Shift or the wheel to test recognition and direction.",
        puckMove:"Move", puckSelect:"Select", puckZoom:"Zoom", puckBack:"Back",
        modeZoom:"forward = zoom in",
        flipSide:"To the other side", flipNote:"To the other side",
@@ -870,7 +870,6 @@ function endPointer(e){
       pt.ptrs.delete(e.pointerId);
       if(pt.ptrs.size===0){
         puckTouches.splice(puckTouches.indexOf(pt),1);
-        if(wasTap(pt)) tryConfirmPuck(pt.puck.x,pt.puck.y);
       } else basePuckTouch(pt);
       return;
     }
@@ -1029,7 +1028,6 @@ addEventListener("mouseup",e=>{
     movePinTo(pinDrag.pin,e.clientX,e.clientY); pinDrag=null;
     document.body.classList.remove("dragging-dot"); save();
   }
-  if(drag && wasTap(drag)) tryConfirmPuck(drag.puck.x,drag.puck.y);
   drag=null; mousePan=null;
 });
 addEventListener("wheel",e=>{
@@ -1390,7 +1388,6 @@ addEventListener("pointerup",e=>{
   if(simPuckAt(e.clientX,e.clientY)) return;
   const onTrack=puckTrackAt(e.clientX,e.clientY);
   if(onTrack){
-    if(tryConfirmPuck(e.clientX,e.clientY)) return;
     // Een puck die al vast ligt: dubbeltikken zet zijn venster op de andere kant.
     const own=onTrack.pinId?pins.find(p=>p.id===onTrack.pinId):null;
     if(own&&doubleTap(own.id)) flipNote(own,onTrack.x,onTrack.y);
