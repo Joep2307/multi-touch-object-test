@@ -181,6 +181,13 @@
       <div class="row"><button id="btnKgThemes" data-i18n="kgThemes">Thema's uit graaf</button></div>
       <p class="hint" data-i18n="kgThemesHint">De onderwerpen op de pucks komen dan uit de graaf in plaats van uit de vaste lijst.</p>
 
+      <!-- Herkennen staat bewust niet achter ?dev. Dit doe je aan de tafel
+           zelf, met de tape nog in je hand; dan is de URL aanpassen precies
+           de handeling die je niet wilt moeten doen. -->
+      <p class="eyebrow menu-subhead" data-i18n="physicalPucks">Fysieke pucks</p>
+      <div class="row"><button id="btnRecognise" class="primary" data-i18n="recog">Puck herkennen</button></div>
+      <p class="hint" data-i18n-html="recogHint">Plak drie stukjes tape in een driehoek, leg de puck op het scherm en druk op <b>Puck herkennen</b>.</p>
+
       <!-- Gereedschap voor wie de tafel bouwt of ijkt. Aan een tafel met
            publiek eromheen zijn dit alleen maar knoppen die iets kapot kunnen
            maken: één veeg over de tolerantieschuif en de herkenning is van
@@ -197,13 +204,11 @@
         <label class="field" for="diag" data-i18n="diagLabel">Schermdiagonaal (inch)</label>
         <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
 
-        <p class="eyebrow menu-subhead" data-i18n="physicalPucks">Fysieke pucks</p>
-        <div class="row"><button id="btnLearn" data-i18n="learn">Puck inlezen</button></div>
+        <p class="eyebrow menu-subhead" data-i18n="buildTools">Bouwgereedschap</p>
         <div class="row">
           <button id="btnSheet" data-i18n="sheetBtn">Bouwtekening</button>
           <button id="btnExport" data-i18n="exportCfg">Config exporteren</button>
         </div>
-        <p class="hint" id="learnHint" data-i18n-html="learnHint">Leg één puck stil op het scherm en druk op <b>Puck inlezen</b>.</p>
       </div>
     </div>
   </div>
@@ -310,6 +315,28 @@
     <span id="keyboardField" class="mono"></span>
   </div>
   <div id="keyboardKeys"></div>
+</div>
+
+<!-- ── Puck herkennen ────────────────────────────────────
+     Een vel over de kaart, maar de plakkers op de tafel tellen gewoon door:
+     contactpunten worden op `window` gelezen, niet op de kaart. Het kaartje
+     staat bovenaan zodat het vlak eronder vrij blijft om de puck neer te
+     leggen, en de driehoek wordt er live overheen getekend. -->
+<div id="learn" role="dialog" aria-modal="true" aria-labelledby="learnTitle">
+  <svg id="learnPoints" aria-hidden="true"></svg>
+  <div class="learn-card" id="learnCard">
+    <button id="closeLearnTop" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+    <h2 id="learnTitle" data-i18n="recogTitle">Puck herkennen</h2>
+    <p class="learn-intro" data-i18n="recogIntro">Leg de puck op het vrije vlak hieronder en houd hem stil. Zodra de drie plakkers gelezen zijn, kies je welke puck dit is.</p>
+    <p class="learn-status" id="learnStatus" aria-live="polite"></p>
+    <div class="learn-bar" aria-hidden="true"><i id="learnBar"></i></div>
+    <div id="learnBody"></div>
+    <div class="row learn-foot">
+      <button id="btnLearnReset" data-i18n="recogReset">Metingen wissen</button>
+      <button id="btnLearnExport" data-i18n="recogExport">Metingen exporteren</button>
+      <button id="closeLearn" data-i18n="close">Sluiten</button>
+    </div>
+  </div>
 </div>
 
 <div id="sheet"><div class="inner">
