@@ -80,6 +80,7 @@ const L = {
        touchscreen:"Touchscreen", exportGeo:"GeoJSON exporteren", exportCsv:"CSV exporteren",
        touchDebug:"Touch-debug",
        appearanceHead:"Weergave", chooseTheme:"Kleurmodus kiezen", lightMode:"☀ Licht", darkMode:"☾ Donker",
+       fullscreen:"Volledig scherm", fullscreenOff:"Uit volledig scherm",
 
        saidWhat:"Wat is er gezegd",
        groundFlag:"Minder dan 3 contactpunten. Ligt er een puck? Dan koppelen de pads niet — check de aarding.",
@@ -170,6 +171,7 @@ const L = {
        recogExport:"Metingen exporteren",
        recogLearned:(t)=>`ingelezen ${t}`, recogFactory:"nog niet ingelezen",
        recogCleared:"Alle metingen gewist — de pucks staan weer op hun oorspronkelijke driehoek.",
+<<<<<<< HEAD
        modePuck:"Puck", puckAdd:"+ Puck",
        modePuckHint:"De balk onderaan is weg. De tafel herkent alleen pucks die je zelf hebt ingelezen.",
        sidesHintPuck:"De toevoegknop aan beide kanten; vensters draaien naar wie ze opent.",
@@ -181,6 +183,8 @@ const L = {
        recogRemove:"Deze puck weggooien", recogRemoved:"Puck weggegooid.",
        recogResetOwn:"Alle pucks wissen",
        recogClearedOwn:"Alle eigen pucks weggegooid. Lees er een in om weer iets te laten herkennen.",
+=======
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
        sheetTitle:"Bouwtekening pucks",
        sheetIntro:"Padposities per puck, in millimeters vanaf het midden. Elke driehoek is ongelijkzijdig en de zijdeverhoudingen liggen ver genoeg uit elkaar om ze met een paar millimeter meetfout nog te onderscheiden.",
        sheetPad:"Pad", sheetRatios:"Ratio's", sheetLongest:"Langste",
@@ -217,6 +221,7 @@ const L = {
        touchscreen:"Touchscreen", exportGeo:"Export GeoJSON", exportCsv:"Export CSV",
        touchDebug:"Touch debug",
        appearanceHead:"Appearance", chooseTheme:"Choose colour mode", lightMode:"☀ Light", darkMode:"☾ Dark",
+       fullscreen:"Full screen", fullscreenOff:"Leave full screen",
 
        saidWhat:"What was said",
        groundFlag:"Fewer than 3 contact points. Is a puck lying there? Then the pads are not coupling — check the grounding.",
@@ -307,6 +312,7 @@ const L = {
        recogExport:"Export measurements",
        recogLearned:(t)=>`read in ${t}`, recogFactory:"not read in yet",
        recogCleared:"All measurements cleared — the pucks are back on their original triangles.",
+<<<<<<< HEAD
        modePuck:"Puck", puckAdd:"+ Puck",
        modePuckHint:"The bar at the bottom is gone. The table only recognises pucks you have read in yourself.",
        sidesHintPuck:"The add button on both sides; windows turn to whoever opens them.",
@@ -318,6 +324,8 @@ const L = {
        recogRemove:"Throw this puck away", recogRemoved:"Puck thrown away.",
        recogResetOwn:"Clear all pucks",
        recogClearedOwn:"All your own pucks are gone. Read one in to have the table recognise something again.",
+=======
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
        sheetTitle:"Puck build drawing",
        sheetIntro:"Pad positions per puck, in millimetres from the centre. Every triangle is scalene and the side ratios lie far enough apart to tell them apart with a few millimetres of measurement error.",
        sheetPad:"Pad", sheetRatios:"Ratios", sheetLongest:"Longest",
@@ -394,7 +402,11 @@ const TPL_KEY="pucktable-templates";
    precies 60 mm en twee pucks mogen best verschillen. `CFG.longestSideMM` is de
    terugval voor een puck die nog nooit is ingelezen. */
 const tplLongest=t=>(t&&Number.isFinite(t.longestMM)&&t.longestMM>0)?t.longestMM:CFG.longestSideMM;
+<<<<<<< HEAD
 const maxTplLongest=()=>activeTemplates().reduce((m,t)=>Math.max(m,tplLongest(t)),CFG.longestSideMM);
+=======
+const maxTplLongest=()=>templates.reduce((m,t)=>Math.max(m,tplLongest(t)),CFG.longestSideMM);
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
 function saveTemplates(){
   try{ localStorage.setItem(TPL_KEY,JSON.stringify(templates.map(t=>
     ({id:t.id,ratios:t.ratios,longestMM:t.longestMM??null,learnedAt:t.learnedAt||null})))); }catch(e){}
@@ -421,6 +433,7 @@ function resetTemplates(){
   }
   try{ localStorage.removeItem(TPL_KEY); }catch(e){}
 }
+<<<<<<< HEAD
 /* -- Eigen pucks: de lijst van de puckstand ---------------------------------
    In de puckstand bestaat er geen vaste verzameling pucks. Wat de tafel
    herkent is precies wat er is ingelezen en niets anders: ook geen fabrieks-
@@ -473,6 +486,8 @@ function removeOwnPuck(id){
 /* Welke lijst telt hangt aan de stand: in de puckstand alleen de eigen pucks,
    daarbuiten de vier van de bouwtekening. */
 const activeTemplates=()=>puckMode()?ownPucks:templates;
+=======
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
 /* `simMode` bepaalt of de contactpunten van pucks uit de balk meetellen bij de
    herkenning — en de balk is geen ontwikkelgereedschap maar de gewone manier om
    zonder fysieke puck te werken. Stond dit op `DEV`, dan liet een tafel zonder
@@ -1261,11 +1276,14 @@ function syncPlacedPinTopic(t){
    afstand nog exact aanwijsbaar zijn: een ring met vier streepjes eromheen en
    een stip in het hart. Alles schaalt mee met de puckstraal `R`. */
 /* Straal van het kijkgat in het hart van de puck, als deel van de puckstraal.
-   Het vizier (ring + armen, tot 0.27R) past er ruim in en de teksten blijven
-   erbuiten. */
-const PUCK_HOLE=0.34;
+   Het vizier schaalt mee met het gat; de teksten staan in de zwarte band
+   daarbuiten. */
+const PUCK_HOLE=0.58;
 function drawTarget(ctx,x,y,c,R){
-  const ring=R*0.16, gap=R*0.07, arm=R*0.27;
+  // Maten hangen aan het kijkgat, niet aan de hele puck: wordt het gat groter,
+  // dan groeit het vizier mee en blijft de verhouding hetzelfde.
+  const hole=R*PUCK_HOLE;
+  const ring=hole*0.47, gap=hole*0.2, arm=hole*0.8;
   const draw=()=>{
     ctx.beginPath(); ctx.arc(x,y,ring,0,Math.PI*2); ctx.stroke();
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
@@ -1799,23 +1817,37 @@ function frame(){
     ctx.arc(t.x,t.y,R,0,Math.PI*2);
     ctx.arc(t.x,t.y,hole,0,Math.PI*2,true);
     ctx.fill();
-    ctx.strokeStyle=c; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(t.x,t.y,R,0,Math.PI*2); ctx.stroke();
+    // De buitenrand draagt de kleur van het oordeel en moet van een meter
+    // afstand af te lezen zijn, dus hij is fors; hij ligt binnen R zodat de
+    // puckstraal blijft kloppen.
+    ctx.strokeStyle=c; ctx.lineWidth=Math.max(3,R*0.055);
+    ctx.beginPath(); ctx.arc(t.x,t.y,R-ctx.lineWidth/2,0,Math.PI*2); ctx.stroke();
     // Een dunne rand rond het gat houdt de overgang naar de kaart rustig.
     ctx.strokeStyle=c+"66"; ctx.lineWidth=1;
     ctx.beginPath(); ctx.arc(t.x,t.y,hole,0,Math.PI*2); ctx.stroke();
     // Het hart van de puck blijft vrij voor het vizier; de teksten wijken uit.
     drawTarget(ctx,t.x,t.y,c,R);
+    // Het gat is groter dan de teksten aankunnen, dus die staan nu midden in de
+    // zwarte band tussen gat en rand.
+    const band=(hole+R)/2;
     ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 15px 'Space Grotesk',system-ui,sans-serif";
-    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-R*0.42);
+    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-band+5);
     ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle="rgba(232,237,244,.55)";
+<<<<<<< HEAD
     ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+R*0.52);
+=======
+    ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+band+4);
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
     // Zoomen is een modale stand: wie niet ziet dat hij aan staat, duwt de
     // kaart per ongeluk weg. Verplaatsen is de rusttoestand en zegt niets —
     // dat staat al op de ring, en twee regels onder elkaar is te druk.
     if(t.mode==="zoom"){
       ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle=c;
+<<<<<<< HEAD
       ctx.fillText(tr("modeZoom"),t.x,t.y+R*0.74);
+=======
+      ctx.fillText(tr("modeZoom"),t.x,t.y+band+17);
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
     }
     ctx.restore();
   }
@@ -2320,6 +2352,21 @@ function toggleOrientation(){
 }
 el("btnOrientation").onclick=toggleOrientation;
 
+/* ── Volledig scherm ─────────────────────────────────────────────────────
+   Alleen de browserbalk. De gebaren van de bureaubladomgeving — drie vingers
+   die een werkblad wegschuiven — zitten vóór de browser en gaan hier níét mee
+   weg; daarvoor is deploy/KIOSK.md. */
+function refreshFullscreenLabel(){
+  const on=!!document.fullscreenElement;
+  el("btnFullscreen").textContent=tr(on?"fullscreenOff":"fullscreen");
+  el("btnFullscreen").classList.toggle("on",on);
+}
+el("btnFullscreen").onclick=()=>{
+  if(document.fullscreenElement) document.exitFullscreen?.();
+  else document.documentElement.requestFullscreen?.().catch(()=>{});
+};
+addEventListener("fullscreenchange",refreshFullscreenLabel);
+
 el("modeTouch").onclick=()=>{applyMode("touch");reorientMenu();};
 el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();};
 el("modePuck").onclick=()=>{applyMode("puck");reorientMenu();};
@@ -2757,6 +2804,7 @@ function learnStamp(t){
   const d=new Date(t.learnedAt);
   return tr("recogLearned",isNaN(d)?"":d.toLocaleDateString(L[lang].locale,{day:"numeric",month:"short"}));
 }
+<<<<<<< HEAD
 /* In de puckstand is er geen balk meer die laat zien welke pucks de tafel kent.
    Dat overzicht staat daarom hier, met een kruisje per puck: inlezen en
    weggooien horen bij elkaar en gebeuren aan dezelfde tafel. */
@@ -2779,6 +2827,12 @@ function renderLearn(){
   if(learn.phase==="saved"){
     const tpl=activeTemplates().find(t=>t.id===learn.tplId);
     if(!tpl){ restartLearn(); return; }
+=======
+function renderLearn(){
+  const body=el("learnBody"), st=el("learnStatus");
+  if(learn.phase==="saved"){
+    const tpl=templates.find(t=>t.id===learn.tplId);
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
     st.innerHTML=tr("recogSaved",vName(tpl.verdict),tpl.ratios[0].toFixed(3),
                     tpl.ratios[1].toFixed(3),tplLongest(tpl).toFixed(1))
                 +(learn.clash?tr("recogClash",learn.clash):"");
@@ -2790,6 +2844,7 @@ function renderLearn(){
     st.innerHTML=tr("recogMeasured",learn.m.r0.toFixed(3),learn.m.r1.toFixed(3),
                     (learn.m.longest/pxPerMM).toFixed(1));
     const iso=nearlyIsosceles(learn.m.r0,learn.m.r1)?`<p class="learn-warn">${tr("recogIso")}</p>`:"";
+<<<<<<< HEAD
     if(puckMode()){
       /* Geen preset. De meting wordt een nieuwe puck; je zegt alleen nog wat
          voor soort het is, en dezelfde soort mag vaker voorkomen. */
@@ -2801,6 +2856,8 @@ function renderLearn(){
       [...body.querySelectorAll(".learn-pick")].forEach(b=>b.onclick=()=>addLearnedPuck(b.dataset.verdict));
       return;
     }
+=======
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
     body.innerHTML=iso+`<p class="learn-which">${tr("recogWhich")}</p>`+templates.map(t=>
       `<button class="learn-pick" data-id="${t.id}" style="--c:${vColor(t.verdict)}">
          <b>${vName(t.verdict)}</b>
@@ -2809,9 +2866,13 @@ function renderLearn(){
     [...body.querySelectorAll(".learn-pick")].forEach(b=>b.onclick=()=>assignLearn(b.dataset.id));
     return;
   }
+<<<<<<< HEAD
   body.innerHTML=(learn.note?`<p class="hint">${learn.note}</p>`:"")+(puckMode()?ownPuckList():"");
   [...body.querySelectorAll(".own-del")].forEach(b=>b.onclick=()=>{
     removeOwnPuck(b.dataset.id); learn.note=tr("recogRemoved"); renderLearn(); });
+=======
+  body.innerHTML=learn.note?`<p class="hint">${learn.note}</p>`:"";
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
   if(learn.phase==="wait") st.innerHTML=tr("recogWait",learnPoints().length);
 }
 /* Hier gebeurt het onthouden. De driehoek van die ene puck wordt vervangen —
@@ -2831,6 +2892,7 @@ function assignLearn(id){
   renderLearn(); renderTray();
   if(el("sheet").style.display==="block") buildSheet();
 }
+<<<<<<< HEAD
 /* De puckstand kent geen vaste vier: elke meting komt er als nieuwe puck bij.
    Lijkt de driehoek te veel op een puck die je al hebt, dan wordt dat gezegd --
    die twee verwisselt de tafel straks. */
@@ -2854,12 +2916,25 @@ el("btnLearnReset").onclick=()=>{
 el("btnLearnExport").onclick=()=>download("puck-metingen.json",JSON.stringify({
   screenDiagIn:CFG.screenDiagIn, pxPerMM:+pxPerMM.toFixed(3), tolerance,
   templates:activeTemplates().map(t=>({id:t.id,verdict:t.verdict,ratios:t.ratios,
+=======
+el("btnRecognise").onclick=openLearn;
+el("closeLearn").onclick=closeLearn;
+el("closeLearnTop").onclick=closeLearn;
+el("btnLearnReset").onclick=()=>{ resetTemplates(); renderTray(); learn.note=tr("recogCleared"); restartLearn(); };
+el("btnLearnExport").onclick=()=>download("puck-metingen.json",JSON.stringify({
+  screenDiagIn:CFG.screenDiagIn, pxPerMM:+pxPerMM.toFixed(3), tolerance,
+  templates:templates.map(t=>({id:t.id,verdict:t.verdict,ratios:t.ratios,
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
                                longestMM:+tplLongest(t).toFixed(1),learnedAt:t.learnedAt||null}))
 },null,2),"application/json");
 el("btnExport").onclick=()=>download("puck-config.json",
   JSON.stringify({longestSideMM:CFG.longestSideMM,tolerance,templates:activeTemplates()},null,2),"application/json");
 function buildSheet(){
+<<<<<<< HEAD
   el("sheetGrid").innerHTML=activeTemplates().map(t=>{
+=======
+  el("sheetGrid").innerHTML=templates.map(t=>{
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
     const Lmm=tplLongest(t), pads=padsFor(t,Lmm),S=150,sc=(S*0.34)/Lmm*2;
     const pts=pads.map(p=>({x:S/2+p.x*sc,y:S/2+p.y*sc})),c=vColor(t.verdict);
     return `<div class="sheetcard"><h3 style="color:${c}">${t.id} · ${vName(t.verdict)}</h3>
@@ -2994,6 +3069,7 @@ function applyLang(){
   const fb=el("noteFlip");
   if(fb){ fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide")); }
   refreshOrientationControl();
+  refreshFullscreenLabel();
   // Een open venster hoort niet eerst dicht te moeten voordat het meegaat.
   if(selected) el("noteHead").textContent=vName(selected.verdict)+" · "+selected.topic;
   if(el("kgInfo").style.display==="block" && kg.selected){
@@ -3013,7 +3089,11 @@ function setLang(next){
 el("langNl").onclick=()=>setLang("nl");
 el("langEn").onclick=()=>setLang("en");
 
+<<<<<<< HEAD
 restoreTemplates(); restoreOwnPucks();
+=======
+restoreTemplates();
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
 applyColorTheme(colorTheme); resize(); restore(); restoreBasemap(); applyScale(); applyLock(); applyPinMoveMode(); applyMode(uiMode); renderTray(); applyLang(); frame();
 
 /* ---- Bijgewerkt-stempel -------------------------------------------------

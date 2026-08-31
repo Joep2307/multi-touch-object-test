@@ -162,6 +162,10 @@
           <span class="theme-icon" aria-hidden="true">☾</span> Donker
         </button>
       </div>
+      <!-- Aan een tafel zonder toetsenbord is F11 geen knop. Volledig scherm
+           haalt de browserbalk weg; de gebaren van het bureaublad zelf gaan
+           daar niet mee weg — zie deploy/KIOSK.md. -->
+      <div class="row" style="margin:9px 0 0"><button id="btnFullscreen" data-i18n="fullscreen">Volledig scherm</button></div>
       <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening" data-i18n-aria="controlSize">
         <button id="btnScaleDown" type="button" aria-label="Bediening kleiner" data-i18n-aria="smaller">&minus;</button>
         <span class="scale-val mono" id="scaleVal" aria-live="polite">100%</span>
@@ -333,7 +337,11 @@
   <div class="learn-card" id="learnCard">
     <button id="closeLearnTop" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
     <h2 id="learnTitle" data-i18n="recogTitle">Puck herkennen</h2>
+<<<<<<< HEAD
     <p class="learn-intro" id="learnIntro" data-i18n="recogIntro">Leg de puck op het vrije vlak hieronder en houd hem stil. Zodra de drie plakkers gelezen zijn, kies je welke puck dit is.</p>
+=======
+    <p class="learn-intro" data-i18n="recogIntro">Leg de puck op het vrije vlak hieronder en houd hem stil. Zodra de drie plakkers gelezen zijn, kies je welke puck dit is.</p>
+>>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
     <p class="learn-status" id="learnStatus" aria-live="polite"></p>
     <div class="learn-bar" aria-hidden="true"><i id="learnBar"></i></div>
     <div id="learnBody"></div>
