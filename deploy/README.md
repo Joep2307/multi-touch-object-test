@@ -41,6 +41,20 @@ iets nieuws is. Kost een `git fetch` per minuut.
 
 ## Let op
 
-`update.sh` gebruikt `git merge --ff-only`. Bewerk je bestanden rechtstreeks op
-de NUC, dan loopt de boel vast in plaats van dat je werk overschreven wordt —
-dat is opzet. Los het op met `git stash` of `git reset --hard origin/main`.
+`update.sh` doet `git reset --hard origin/main`. Wat je rechtstreeks op de NUC
+verandert, is bij de eerstvolgende push dus weg — met opzet: deze machine is een
+kopie. Wil je daar iets uitproberen, doe het in een eigen tak of op je laptop.
+
+## Als de tafel niet bijwerkt
+
+Kijk eerst in `journalctl -u puck-update -n 30`. Twee dingen die eerder misgingen:
+
+- **HTTP 401 bij `git fetch`.** Er stond een `credential.helper` van `gh` in
+  `~/.gitconfig` met een verlopen token. De repo is publiek, dus ophalen kan
+  anoniem: `git config --local credential.https://github.com.helper ""` in de
+  kloon op de NUC zet die hulp voor deze map uit.
+- **Twee bijwerkers tegelijk.** Alleen `puck-update.timer` hoort te draaien;
+  controleer met `systemctl list-timers --all | grep -i puck` en
+  `systemctl --user list-timers`.
+
+Welke build er draait, zie je zonder in te loggen op `http://<tafel>:8080/version.json`.
