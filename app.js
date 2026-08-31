@@ -1002,11 +1002,14 @@ function syncPlacedPinTopic(t){
    afstand nog exact aanwijsbaar zijn: een ring met vier streepjes eromheen en
    een stip in het hart. Alles schaalt mee met de puckstraal `R`. */
 /* Straal van het kijkgat in het hart van de puck, als deel van de puckstraal.
-   Het vizier (ring + armen, tot 0.27R) past er ruim in en de teksten blijven
-   erbuiten. */
-const PUCK_HOLE=0.34;
+   Het vizier schaalt mee met het gat; de teksten staan in de zwarte band
+   daarbuiten. */
+const PUCK_HOLE=0.58;
 function drawTarget(ctx,x,y,c,R){
-  const ring=R*0.16, gap=R*0.07, arm=R*0.27;
+  // Maten hangen aan het kijkgat, niet aan de hele puck: wordt het gat groter,
+  // dan groeit het vizier mee en blijft de verhouding hetzelfde.
+  const hole=R*PUCK_HOLE;
+  const ring=hole*0.47, gap=hole*0.2, arm=hole*0.8;
   const draw=()=>{
     ctx.beginPath(); ctx.arc(x,y,ring,0,Math.PI*2); ctx.stroke();
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
@@ -1523,17 +1526,23 @@ function frame(){
     ctx.arc(t.x,t.y,R,0,Math.PI*2);
     ctx.arc(t.x,t.y,hole,0,Math.PI*2,true);
     ctx.fill();
-    ctx.strokeStyle=c; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(t.x,t.y,R,0,Math.PI*2); ctx.stroke();
+    // De buitenrand draagt de kleur van het oordeel en moet van een meter
+    // afstand af te lezen zijn, dus hij is fors; hij ligt binnen R zodat de
+    // puckstraal blijft kloppen.
+    ctx.strokeStyle=c; ctx.lineWidth=Math.max(3,R*0.055);
+    ctx.beginPath(); ctx.arc(t.x,t.y,R-ctx.lineWidth/2,0,Math.PI*2); ctx.stroke();
     // Een dunne rand rond het gat houdt de overgang naar de kaart rustig.
     ctx.strokeStyle=c+"66"; ctx.lineWidth=1;
     ctx.beginPath(); ctx.arc(t.x,t.y,hole,0,Math.PI*2); ctx.stroke();
     // Het hart van de puck blijft vrij voor het vizier; de teksten wijken uit.
     drawTarget(ctx,t.x,t.y,c,R);
+    // Het gat is groter dan de teksten aankunnen, dus die staan nu midden in de
+    // zwarte band tussen gat en rand.
+    const band=(hole+R)/2;
     ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 15px 'Space Grotesk',system-ui,sans-serif";
-    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-R*0.42);
+    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-band+5);
     ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle="rgba(232,237,244,.55)";
-    ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+R*0.52);
+    ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+band+4);
     ctx.restore();
   }
 
