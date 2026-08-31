@@ -17,8 +17,12 @@ import { kg, loadKG, ensureKG, drawKG, drawGaps, kgAt, kgDescribe, onKgChange,
    ═══════════════════════════════════════════════════════════════ */
 const CFG = {
   longestSideMM:60, puckRadiusMM:45,
-  stableFrames:3, dropoutMS:180, smoothing:4,
-  jitterPX:22, rearmPX:70, ringPX:110,
+  /* Een draaiende fysieke puck onderbreekt soms heel kort één voetje. Twee
+     goede beelden zijn genoeg om hem vast te pakken; daarna houden we de
+     laatst bekende positie en hoek 0,9 s vast in plaats van hem na 0,18 s te
+     verwijderen. */
+  stableFrames:2, dropoutMS:900, smoothing:4,
+  jitterPX:22, rearmPX:70, ringPX:110, rotationGain:2,
   /* De ring om de puck is een menu geworden. Kiezen gaat door naar een optie
      te draaien en even stil te houden: tikken blijft zo gereserveerd voor het
      vastleggen van een markering. `puckDwellMS` is die stilstand,
@@ -1078,11 +1082,16 @@ function recognise(points){
       const d=describe(points[i],points[j],points[k]); if(!d) continue;
       for(const tpl of activeTemplates()){
         const err=Math.hypot(d.ratios[0]-tpl.ratios[0],d.ratios[1]-tpl.ratios[1]);
-        if(err>tolerance) continue;
+        /* Tijdens draaien vervormen de gemeten contactpunten enkele pixels.
+           Een puck die al gevolgd wordt krijgt daarom wat extra speelruimte;
+           de eerste herkenning blijft op de ingestelde, strenge tolerantie. */
+        const tracked=tracks.has(tpl.id);
+        const errLimit=tracked?Math.min(0.12,tolerance*1.75):tolerance;
+        if(err>errLimit) continue;
         const want=tplLongest(tpl)*pxPerMM;
         const sizeErr=Math.abs(d.longest-want)/want;
-        if(sizeErr>0.35) continue;
-        cands.push({tpl,err,idx:[i,j,k],d,conf:Math.max(0,1-err/tolerance*0.7-sizeErr*0.6)});
+        if(sizeErr>(tracked?0.45:0.35)) continue;
+        cands.push({tpl,err,idx:[i,j,k],d,conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
       }
     }
   }
@@ -1100,7 +1109,10 @@ const tracks=new Map();
 function track(dets,now){
   for(const d of dets){
     let t=tracks.get(d.id);
-    if(!t){ t={id:d.id,tpl:d.tpl,x:d.x,y:d.y,angle:d.angle,frames:0,state:"candidate",buf:[],
+    if(!t){ t={id:d.id,tpl:d.tpl,x:d.x,y:d.y,angle:d.angle,
+               measuredAngle:d.angle,filteredAngle:d.angle,lastRawAngle:d.angle,
+               angleOrigin:d.angle,rawOrigin:d.angle,
+               frames:0,state:"candidate",buf:[],
                conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
                // De puck begint in het hoofdmenu, in de rustigste stand.
                // `dwellDone` staat aan zodat de stand waarin hij toevallig
@@ -1112,8 +1124,16 @@ function track(dets,now){
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
     t.x=t.buf.reduce((s,p)=>s+p.x,0)/t.buf.length;
     t.y=t.buf.reduce((s,p)=>s+p.y,0)/t.buf.length;
-    let dl=d.angle-t.angle; while(dl>Math.PI)dl-=Math.PI*2; while(dl<-Math.PI)dl+=Math.PI*2;
-    t.angle+=dl*0.35;
+    let rawStep=d.angle-t.lastRawAngle;
+    while(rawStep>Math.PI) rawStep-=Math.PI*2;
+    while(rawStep<-Math.PI) rawStep+=Math.PI*2;
+    t.lastRawAngle=d.angle;
+    t.measuredAngle+=rawStep;
+    t.filteredAngle+=(t.measuredAngle-t.filteredAngle)*0.55;
+    // Eén graad aan de puck telt als twee graden op de keuzering. Daardoor is
+    // ongeveer 45 graden draaien genoeg om naar de volgende van vier opties te
+    // gaan, terwijl de filtering hierboven kleine contacttrillingen dempt.
+    t.angle=t.angleOrigin+(t.filteredAngle-t.rawOrigin)*CFG.rotationGain;
     t.state=t.frames>=CFG.stableFrames?"recognised":"candidate";
     const moved=Math.hypot(t.x-t.anchorX,t.y-t.anchorY);
     if(moved>CFG.jitterPX){ t.anchorX=t.x; t.anchorY=t.y; }
