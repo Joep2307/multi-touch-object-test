@@ -724,6 +724,31 @@ function describe(p1,p2,p3){
 }
 const realTouches=new Map(); let peakTouches=0;
 
+/* Sommige touchscreens maken geen gewone `click` als er al drie contacten op
+   het glas liggen. Dat is precies de normale situatie met een fysieke puck:
+   een vierde aanraking op "welke puck is dit?" of op Instellingen leek daardoor
+   niets te doen. Voor knoppen zetten we alleen in die multitouchsituatie de
+   korte vingertik zelf om in één click. De drie puckcontacten blijven intussen
+   ongemoeid, zodat herkennen en ijken gewoon doorlopen. */
+const controlTaps=new Map();
+addEventListener("pointerdown",e=>{
+  if(e.pointerType==="mouse"||realTouches.size<3) return;
+  const button=e.target.closest?.("button");
+  if(!button||button.disabled) return;
+  controlTaps.set(e.pointerId,{button,x:e.clientX,y:e.clientY,t:performance.now()});
+  e.preventDefault(); e.stopPropagation();
+},true);
+addEventListener("pointerup",e=>{
+  const tap=controlTaps.get(e.pointerId); if(!tap) return;
+  controlTaps.delete(e.pointerId);
+  e.preventDefault(); e.stopPropagation();
+  const same=e.target.closest?.("button")===tap.button;
+  const short=performance.now()-tap.t<700;
+  const still=Math.hypot(e.clientX-tap.x,e.clientY-tap.y)<18;
+  if(same&&short&&still&&!tap.button.disabled) tap.button.click();
+},true);
+addEventListener("pointercancel",e=>controlTaps.delete(e.pointerId),true);
+
 /* One finger drags the map, two fingers pinch it. Three or more is a puck,
    and a recognised puck freezes the map so it can't slide out from under it. */
 let gesture=null, mousePan=null;
