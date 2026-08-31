@@ -193,7 +193,10 @@
            zelf, met de tape nog in je hand; dan is de URL aanpassen precies
            de handeling die je niet wilt moeten doen. -->
       <p class="eyebrow menu-subhead" data-i18n="physicalPucks">Fysieke pucks</p>
-      <div class="row"><button id="btnRecognise" class="primary" data-i18n="recog">Puck herkennen</button></div>
+      <div class="row">
+        <button id="btnRecognise" class="primary" data-i18n="recog">Puck herkennen</button>
+        <button id="btnDebug" data-i18n="touchDebug">Touch debug</button>
+      </div>
       <p class="hint" data-i18n-html="recogHint">Plak drie stukjes tape in een driehoek, leg de puck op het scherm en druk op <b>Puck herkennen</b>.</p>
 
       <!-- Gereedschap voor wie de tafel bouwt of ijkt. Aan een tafel met
@@ -205,7 +208,6 @@
         <p class="hint" data-i18n="devNote" style="margin:0 0 9px">Zichtbaar omdat de URL ?dev bevat.</p>
         <div class="row">
           <button id="btnSim" class="on" data-i18n="simPuck">Puck simuleren</button>
-          <button id="btnDebug" data-i18n="touchDebug">Touch debug</button>
         </div>
         <label class="field" for="tol"><span data-i18n="tolLabel">Ratio-tolerantie</span> <span id="tolVal" class="mono">0.060</span></label>
         <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
