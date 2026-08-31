@@ -1001,17 +1001,27 @@ function syncPlacedPinTopic(t){
    bij bevestigen als markering wordt vastgelegd, dus het moet van een meter
    afstand nog exact aanwijsbaar zijn: een ring met vier streepjes eromheen en
    een stip in het hart. Alles schaalt mee met de puckstraal `R`. */
+/* Straal van het kijkgat in het hart van de puck, als deel van de puckstraal.
+   Het vizier (ring + armen, tot 0.27R) past er ruim in en de teksten blijven
+   erbuiten. */
+const PUCK_HOLE=0.34;
 function drawTarget(ctx,x,y,c,R){
   const ring=R*0.16, gap=R*0.07, arm=R*0.27;
+  const draw=()=>{
+    ctx.beginPath(); ctx.arc(x,y,ring,0,Math.PI*2); ctx.stroke();
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      ctx.beginPath();
+      ctx.moveTo(x+dx*gap,y+dy*gap);
+      ctx.lineTo(x+dx*arm,y+dy*arm);
+      ctx.stroke();
+    }
+  };
   ctx.save();
-  ctx.strokeStyle=c; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.arc(x,y,ring,0,Math.PI*2); ctx.stroke();
-  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-    ctx.beginPath();
-    ctx.moveTo(x+dx*gap,y+dy*gap);
-    ctx.lineTo(x+dx*arm,y+dy*arm);
-    ctx.stroke();
-  }
+  ctx.lineCap="round";
+  // Het gat laat de kaart door, dus het vizier krijgt eerst een donkere
+  // onderlijn; anders valt hij weg op een licht stuk kaart.
+  ctx.strokeStyle="rgba(9,12,17,.55)"; ctx.lineWidth=4; draw();
+  ctx.strokeStyle=c; ctx.lineWidth=1.5; draw();
   ctx.fillStyle=c;
   ctx.beginPath(); ctx.arc(x,y,Math.max(1.5,R*0.022),0,Math.PI*2); ctx.fill();
   ctx.restore();
@@ -1504,8 +1514,20 @@ function frame(){
       ctx.strokeStyle=c+Math.floor(t.flash*200).toString(16).padStart(2,"0");
       ctx.lineWidth=3; ctx.stroke(); t.flash-=0.04;
     }
-    ctx.fillStyle="rgba(9,12,17,.94)"; ctx.beginPath(); ctx.arc(t.x,t.y,R,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=c; ctx.lineWidth=2; ctx.stroke();
+    // De puck is een ring, geen schijf: in het hart zit een kijkgat, zodat de
+    // kaart onder het vizier zichtbaar blijft. Je ziet dus precies waar je
+    // aanwijst terwijl je richt, in plaats van erop te moeten gokken.
+    const hole=R*PUCK_HOLE;
+    ctx.fillStyle="rgba(9,12,17,.94)";
+    ctx.beginPath();
+    ctx.arc(t.x,t.y,R,0,Math.PI*2);
+    ctx.arc(t.x,t.y,hole,0,Math.PI*2,true);
+    ctx.fill();
+    ctx.strokeStyle=c; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(t.x,t.y,R,0,Math.PI*2); ctx.stroke();
+    // Een dunne rand rond het gat houdt de overgang naar de kaart rustig.
+    ctx.strokeStyle=c+"66"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(t.x,t.y,hole,0,Math.PI*2); ctx.stroke();
     // Het hart van de puck blijft vrij voor het vizier; de teksten wijken uit.
     drawTarget(ctx,t.x,t.y,c,R);
     ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 15px 'Space Grotesk',system-ui,sans-serif";
