@@ -563,7 +563,6 @@ body.keyboard-open #note{z-index:45}
 .learn-foot #closeLearn{margin-left:auto}
 #closeLearnTop{position:absolute;top:9px;right:11px;border:0;background:none;
   color:var(--ink-dim);font-size:22px;line-height:1;padding:4px 9px}
-<<<<<<< HEAD
 
 
 /* ---- Puckstand ---------------------------------------------------------
@@ -592,5 +591,3 @@ body:not(.mode-puck) .puck-mode-hint{display:none}
   padding:0;font-size:18px;line-height:1}
 :root[data-theme="light"] .own-row{background:rgba(255,255,255,.6)}
 .mode-touch .own-row .own-del{width:44px;height:44px}
-=======
->>>>>>> 18de10107ec241c52d05d0020c29c771b50ad0a0
