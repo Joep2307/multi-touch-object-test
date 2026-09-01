@@ -135,6 +135,7 @@ const L = {
        bakeFailed:"<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw.",
        bakeSaved:(kb)=>`Kaartbeeld bewaard (${kb} kB). Dit gebied verschijnt nu ook zonder internet.`,
        bakeTooBig:"Bewaard voor deze sessie, maar te groot voor de browseropslag. Zoom iets verder uit en probeer opnieuw.",
+       storageFull:"<b>De browseropslag zit vol.</b> Nieuwe bijdragen worden niet bewaard. Exporteer de sessie en wis hem, of maak de offline kaart leeg.",
        bakeCleared:"Bewaarde kaart gewist.",
 
        kgHead:"Kennisgraaf", kgShow:"Graaf tonen", kgThemes:"Thema's uit graaf",
@@ -273,6 +274,7 @@ const L = {
        bakeFailed:"<b>Could not save the map view</b> — the tiles have not fully loaded yet. Wait a moment and try again.",
        bakeSaved:(kb)=>`Map view saved (${kb} kB). This area now also appears without an internet connection.`,
        bakeTooBig:"Saved for this session, but too large for browser storage. Zoom out a little and try again.",
+       storageFull:"<b>Browser storage is full.</b> New contributions are not being saved. Export the session and wipe it, or clear the offline map.",
        bakeCleared:"Saved map cleared.",
 
        kgHead:"Knowledge graph", kgShow:"Show graph", kgThemes:"Themes from graph",
@@ -1532,7 +1534,30 @@ const DEMO_PINS=[
   {id:"demo-idea-3",lat:51.59172,lng:4.77784,verdict:"idea",topic:"Afval",title:"Slim inzamelpunt",description:"Plaats een compact inzamelpunt met aparte vakken en een melding wanneer een bak vol is."}
 ].map((pin,i)=>({...pin,note:pin.description,t:new Date(Date.UTC(2026,7,28,9,15+i*4)).toISOString()}));
 
-function save(){ try{ localStorage.setItem("pucktable-"+el("sess").value,JSON.stringify(pins)); }catch(e){} }
+/* Opslaan was `try{...}catch(e){}` — een volle browseropslag verdween daarmee
+   zonder spoor, en dat is precies wat er gebeurt zodra iemand de kaart offline
+   bewaart (die stond in dezelfde 5 MB; zie bakeMap, dat nu IndexedDB gebruikt).
+   Je merkte het pas na de herlaadbeurt, en dan was de middag weg. */
+let storageFull=false, pinsRevision=0;
+function save(){
+  pinsRevision++;
+  try{ localStorage.setItem("pucktable-"+el("sess").value,JSON.stringify(pins)); storageFull=false; }
+  catch(e){ storageFull=true; }
+}
+/* Tijdens het typen hoeft niet elke aanslag naar de opslag. */
+let saveTimer=null;
+function saveSoon(){ clearTimeout(saveTimer); saveTimer=setTimeout(save,400); }
+const VERDICT_KEYS=new Set(VERDICTS.map(v=>v.key));
+const validPin=p=>!!p && typeof p==="object" && VERDICT_KEYS.has(p.verdict)
+                 && Number.isFinite(+p.lat) && Number.isFinite(+p.lng);
+function cleanPin(p){
+  const text=v=>typeof v==="string"?v:"";
+  return {...p, lat:+p.lat, lng:+p.lng,
+          id:String(p.id||Date.now()+"-"+Math.random().toString(36).slice(2,6)),
+          topic:text(p.topic)||topics()[0],
+          title:text(p.title), description:text(p.description)||text(p.note), note:text(p.note),
+          t:typeof p.t==="string"&&p.t.length>=16?p.t:new Date().toISOString()};
+}
 function restore(){
   pins.length=0;
   try{
@@ -1541,7 +1566,18 @@ function restore(){
     const demoKey="pucktable-demo-pins-v1";
     const raw=localStorage.getItem(sessionKey);
     const stored=raw===null?[]:JSON.parse(raw);
-    if(Array.isArray(stored)) stored.forEach(p=>pins.push(p));
+    /* Ongezien terugzetten wat er in de opslag staat is hier gevaarlijker dan
+       het lijkt: één markering met een onbekend oordeel laat `vColor()` gooien
+       middenin de tekenlus, en dan wordt alles ná die regel — de pucks, het
+       ringmenu — nooit meer getekend. Elke frame opnieuw, tot iemand de opslag
+       leegt. Templates en eigen pucks werden al gecontroleerd; markeringen niet. */
+    if(Array.isArray(stored)){
+      stored.filter(validPin).forEach(p=>pins.push(cleanPin(p)));
+      // Wat er niet doorheen kwam schrijven we ook weg: anders staat het er de
+      // volgende keer weer, en is de eerstvolgende wijziging in de sessie de
+      // enige die het opruimt.
+      if(stored.length!==pins.length) localStorage.setItem(sessionKey,JSON.stringify(pins));
+    }
 
     /* Ook een sessie-01 die al vóór de demo bestond krijgt de voorbeelden
        één keer toegevoegd. Bestaande bijdragen blijven staan. De aparte
@@ -1860,6 +1896,9 @@ async function askKnowledge(){
   }
 }
 function closeNote(){
+  // Wat er in de velden stond staat al in de markering (zie noteToPin), maar
+  // de opslag kan nog in de wacht staan; die trekken we hier recht.
+  if(selected&&saveTimer){ clearTimeout(saveTimer); saveTimer=null; save(); }
   askAbort?.abort(); askAbort=null;
   const n=el("note"); n.style.display="none"; n.classList.remove("opening"); selected=null;
   if(keyboardTarget===el("noteTitle")||keyboardTarget===el("noteText")) hideKeyboard(true);
@@ -2089,10 +2128,18 @@ function updateUI(pucks){
   /* De aardingswaarschuwing is installatietaal ("check de aarding") en hoort
      bij het ijken van de tafel, niet bij het gesprek eromheen. */
   const flag=el("flag"), ground=DEV&&realTouches.size>=3&&!pucks.length;
-  flag.style.display=ground?"block":"none";
-  if(ground) flag.textContent=tr("groundFlag");
-  if(el("analytics").classList.contains("open")) renderAnalytics();
+  // Een volle opslag gaat voor: dat kost iemand zijn bijdrage, de aarding
+  // kost hooguit een meting.
+  if(storageFull){ flag.style.display="block"; flag.innerHTML=tr("storageFull"); }
+  else{ flag.style.display=ground?"block":"none"; if(ground) flag.textContent=tr("groundFlag"); }
+  /* De analyse bouwde zichzelf 6x per seconde opnieuw op: knoppen verdwenen
+     onder een trage vinger vandaan en de lijst sprong terug naar boven terwijl
+     je las. Nu alleen als er werkelijk iets veranderd is. */
+  if(el("analytics").classList.contains("open") && analyticsRevision!==pinsRevision){
+    analyticsRevision=pinsRevision; renderAnalytics();
+  }
 }
+let analyticsRevision=-1;
 
 /* De laatste markeringen, met een kruisje per regel om er één weg te halen.
    Staat in het analysevenster: daar lees je na wat er ligt, en daar hoort
@@ -2197,7 +2244,7 @@ function openAnalytics(){
   // dezelfde tafelrand te verschijnen en in de leesrichting daarvan te staan.
   analyticsSide=menuSide||"a";
   analyticsRotation=analyticsSide==="b"&&sidesActive()?180:0;
-  closeMenu(); closeNote(); renderAnalytics(); applyAnalyticsOrientation();
+  closeMenu(); closeNote(); analyticsRevision=pinsRevision; renderAnalytics(); applyAnalyticsOrientation();
   const a=el("analytics"); a.classList.add("open");
   el("analytics").scrollTop=0; el("analytics").querySelector(".analytics-inner").scrollTop=0;
 }
@@ -2908,11 +2955,21 @@ el("search").onkeydown=async e=>{
     if(j[0]){ MV.lat=+j[0].lat; MV.lng=+j[0].lon; MV.zoom=15; }
   }catch(err){}
 };
-el("noteSave").onclick=()=>{ if(selected){ setTimeout(()=>{ if(selected) renderMatches(selected); },0);
+/* Elke aanslag gaat meteen naar de markering. Dit is een tafel waar meerdere
+   mensen tegelijk bezig zijn: er is één notitievenster, en wachten tot iemand
+   op "Bewaren" drukt betekende dat de half getypte bijdrage van de eerste weg
+   was zodra de tweede een markering aantikte. "Bewaren" sluit nu het venster;
+   het bewaart niets meer wat er niet al stond. */
+function noteToPin(){
+  if(!selected) return;
   selected.title=el("noteTitle").value.trim();
   selected.description=el("noteText").value.trim();
-  selected.note=selected.description; // keep older exports and saved sessions compatible
-  save();
+  selected.note=selected.description;  // keep older exports and saved sessions compatible
+}
+["noteTitle","noteText"].forEach(id=>
+  el(id).addEventListener("input",()=>{ noteToPin(); saveSoon(); }));
+el("noteSave").onclick=()=>{ if(selected){ setTimeout(()=>{ if(selected) renderMatches(selected); },0);
+  noteToPin(); save();
 } closeNote(); };
 el("noteFlip").onclick=()=>flipNote();
 el("noteDel").onclick=()=>{ if(selected){const i=pins.indexOf(selected); if(i>=0)pins.splice(i,1); save();} closeNote(); };
@@ -3170,7 +3227,34 @@ addEventListener("drop",e=>{
 });
 
 /* Save the tiles currently on screen as a picture pinned to their coordinates,
-   so the table shows a map even with no connection at all. */
+   so the table shows a map even with no connection at all.
+
+   Die afbeelding is een JPEG van een paar megabyte en stond in localStorage —
+   dezelfde 5 MB waar de bijdragen in moeten. Wie 's ochtends op "Kaart offline
+   bewaren" drukte, zag daarna elke bijdrage stilletjes niet bewaard worden.
+   Hij gaat nu naar IndexedDB, dat een eigen en veel ruimere quota heeft. */
+const BAKE_DB="pucktable", BAKE_STORE="basemap", BAKE_KEY="current";
+function bakeIDB(mode,run){
+  return new Promise((resolve,reject)=>{
+    if(!self.indexedDB) return reject(new Error("geen IndexedDB"));
+    const req=indexedDB.open(BAKE_DB,1);
+    req.onupgradeneeded=()=>{
+      if(!req.result.objectStoreNames.contains(BAKE_STORE)) req.result.createObjectStore(BAKE_STORE);
+    };
+    req.onerror=()=>reject(req.error);
+    req.onsuccess=()=>{
+      const db=req.result;
+      let op;
+      try{ op=run(db.transaction(BAKE_STORE,mode).objectStore(BAKE_STORE)); }
+      catch(err){ db.close(); return reject(err); }
+      op.onsuccess=()=>{ resolve(op.result); db.close(); };
+      op.onerror =()=>{ reject(op.error);   db.close(); };
+    };
+  });
+}
+const bakePut=rec=>bakeIDB("readwrite",st=>st.put(rec,BAKE_KEY));
+const bakeGet=()=>bakeIDB("readonly", st=>st.get(BAKE_KEY));
+const bakeDel=()=>bakeIDB("readwrite",st=>st.delete(BAKE_KEY));
 let bakePending=false;
 function bakeMap(){
   const nw=MV.unproject(0,0), se=MV.unproject(W,H);
@@ -3190,26 +3274,38 @@ function bakeMap(){
   const img=new Image();
   img.onload=()=>{ bgImage={img,west:rec.west,north:rec.north,east:rec.east,south:rec.south}; };
   img.src=data;
-  try{
-    localStorage.setItem("pucktable-basemap",JSON.stringify(rec));
-    el("bakeHint").innerHTML=tr("bakeSaved",Math.round(data.length/1024));
-  }catch(err){
-    el("bakeHint").innerHTML=tr("bakeTooBig");
-  }
+  bakePut(rec)
+    .then(()=>{ el("bakeHint").innerHTML=tr("bakeSaved",Math.round(data.length/1024)); })
+    .catch(()=>{ el("bakeHint").innerHTML=tr("bakeTooBig"); });
+}
+function showBasemap(rec){
+  if(!rec||!rec.data) return;
+  const img=new Image();
+  img.onload=()=>{ bgImage={img,west:rec.west,north:rec.north,east:rec.east,south:rec.south}; };
+  img.src=rec.data;
 }
 function restoreBasemap(){
-  try{
-    const raw=localStorage.getItem("pucktable-basemap"); if(!raw) return;
-    const rec=JSON.parse(raw);
-    const img=new Image();
-    img.onload=()=>{ bgImage={img,west:rec.west,north:rec.north,east:rec.east,south:rec.south}; };
-    img.src=rec.data;
-  }catch(e){}
+  // Een kaart die vóór de verhuizing naar IndexedDB bewaard is, verhuist mee
+  // en gaat daarna uit localStorage: daar hield hij de ruimte bezet die de
+  // bijdragen nodig hebben.
+  let old=null;
+  try{ old=localStorage.getItem("pucktable-basemap"); }catch(e){}
+  if(old){
+    try{
+      const rec=JSON.parse(old);
+      showBasemap(rec);
+      bakePut(rec).then(()=>{ try{ localStorage.removeItem("pucktable-basemap"); }catch(e){} })
+                  .catch(()=>{});
+      return;
+    }catch(e){}
+  }
+  bakeGet().then(showBasemap).catch(()=>{});
 }
 el("btnBake").onclick=()=>{ bakePending=true; };
 el("btnUnbake").onclick=()=>{
   bgImage=null;
   try{ localStorage.removeItem("pucktable-basemap"); }catch(e){}
+  bakeDel().catch(()=>{});
   el("bakeHint").textContent=tr("bakeCleared");
 };
 
