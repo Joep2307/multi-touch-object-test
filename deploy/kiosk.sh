@@ -24,8 +24,12 @@ als_gebruiker(){ sudo -u "$USER_NAME" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/u
 heeft(){ command -v "$1" >/dev/null 2>&1; }
 root_nodig(){ [ "$(id -u)" -eq 0 ] || { echo "draai dit met sudo: sudo ./deploy/kiosk.sh $1" >&2; exit 1; }; }
 
+# Een echte deb gaat voor op de snap. De snap-chromium zit in een profiel dat
+# verborgen mappen in de home niet mag schrijven, en hij wisselt van versie
+# wanneer snapd daar zin in heeft — allebei niet wat je op een tentoonstelling
+# wilt. Vandaar deze volgorde, en de waarschuwing hieronder.
 vind_browser(){
-  for b in chromium chromium-browser google-chrome-stable google-chrome; do
+  for b in google-chrome-stable google-chrome chromium-browser chromium; do
     heeft "$b" && { command -v "$b"; return 0; }
   done
   return 1
@@ -75,6 +79,14 @@ zacht(){
 kiosk(){
   root_nodig kiosk
   local browser; browser=$(vind_browser) || { echo "geen chromium gevonden — installeer die eerst: sudo apt install chromium" >&2; exit 1; }
+  case "$browser" in
+    /snap/*)
+      echo "Let op: dit is de snap-versie ($browser)."
+      echo "Die mag geen verborgen mappen in je home schrijven, dus het profiel"
+      echo "staat hieronder bewust op ~/puck-kiosk-profiel en niet in ~/.config."
+      echo "Een echte deb (google-chrome-stable) is voor een kiosk rustiger."
+      ;;
+  esac
   heeft cage || { echo "cage installeren…"; apt-get update -qq && apt-get install -y cage; }
 
   # cage is een compositor die precies één venster kent. Geen werkbladen, geen
@@ -101,7 +113,7 @@ ExecStart=/usr/bin/cage -s -- $browser \\
   --ozone-platform=wayland --kiosk --app=http://localhost:$PORT \\
   --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 \\
   --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble \\
-  --user-data-dir=/home/$USER_NAME/.config/puck-kiosk
+  --user-data-dir=/home/$USER_NAME/puck-kiosk-profiel
 Restart=always
 RestartSec=3
 

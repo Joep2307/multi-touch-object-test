@@ -53,6 +53,25 @@ niemand kan er per ongeluk uit.
 De browser start meteen met de vlaggen die de rest ook stilhouden:
 `--kiosk --disable-pinch --overscroll-history-navigation=0 --touch-events=enabled`.
 
+### Zwart scherm terwijl alles lijkt te draaien
+
+Zie je `puck-kiosk.service` als *active* maar geeft `pgrep chromium` niets, dan
+draait cage met een leeg scherm: de browser is nooit opgekomen. Twee oorzaken,
+allebei een keer voorgekomen:
+
+- **De snap-chromium.** Die mag geen verborgen mappen in je home schrijven,
+  dus een `--user-data-dir` onder `~/.config` laat hem meteen afsluiten. Het
+  profiel staat daarom op `~/puck-kiosk-profiel`. Draai `sudo ./deploy/kiosk.sh
+  kiosk` opnieuw als je nog de oude dienst hebt, en kijk mee met
+  `journalctl -b --no-pager | grep -iE 'chromium|apparmor|DENIED'`.
+- **Een blijven staan `SingletonLock`** van een vorige start:
+  `rm -f ~/puck-kiosk-profiel/Singleton*` en `sudo systemctl restart puck-kiosk`.
+
+En kijk of de zichtbare console wel die van de kiosk is: `loginctl` toont per
+sessie een tty, en alleen de `active` is in beeld. Staat er een tweede sessie op
+tty2, dan tekent cage op tty1 waar niemand naar kijkt — `sudo chvt 1` zet het
+terug, `sudo loginctl terminate-session <n>` ruimt de andere op.
+
 ## Wat de pagina zelf al doet
 
 `html,body` staan op `touch-action:none` en `overscroll-behavior:none`, dus de
