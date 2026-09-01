@@ -323,6 +323,32 @@ async function newPage(uiMode){
   await ctx3.close();
 }
 
+// ── 10. de resetknop: toets leren, en ingedrukt houden begint opnieuw ──
+{
+  const {page, ctx, errs} = await newPage('laptop');
+  await page.click('#btnSetA'); await page.waitForTimeout(250);
+  await page.evaluate(()=>document.querySelectorAll('#menu .menu-sec').forEach(s=>s.classList.remove('collapsed')));
+  await page.waitForTimeout(200);
+  await page.click('#btnResetKey'); await page.waitForTimeout(150);
+  await page.keyboard.press('F9'); await page.waitForTimeout(250);
+  ok('de toets wordt onthouden', await page.evaluate(()=>localStorage.getItem('pucktable-reset-key'))==='F9');
+  ok('en staat in beeld', /F9/.test(await page.locator('#resetKeyHint').textContent()));
+
+  // een korte tik mag niets doen
+  await page.evaluate(()=>{ window.__voor=1; });
+  await page.keyboard.press('F9'); await page.waitForTimeout(400);
+  ok('een tik begint niet opnieuw', await page.evaluate(()=>window.__voor)===1);
+
+  // ingedrukt houden wel: de pagina herlaadt, dus het merkteken is weg
+  await page.keyboard.down('F9');
+  await page.waitForTimeout(1400);
+  await page.keyboard.up('F9').catch(()=>{});
+  await page.waitForTimeout(600);
+  ok('ingedrukt houden begint opnieuw', await page.evaluate(()=>window.__voor)===undefined);
+  ok('geen JS-fouten (resetknop)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx.close();
+}
+
 await browser.close();
 server.close();
 fs.rmSync(work, { recursive: true, force: true });

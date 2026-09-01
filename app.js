@@ -35,6 +35,10 @@ const CFG = {
      Een slecht contact of een stoot tegen de tafel laat een puck korter dan
      dit wegvallen; die komt terug zoals hij was, niet als nieuwe puck. */
   puckMemoryMS:10000,
+  /* Hoe lang de resetknop ingedrukt moet blijven voor de tafel opnieuw begint.
+     Op nul is één aanraking genoeg, en dan gooit een mouw langs de knop een
+     half gesprek weg. */
+  resetHoldMS:700,
   retina:0,           // use the visible zoom level; avoids four times as many tile requests
   /* Eenmalig per opstelling, niet per sessie. Deze drie stonden als invoer-
      velden in het menu, waar ze bij elke herlaad terugsprongen naar hun
@@ -135,6 +139,11 @@ const L = {
        bakeFailed:"<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw.",
        bakeSaved:(kb)=>`Kaartbeeld bewaard (${kb} kB). Dit gebied verschijnt nu ook zonder internet.`,
        bakeTooBig:"Bewaard voor deze sessie, maar te groot voor de browseropslag. Zoom iets verder uit en probeer opnieuw.",
+       resetHead:"Resetknop", resetKey:"Resetknop instellen",
+       resetKeyWaiting:"Druk nu op de knop…",
+       resetKeyNow:(k)=>`De knop staat op <b>${k}</b>. Ingedrukt houden begint opnieuw.`,
+       resetKeyNone:"Nog geen knop ingesteld.",
+       resetBusy:"Opnieuw beginnen — loslaten om te stoppen",
        calm:"Kaart dempen", calmOn:"Kaart is gedempt",
        calmHint:"Gedempt is de kaart de ondergrond en zijn de markeringen het enige felle op tafel.",
        storageFull:"<b>De browseropslag zit vol.</b> Nieuwe bijdragen worden niet bewaard. Exporteer de sessie en wis hem, of maak de offline kaart leeg.",
@@ -279,6 +288,11 @@ const L = {
        bakeFailed:"<b>Could not save the map view</b> — the tiles have not fully loaded yet. Wait a moment and try again.",
        bakeSaved:(kb)=>`Map view saved (${kb} kB). This area now also appears without an internet connection.`,
        bakeTooBig:"Saved for this session, but too large for browser storage. Zoom out a little and try again.",
+       resetHead:"Reset button", resetKey:"Set the reset button",
+       resetKeyWaiting:"Press the button now…",
+       resetKeyNow:(k)=>`The button is set to <b>${k}</b>. Hold it to start over.`,
+       resetKeyNone:"No button set yet.",
+       resetBusy:"Starting over — let go to stop",
        calm:"Mute the map", calmOn:"Map is muted",
        calmHint:"Muted, the map is the background and the marks are the only bright thing on the table.",
        storageFull:"<b>Browser storage is full.</b> New contributions are not being saved. Export the session and wipe it, or clear the offline map.",
@@ -709,6 +723,88 @@ function blitCovered(g,z,x,y,rx,ry,rw,rh){
   return false;
 }
 let bgImage=null;   // {img, west, east, north, south} — a map picture pinned to real coordinates
+/* ── De resetknop ────────────────────────────────────────────────────────
+   Een knop naast de tafel waarmee iemand de tafel opnieuw begint. Zulke
+   USB-knoppen doen zich voor als een toetsenbord en sturen één toets, maar
+   welke toets dat is verschilt per knop en staat nergens op de doos. De tafel
+   leest hem daarom zelf uit: "Resetknop instellen" in de instellingen, dan één
+   keer drukken, en de toetscode gaat in localStorage — bij de tafel dus, niet
+   in de code.
+
+   Ingedrukt houden, niet tikken. Iemand die tegen de tafelrand leunt of langs
+   de knop strijkt gooit anders een half gesprek weg; nu loopt er eerst een
+   ring vol en is loslaten genoeg om je te bedenken. */
+let resetKey=(()=>{ try{ return localStorage.getItem("pucktable-reset-key")||""; }catch(e){ return ""; } })();
+let resetLearning=false, resetHeldAt=0;
+/* `e.code` is de plek van de toets, niet het teken: dat is precies wat je van
+   een knop wilt weten, en het verandert niet mee met de toetsenbordindeling. */
+const keyLabel=code=>code.replace(/^Key/,"").replace(/^Digit/,"").replace(/^Numpad/,"num ")||code;
+function applyResetKey(){
+  const b=el("btnResetKey");
+  b.classList.toggle("on",resetLearning);
+  b.textContent=resetLearning?tr("resetKeyWaiting"):tr("resetKey");
+  el("resetKeyHint").innerHTML=resetKey?tr("resetKeyNow",keyLabel(resetKey)):tr("resetKeyNone");
+}
+function setResetKey(code){
+  resetKey=code; resetLearning=false;
+  try{ localStorage.setItem("pucktable-reset-key",code); }catch(e){}
+  applyResetKey();
+}
+function doReset(){
+  resetHeldAt=0;
+  // Wat er getypt is staat al in de markering, maar de opslag kan nog in de
+  // wacht staan (zie saveSoon). Die eerst afmaken; anders kost een druk op de
+  // knop precies de zin die iemand net intypte.
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; }
+  save();
+  location.reload();
+}
+addEventListener("keydown",e=>{
+  if(resetLearning){
+    e.preventDefault();
+    if(e.code==="Escape"){ resetLearning=false; applyResetKey(); return; }
+    setResetKey(e.code); return;
+  }
+  if(!resetKey||e.code!==resetKey||e.repeat) return;
+  // Een knop die een gewone typetoets stuurt mag niet afgaan terwijl iemand
+  // een bijdrage schrijft. Functietoetsen zijn altijd de knop.
+  const t=e.target;
+  if(!/^F\d+$/.test(e.code) && t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA")) return;
+  e.preventDefault();
+  if(!resetHeldAt) resetHeldAt=performance.now();
+});
+addEventListener("keyup",e=>{ if(e.code===resetKey) resetHeldAt=0; });
+addEventListener("blur",()=>{ resetHeldAt=0; });
+/* Wat er gebeurt terwijl de knop ingedrukt is. Midden op tafel, want daar
+   kijkt iedereen naar zodra er iets verandert; twee keer, zodat het aan beide
+   kanten rechtop staat. */
+function drawResetProgress(ctx,now){
+  if(!resetHeldAt) return;
+  const p=Math.min(1,(now-resetHeldAt)/CFG.resetHoldMS);
+  if(p>=1){ doReset(); return; }
+  const r=Math.max(46,CFG.ringPX*0.55), cx=W/2, cy=H/2;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle="rgba(9,12,17,.55)"; ctx.lineWidth=9; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+p*Math.PI*2);
+  ctx.strokeStyle="#ffd166"; ctx.lineWidth=7; ctx.lineCap="round"; ctx.stroke();
+  const label=tr("resetBusy");
+  ctx.font="600 "+CHIP.font.toFixed(1)+"px "+CHIP_FAMILY;
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  const h=chipHeight(), w=Math.ceil(ctx.measureText(label).width)+CHIP.padX*2;
+  const chip=(y,turn)=>{
+    ctx.save(); ctx.translate(cx,y); if(turn) ctx.rotate(Math.PI);
+    ctx.beginPath(); ctx.roundRect(-w/2,-h/2,w,h,Math.min(CHIP.radius,h/2));
+    ctx.fillStyle="rgba(9,12,17,.92)"; ctx.fill();
+    ctx.strokeStyle="rgba(255,209,102,.7)"; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle="#ffd166"; ctx.fillText(label,0,0.5);
+    ctx.restore();
+  };
+  chip(cy+r+h,false);
+  if(sidesActive()) chip(cy-r-h,true);
+  ctx.restore();
+}
+
 /* Stille kaart, luide inhoud. Een kaart is verzadigd bedoeld: witte wegen,
    blauw water, groene vlakken. Daar bovenop leggen we vier oordeelskleuren en
    een blauwe knop, en dan vecht de inhoud met zijn eigen ondergrond. Gedempt
@@ -2246,6 +2342,7 @@ function frame(){
 
   drawNoteTether(ctx,pucks);
   drawLockBadge(ctx);
+  drawResetProgress(ctx,now);
 
   if(debugMode) points.forEach((pt,i)=>{
     ctx.strokeStyle=usedIdx.has(i)?"#39d8a4":"#ff5f56"; ctx.lineWidth=2;
@@ -2609,6 +2706,7 @@ document.querySelectorAll("#menu .menu-sec>.accordion-head").forEach(head=>{
 });
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
 el("btnCalm").onclick=()=>{calmMap=!calmMap;applyCalm();};
+el("btnResetKey").onclick=()=>{ resetLearning=!resetLearning; applyResetKey(); };
 el("btnMoveDots").onclick=()=>{pinMoveMode=!pinMoveMode;closeNote();applyPinMoveMode();};
 function applyScale(){
   document.documentElement.style.setProperty("--ui-scale",String(uiScale));
@@ -3539,6 +3637,7 @@ function applyLang(){
   el("bakeHint").textContent=tr("bakeHint");
   buildLayerMenu();
   resetWipeButton();
+  applyResetKey();
   applyCalm();
   applyLock();
   applyPinMoveMode();
