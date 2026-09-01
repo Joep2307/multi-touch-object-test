@@ -388,7 +388,7 @@ body.keyboard-open #note{z-index:45}
             font:400 var(--text-2xs)/1.5 var(--display);color:#e8edf4;
             white-space:pre-wrap;
             height:var(--answer-h,196px);overflow-y:auto;
-            touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+            touch-action:none;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #noteAnswer::-webkit-scrollbar{width:5px}
 #noteAnswer::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(232,237,244,.22)}
 #noteAnswer::-webkit-scrollbar-track{background:transparent}
@@ -398,7 +398,10 @@ body.keyboard-open #note{z-index:45}
    elke veeg daar een kaartgebaar of een puck is; in een paneel moet een
    verticale veeg juist gewoon scrollen. overscroll-behavior houdt die veeg
    binnen het paneel zodra het einde bereikt is. */
-#note,#menu,#sheet{touch-action:pan-y;overscroll-behavior:contain;
+/* Geen `pan-y` maar `none`: het scrollen gebeurt in app.js, met de vinger die
+   het begon. De browser scrollt namelijk niet meer zodra er nog een contactpunt
+   op het glas ligt, en aan deze tafel ligt er altijd een puck. */
+#note,#menu,#sheet{touch-action:none;overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch}
 #note{max-height:calc(100vh - 24px);overflow-y:auto}
 #noteAnswer .kg-h{display:inline-block;margin-top:6px;color:#fff;font-weight:700}
@@ -420,7 +423,7 @@ body.keyboard-open #note{z-index:45}
    bewust kort en breed genoeg om ook aan een grote tafel van enige afstand
    te kunnen lezen. */
 #analytics{position:fixed;inset:0;z-index:70;display:none;overflow:hidden;padding:28px;
-  background:rgba(3,5,8,.88);backdrop-filter:blur(14px);touch-action:pan-y;overscroll-behavior:contain}
+  background:rgba(3,5,8,.88);backdrop-filter:blur(14px);touch-action:none;overscroll-behavior:contain}
 #analytics.open{display:flex;justify-content:center}
 #analytics.at-a{align-items:flex-end}
 #analytics.at-b{align-items:flex-start}

@@ -889,6 +889,53 @@ function syncGesture(){
              mx:(a.x+b.x)/2,my:(a.y+b.y)/2};
   }else gesture=null;
 }
+/* ── Scrollen in de bediening ────────────────────────────────────────────
+   Aan een tafel ligt er altijd iets op het glas. Zodra er meer dan één
+   contactpunt is, ziet de browser geen veeggebaar meer maar een multitouch-
+   gebaar, en dan scrollt hij een paneel niet meer: met een puck op tafel stond
+   het menu stil onder je vinger. Op een laptop met één vinger werkt het wel,
+   dus dit valt pas op de tafel op — en daar is het de enige manier om bij de
+   onderkant van een lijst te komen.
+
+   De panelen staan daarom op `touch-action:none` en het scrollen gebeurt hier,
+   met de vinger die het begon. `#learn` staat er bewust niet bij: het
+   meetvenster moet elke aanraking als contactpunt blijven zien, ook op zijn
+   eigen knoppen. */
+const uiChrome=t=>t?.closest?.(".panel,#sheet,#analytics,#documentViewer")||null;
+function scrollableFrom(node,root){
+  for(let n=node; n; n=n.parentElement){
+    if(n.scrollHeight>n.clientHeight+2){
+      const oy=getComputedStyle(n).overflowY;
+      if(oy==="auto"||oy==="scroll") return n;
+    }
+    if(n===root) break;
+  }
+  return null;
+}
+let panelScroll=null;
+function startPanelScroll(e,root){
+  const target=scrollableFrom(e.target,root);
+  if(!target) return;
+  // Het paneel staat op `zoom`, dus een schermpixel is niet een pixel in het
+  // paneel zelf. De verhouding volgt uit zijn eigen twee maten.
+  const scale=target.getBoundingClientRect().height/(target.offsetHeight||1)||1;
+  panelScroll={id:e.pointerId,el:target,y:e.clientY,top:target.scrollTop,scale,moved:false};
+}
+function movePanelScroll(e){
+  if(!panelScroll||e.pointerId!==panelScroll.id) return false;
+  const dy=e.clientY-panelScroll.y;
+  if(!panelScroll.moved&&Math.abs(dy)<5) return true;
+  panelScroll.moved=true;
+  panelScroll.el.scrollTop=panelScroll.top-dy/panelScroll.scale;
+  return true;
+}
+function endPanelScroll(e){
+  if(!panelScroll||e.pointerId!==panelScroll.id) return false;
+  // Een veeg is geen tik: de klik die erop volgt mag geen knop indrukken.
+  if(panelScroll.moved) panelDragEnd=performance.now();
+  panelScroll=null;
+  return true;
+}
 addEventListener("pointerdown",e=>{
   /* Het meetvenster slikt geen enkele aanraking, ook niet op zijn eigen
      knoppen: een puck die half onder het kaartje ligt moet gewoon gelezen
@@ -896,7 +943,12 @@ addEventListener("pointerdown",e=>{
      wel degelijk ligt. Een vinger die op een knop drukt telt zolang mee als
      contactpunt en verdwijnt weer bij loslaten; de kaart staat tijdens het
      meten toch stil (zie `mapMovable`). */
-  if(e.target.closest(".panel")) return;
+  const chrome=uiChrome(e.target);
+  if(chrome){
+    // Een vinger in de bediening scrollt zelf; zie startPanelScroll.
+    if(e.pointerType!=="mouse") startPanelScroll(e,chrome);
+    return;
+  }
   if(e.pointerType==="mouse") return;
   if(pinMoveMode){
     e.preventDefault();
@@ -931,6 +983,7 @@ addEventListener("pointerdown",e=>{
 });
 addEventListener("pointermove",e=>{
   if(e.pointerType==="mouse") return;
+  if(movePanelScroll(e)) return;
   if(pinDrag&&pinDrag.kind==="touch"&&pinDrag.pointerId===e.pointerId){
     movePinTo(pinDrag.pin,e.clientX,e.clientY); return;
   }
@@ -965,6 +1018,7 @@ addEventListener("pointermove",e=>{
   }
 });
 function endPointer(e){
+  if(endPanelScroll(e)) return;
   if(pinDrag&&pinDrag.kind==="touch"&&pinDrag.pointerId===e.pointerId){
     movePinTo(pinDrag.pin,e.clientX,e.clientY); pinDrag=null;
     document.body.classList.remove("dragging-dot"); save(); return;
@@ -1148,8 +1202,9 @@ addEventListener("wheel",e=>{
   if(pinMoveMode){e.preventDefault();return;}
   const hit=simPuckAt(e.clientX,e.clientY);
   if(hit){ e.preventDefault(); hit.rot+=e.deltaY*0.002; return; }
-  if(e.target.closest("#sheet")) return;
-  if(!mapLocked && !e.target.closest(".panel")){
+  // Wat bediening is, scrollt; alleen de kaart zelf zoomt.
+  if(uiChrome(e.target)) return;
+  if(!mapLocked){
     e.preventDefault();
     // normalise the wheel across mice (pixels), trackpads (many small pixels) and Firefox (lines/pages)
     const unit=e.deltaMode===1?16:e.deltaMode===2?H:1;

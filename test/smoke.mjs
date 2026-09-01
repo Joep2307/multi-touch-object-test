@@ -286,6 +286,43 @@ async function newPage(uiMode){
 
 
 
+// ── 9. scrollen in het menu met een vinger, ook met een puck op het glas ──
+{
+  const ctx3 = await browser.newContext({ viewport:{width:W,height:H}, hasTouch:true });
+  const page = await ctx3.newPage();
+  await page.addInitScript(()=>{ try{ localStorage.clear(); localStorage.setItem('pucktable-ui-mode','touch'); }catch(e){} });
+  const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
+  await page.goto(BASE+'/index.html');
+  await page.waitForTimeout(900);
+  await page.click('#btnSetA'); await page.waitForTimeout(300);
+  await page.evaluate(()=>document.querySelectorAll('#menu .menu-sec').forEach(s=>s.classList.remove('collapsed')));
+  await page.waitForTimeout(300);
+  const cdp = await page.context().newCDPSession(page);
+  const rect = await page.evaluate(()=>document.getElementById('menu').getBoundingClientRect().toJSON());
+  const x = rect.x+rect.width/2, y0 = rect.y+rect.height*0.7;
+  // `extra` is een tweede contactpunt op de kaart — een puck die op tafel ligt.
+  // Precies dat maakte de browser blind voor het veeggebaar.
+  const veeg = async extra => {
+    await page.evaluate(()=>document.getElementById('menu').scrollTop=0);
+    const pts = p => extra ? [p,{x:1200,y:500,id:9}] : [p];
+    if(extra) await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:1200,y:500,id:9}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:pts({x,y:y0,id:1})});
+    for(let i=1;i<=8;i++){
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:pts({x,y:y0-i*22,id:1})});
+      await page.waitForTimeout(25);
+    }
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints: extra?[{x:1200,y:500,id:9}]:[]});
+    if(extra) await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await page.waitForTimeout(300);
+    return page.evaluate(()=>document.getElementById('menu').scrollTop);
+  };
+  const alleen = await veeg(false), metPuck = await veeg(true);
+  ok('menu scrollt met een vinger', alleen>80 || (console.log('scrollTop:',alleen),false));
+  ok('menu scrollt ook met een puck op het glas', metPuck>80 || (console.log('scrollTop met puck:',metPuck),false));
+  ok('geen JS-fouten (scrollen)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx3.close();
+}
+
 await browser.close();
 server.close();
 fs.rmSync(work, { recursive: true, force: true });
