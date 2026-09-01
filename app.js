@@ -25,9 +25,12 @@ const CFG = {
   jitterPX:22, rearmPX:70, ringPX:110, rotationGain:3,
   /* De ring om de puck is een menu geworden. Kiezen gaat door naar een optie
      te draaien en even stil te houden: tikken blijft zo gereserveerd voor het
-     vastleggen van een markering. `puckDwellMS` is die stilstand,
-     `puckZoomPX` hoeveel je de puck vooruit moet duwen voor een zoomniveau. */
-  puckDwellMS:600, puckZoomPX:150, puckZoomDeadPX:2,
+     vastleggen van een markering. `puckDwellMS` is die stilstand in het
+     hoofdmenu; `puckTopicDwellMS` geldt in het thema-menu en is veel langer,
+     want daar draai je langs alle thema's om ze te lezen en mag onderweg
+     stilstaan nog geen keuze zijn. `puckZoomPX` is hoeveel je de puck vooruit
+     moet duwen voor een zoomniveau. */
+  puckDwellMS:600, puckTopicDwellMS:2000, puckZoomPX:150, puckZoomDeadPX:2,
   retina:0,           // use the visible zoom level; avoids four times as many tile requests
   /* Eenmalig per opstelling, niet per sessie. Deze drie stonden als invoer-
      velden in het menu, waar ze bij elke herlaad terugsprongen naar hun
@@ -1117,15 +1120,13 @@ function track(dets,now){
                angleOrigin:d.angle,rawOrigin:d.angle,
                frames:0,state:"candidate",buf:[],
                conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
-               // De puck begint in het hoofdmenu, in de rustigste stand. De
-               // stand waarin hij landt telt wél als keuze: je legt hem neer
-               // met de neus op de optie die je wilt, en na de gewone stilstand
-               // staat hij daarop. Dat is dezelfde handeling als kiezen door
-               // stil te houden, alleen hoef je niet eerst weg te draaien en
-               // terug. Vandaar `dwellDone:false` en een stilstand die meteen
-               // loopt.
-               menu:"root",mode:"move",topicIdx:0,
-               dwellIdx:-1,dwellT0:now,dwellDone:false,zoomRefY:d.y,zoomAnchor:null}; tracks.set(d.id,t);
+               // De puck begint in het hoofdmenu. In welke stand hij landt is
+               // meteen de keuze: leg je hem neer met de neus op Zoomen, dan
+               // zoomt hij, zonder eerst weg te draaien en zonder te wachten.
+               // `landing` zegt dat die keuze nog gemaakt moet worden; dat
+               // gebeurt zodra de puck herkend is (zie hieronder).
+               menu:"root",mode:"move",topicIdx:0,landing:true,
+               dwellIdx:-1,dwellT0:now,dwellDone:true,zoomRefY:d.y,zoomAnchor:null}; tracks.set(d.id,t);
               t.dwellIdx=ringIndexOf(d.angle,4); }
     t.frames++; t.lastSeen=now; t.conf=t.conf*.7+d.conf*.3;
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
@@ -1153,7 +1154,11 @@ function track(dets,now){
     // aan: het zoom-ijkpunt gaat mee.
     if(moved>CFG.rearmPX) t.zoomAnchor=null;
     // Draaien bedient het menu, verschuiven bedient (in de zoomstand) de kaart.
-    if(t.state==="recognised") updatePuckMenu(t,now);
+    if(t.state==="recognised"){
+      // De stand waarin de puck op tafel komt is zijn eerste keuze.
+      if(t.landing){ t.landing=false; commitPuckChoice(t,ringIndexOf(t.angle,ringItems(t).length)); }
+      updatePuckMenu(t,now);
+    }
     applyPuckZoom(t);
   }
   const seen=new Set(dets.map(d=>d.id));
@@ -1236,19 +1241,23 @@ function commitPuckChoice(t,idx){
   t.dwellDone=true;
 }
 
+/* Hoe lang stilhouden op dit niveau een keuze is. In het thema-menu draai je
+   langs alle thema's om ze te lezen; daar mag onderweg blijven hangen nog geen
+   keuze zijn, dus staat de tijd daar veel ruimer. */
+const dwellMSFor=t=>t.menu==="topics"?CFG.puckTopicDwellMS:CFG.puckDwellMS;
 /* De stilstand bijhouden. Wordt elk beeld aangeroepen zolang een puck ligt. */
 function updatePuckMenu(t,now){
   const n=ringItems(t).length, idx=ringIndexOf(t.angle,n);
   if(idx!==t.dwellIdx){ t.dwellIdx=idx; t.dwellT0=now; t.dwellDone=false; return; }
   if(t.dwellDone) return;
-  if(now-t.dwellT0>=CFG.puckDwellMS){ t.dwellDone=true; commitPuckChoice(t,idx); }
+  if(now-t.dwellT0>=dwellMSFor(t)){ t.dwellDone=true; commitPuckChoice(t,idx); }
 }
 /* Hoever de stilstand gevorderd is; 0 als er niets loopt. Alleen voor het beeld. */
 function puckDwellProgress(t,now){
   if(t.dwellDone) return 0;
   const items=ringItems(t), item=items[t.dwellIdx];
   if(!item||item.disabled) return 0;
-  return Math.max(0,Math.min(1,(now-t.dwellT0)/CFG.puckDwellMS));
+  return Math.max(0,Math.min(1,(now-t.dwellT0)/dwellMSFor(t)));
 }
 
 /* Zoomen met de puck zelf: vooruit duwen (van je af, het scherm op) zoomt in,
