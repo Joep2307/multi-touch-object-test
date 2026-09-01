@@ -53,7 +53,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 body.moving-dots #c{cursor:grab}
 body.dragging-dot #c{cursor:grabbing}
 .panel{position:fixed;background:var(--panel);backdrop-filter:blur(14px);
-  border:1px solid var(--line);border-radius:17px;padding:17px 19px;z-index:10}
+  border:1px solid var(--line);border-radius:17px;padding:17px 19px;z-index:10;
+  /* Een paneel ligt op het glas, boven de kaart. Zonder schaduw loopt een licht
+     paneel op een lichte kaart over in zijn ondergrond en zweeft er niets. */
+  box-shadow:0 12px 34px var(--shadow),0 2px 6px var(--shadow)}
 /* ── Grootte van de bediening ─────────────────────────────────────
    Eén regelaar voor alle zwevende vensters. `zoom` schaalt maat én
    plaatsing mee, zodat een venster dat groter wordt niet half van het

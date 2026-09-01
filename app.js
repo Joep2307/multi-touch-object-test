@@ -135,6 +135,8 @@ const L = {
        bakeFailed:"<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw.",
        bakeSaved:(kb)=>`Kaartbeeld bewaard (${kb} kB). Dit gebied verschijnt nu ook zonder internet.`,
        bakeTooBig:"Bewaard voor deze sessie, maar te groot voor de browseropslag. Zoom iets verder uit en probeer opnieuw.",
+       calm:"Kaart dempen", calmOn:"Kaart is gedempt",
+       calmHint:"Gedempt is de kaart de ondergrond en zijn de markeringen het enige felle op tafel.",
        storageFull:"<b>De browseropslag zit vol.</b> Nieuwe bijdragen worden niet bewaard. Exporteer de sessie en wis hem, of maak de offline kaart leeg.",
        bakeCleared:"Bewaarde kaart gewist.",
 
@@ -277,6 +279,8 @@ const L = {
        bakeFailed:"<b>Could not save the map view</b> — the tiles have not fully loaded yet. Wait a moment and try again.",
        bakeSaved:(kb)=>`Map view saved (${kb} kB). This area now also appears without an internet connection.`,
        bakeTooBig:"Saved for this session, but too large for browser storage. Zoom out a little and try again.",
+       calm:"Mute the map", calmOn:"Map is muted",
+       calmHint:"Muted, the map is the background and the marks are the only bright thing on the table.",
        storageFull:"<b>Browser storage is full.</b> New contributions are not being saved. Export the session and wipe it, or clear the offline map.",
        bakeCleared:"Saved map cleared.",
 
@@ -705,6 +709,21 @@ function blitCovered(g,z,x,y,rx,ry,rw,rh){
   return false;
 }
 let bgImage=null;   // {img, west, east, north, south} — a map picture pinned to real coordinates
+/* Stille kaart, luide inhoud. Een kaart is verzadigd bedoeld: witte wegen,
+   blauw water, groene vlakken. Daar bovenop leggen we vier oordeelskleuren en
+   een blauwe knop, en dan vecht de inhoud met zijn eigen ondergrond. Gedempt
+   is de kaart weer wat hij hier is — waar iets ligt — en zijn de markeringen
+   het enige verzadigde op tafel. Werkt op elk kaartbeeld, ook op een luchtfoto
+   en op een offline bewaard beeld, want het zit op het tekenen en niet op de
+   bron. */
+let calmMap=(()=>{ try{ return localStorage.getItem("pucktable-calm")!=="0"; }catch(e){ return true; } })();
+const CALM_FILTER="saturate(.55) contrast(.97) brightness(1.02)";
+function applyCalm(){
+  el("btnCalm").classList.toggle("on",calmMap);
+  el("btnCalm").textContent=calmMap?tr("calmOn"):tr("calm");
+  mapRenderKey="";
+  try{ localStorage.setItem("pucktable-calm",calmMap?"1":"0"); }catch(e){}
+}
 function drawMap(g){
   g.fillStyle=colorTheme==="light"?"#e8edf3":"#0b0e13"; g.fillRect(0,0,W,H);
   let drawn=0;
@@ -712,6 +731,7 @@ function drawMap(g){
   const coverW=W*c+H*s,coverH=W*s+H*c;
   g.save();
   g.translate(W/2,H/2); g.rotate(rotation); g.translate(-W/2,-H/2);
+  if(calmMap&&"filter" in g) g.filter=CALM_FILTER;
 
   if(bgImage){
     const nw=MV.projectRaw(bgImage.west,bgImage.north), se=MV.projectRaw(bgImage.east,bgImage.south);
@@ -732,6 +752,7 @@ function drawMap(g){
     if(blitCovered(g,z,wrapped,ty,rx,ry,rw,rh)) drawn++;
     else if(!bgImage){ g.strokeStyle=colorTheme==="light"?"rgba(115,129,147,.42)":"rgba(28,35,45,.9)"; g.lineWidth=1; g.strokeRect(rx,ry,rw,rh); }
   }
+  if("filter" in g) g.filter="none";
   g.restore();
 
   if(!drawn && MV.set!=="none"){
@@ -782,7 +803,7 @@ function describe(p1,p2,p3){
   return {ratios:[e[0].d/long.d,e[1].d/long.d],longest:long.d,anchor,
           chir:cross>=0?1:-1,cx:(p1.x+p2.x+p3.x)/3,cy:(p1.y+p2.y+p3.y)/3};
 }
-const realTouches=new Map(); let peakTouches=0;
+const realTouches=new Map();
 
 /* Sommige touchscreens maken geen gewone `click` als er al drie contacten op
    het glas liggen. Dat is precies de normale situatie met een fysieke puck:
@@ -906,7 +927,6 @@ addEventListener("pointerdown",e=>{
     }
   }
   realTouches.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  peakTouches=Math.max(peakTouches,realTouches.size);
   syncGesture();
 });
 addEventListener("pointermove",e=>{
@@ -1307,8 +1327,6 @@ const ringIndexOf=(angle,n)=>{
   let a=(angle+Math.PI)/(Math.PI*2); a=(a%1+1)%1;
   return Math.floor(a*n)%n;
 };
-/* Terugval voor code die nog in thema's denkt. */
-const topicOf=angle=>ringIndexOf(angle,topics().length);
 
 function ringItems(t){
   if(t.menu==="topics")
@@ -1979,7 +1997,7 @@ addEventListener("resize",resize);
 
 function paintMapLayer(){
   const bgKey=bgImage?[bgImage.west,bgImage.east,bgImage.north,bgImage.south].join(","):"none";
-  const key=[W,H,MV.set,MV.lng.toFixed(7),MV.lat.toFixed(7),MV.zoom.toFixed(5),MV.north,tileRevision,bgKey].join("|");
+  const key=[W,H,MV.set,MV.lng.toFixed(7),MV.lat.toFixed(7),MV.zoom.toFixed(5),MV.north,tileRevision,bgKey,calmMap].join("|");
   if(key!==mapRenderKey){drawMap(mapCtx);mapRenderKey=key;}
   ctx.drawImage(mapLayer,0,0,mapLayer.width,mapLayer.height,0,0,W,H);
 }
@@ -2524,6 +2542,7 @@ document.querySelectorAll("#menu .menu-sec>.accordion-head").forEach(head=>{
   };
 });
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
+el("btnCalm").onclick=()=>{calmMap=!calmMap;applyCalm();};
 el("btnMoveDots").onclick=()=>{pinMoveMode=!pinMoveMode;closeNote();applyPinMoveMode();};
 function applyScale(){
   document.documentElement.style.setProperty("--ui-scale",String(uiScale));
@@ -3454,6 +3473,7 @@ function applyLang(){
   el("bakeHint").textContent=tr("bakeHint");
   buildLayerMenu();
   resetWipeButton();
+  applyCalm();
   applyLock();
   applyPinMoveMode();
   renderTray();
