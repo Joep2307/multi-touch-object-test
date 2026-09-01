@@ -22,7 +22,7 @@ const CFG = {
      laatst bekende positie en hoek 0,9 s vast in plaats van hem na 0,18 s te
      verwijderen. */
   stableFrames:2, dropoutMS:900, smoothing:4,
-  jitterPX:22, rearmPX:70, ringPX:110, rotationGain:2,
+  jitterPX:22, rearmPX:70, ringPX:110, rotationGain:3,
   /* De ring om de puck is een menu geworden. Kiezen gaat door naar een optie
      te draaien en even stil te houden: tikken blijft zo gereserveerd voor het
      vastleggen van een markering. `puckDwellMS` is die stilstand,
@@ -1133,9 +1133,11 @@ function track(dets,now){
     t.lastRawAngle=d.angle;
     t.measuredAngle+=rawStep;
     t.filteredAngle+=(t.measuredAngle-t.filteredAngle)*0.55;
-    // Eén graad aan de puck telt als twee graden op de keuzering. Daardoor is
-    // ongeveer 45 graden draaien genoeg om naar de volgende van vier opties te
+    // Eén graad aan de puck telt als drie graden op de keuzering. Daardoor is
+    // ongeveer 30 graden draaien genoeg om naar de volgende van vier opties te
     // gaan, terwijl de filtering hierboven kleine contacttrillingen dempt.
+    // Meer versterking dan dit maakt de ring nerveus: dan tikt de trilling van
+    // de contactpunten al tegen een segmentgrens aan.
     t.angle=t.angleOrigin+(t.filteredAngle-t.rawOrigin)*CFG.rotationGain;
     t.state=t.frames>=CFG.stableFrames?"recognised":"candidate";
     const moved=Math.hypot(t.x-t.anchorX,t.y-t.anchorY);
@@ -1826,6 +1828,26 @@ function frame(){
       ctx.stroke();
       ctx.fillStyle=off?"rgba(232,237,244,.32)":(selected?"#ffffff":"rgba(232,237,244,.9)");
       ctx.fillText(label,lx,ly+.5);
+    }
+    /* De wijzer. De ring zelf staat stil en alleen het dikke segment verspringt,
+       dus tot je een heel segment verder bent verandert er niets aan het beeld —
+       en dan lijkt de tafel dood terwijl hij je gewoon volgt. Deze wijzer staat
+       op de gemeten hoek en beweegt met elke graad mee: je ziet meteen dát je
+       gehoord wordt, en hoever je nog moet tot de volgende optie. */
+    {
+      const na=t.angle, nr0=R+6, nr1=CFG.ringPX-7;
+      ctx.save();
+      ctx.lineCap="round";
+      ctx.beginPath();
+      ctx.moveTo(t.x+Math.cos(na)*nr0,t.y+Math.sin(na)*nr0);
+      ctx.lineTo(t.x+Math.cos(na)*nr1,t.y+Math.sin(na)*nr1);
+      ctx.strokeStyle="rgba(7,9,12,.85)"; ctx.lineWidth=6; ctx.stroke();
+      ctx.strokeStyle="rgba(255,255,255,.92)"; ctx.lineWidth=3; ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(t.x+Math.cos(na)*nr1,t.y+Math.sin(na)*nr1,5,0,Math.PI*2);
+      ctx.fillStyle="#ffffff"; ctx.fill();
+      ctx.strokeStyle="rgba(7,9,12,.85)"; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.restore();
     }
     ctx.textBaseline="alphabetic";
     if(t.armed&&t.state==="recognised"){
