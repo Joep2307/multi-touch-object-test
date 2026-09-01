@@ -1117,11 +1117,15 @@ function track(dets,now){
                angleOrigin:d.angle,rawOrigin:d.angle,
                frames:0,state:"candidate",buf:[],
                conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
-               // De puck begint in het hoofdmenu, in de rustigste stand.
-               // `dwellDone` staat aan zodat de stand waarin hij toevallig
-               // op tafel landt niet meteen als keuze telt.
+               // De puck begint in het hoofdmenu, in de rustigste stand. De
+               // stand waarin hij landt telt wél als keuze: je legt hem neer
+               // met de neus op de optie die je wilt, en na de gewone stilstand
+               // staat hij daarop. Dat is dezelfde handeling als kiezen door
+               // stil te houden, alleen hoef je niet eerst weg te draaien en
+               // terug. Vandaar `dwellDone:false` en een stilstand die meteen
+               // loopt.
                menu:"root",mode:"move",topicIdx:0,
-               dwellIdx:-1,dwellT0:0,dwellDone:true,zoomRefY:d.y,zoomAnchor:null}; tracks.set(d.id,t);
+               dwellIdx:-1,dwellT0:now,dwellDone:false,zoomRefY:d.y,zoomAnchor:null}; tracks.set(d.id,t);
               t.dwellIdx=ringIndexOf(d.angle,4); }
     t.frames++; t.lastSeen=now; t.conf=t.conf*.7+d.conf*.3;
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
