@@ -31,6 +31,10 @@ const CFG = {
      stilstaan nog geen keuze zijn. `puckZoomPX` is hoeveel je de puck vooruit
      moet duwen voor een zoomniveau. */
   puckDwellMS:600, puckTopicDwellMS:2000, puckZoomPX:150, puckZoomDeadPX:2,
+  /* Hoe lang de stand van een puck bewaard blijft als hij van de tafel valt.
+     Een slecht contact of een stoot tegen de tafel laat een puck korter dan
+     dit wegvallen; die komt terug zoals hij was, niet als nieuwe puck. */
+  puckMemoryMS:10000,
   retina:0,           // use the visible zoom level; avoids four times as many tile requests
   /* Eenmalig per opstelling, niet per sessie. Deze drie stonden als invoer-
      velden in het menu, waar ze bij elke herlaad terugsprongen naar hun
@@ -73,10 +77,10 @@ const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
        topics:["Veiligheid","Verkeer","Groen","Afval","Sociaal","Anders"],
        move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
-       confirmTouch:"Draaien testen", confirmMouse:"Draaien testen",
+       confirmTouch:"Tik in het midden", confirmMouse:"Klik in het midden",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
-       touchHint:"Sleep en draai de puck om de herkenning en richting te testen.",
-       laptopHint:"Sleep en draai met Shift of het wiel om de herkenning en richting te testen.",
+       touchHint:"Sleep, draai naar een keuze en houd even stil, tik in het midden om vast te leggen.",
+       laptopHint:"Sleep, draai met Shift of het wiel en houd stil, klik in het midden om vast te leggen.",
        puckMove:"Verplaatsen", puckSelect:"Kiezen", puckZoom:"Zoomen", puckBack:"Terug",
        modeZoom:"vooruit = inzoomen",
        flipSide:"Naar de overkant", flipNote:"Naar de overkant",
@@ -211,10 +215,10 @@ const L = {
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
        topics:["Safety","Traffic","Green","Waste","Social","Other"],
        move:"Freeze map", locked:"Map is frozen", placed:"Marked",
-       confirmTouch:"Test rotation", confirmMouse:"Test rotation",
+       confirmTouch:"Tap the centre", confirmMouse:"Click the centre",
        moveDots:"Move dots", movingDots:"Finish moving",
-       touchHint:"Drag and rotate the puck to test recognition and direction.",
-       laptopHint:"Drag and rotate with Shift or the wheel to test recognition and direction.",
+       touchHint:"Drag, rotate to an option and hold still, tap the centre to confirm.",
+       laptopHint:"Drag, rotate with Shift or the wheel and hold still, click the centre to confirm.",
        puckMove:"Move", puckSelect:"Select", puckZoom:"Zoom", puckBack:"Back",
        modeZoom:"forward = zoom in",
        flipSide:"To the other side", flipNote:"To the other side",
@@ -905,6 +909,7 @@ function endPointer(e){
       pt.ptrs.delete(e.pointerId);
       if(pt.ptrs.size===0){
         puckTouches.splice(puckTouches.indexOf(pt),1);
+        if(wasTap(pt)) tryConfirmPuck(e.clientX,e.clientY);
       } else basePuckTouch(pt);
       return;
     }
@@ -941,10 +946,17 @@ function markTray(){
     d.classList.toggle("used",simPucks.some(s=>s.tpl.id===d.dataset.id)));
 }
 /* Deselecteren: take every puck off the table and forget the live tracks.
-   Marks that were already dropped stay on the map — only the selection goes. */
-function clearPucks(){
-  if(simPucks.length===0 && tracks.size===0) return;
-  simPucks.length=0; tracks.clear(); puckTouches.length=0; drag=null; markTray();
+   Marks that were already dropped stay on the map — only the selection goes.
+
+   `dropTracks` staat standaard aan, maar niet voor een tik op de kaart: die
+   mag de sleepkopieën opruimen en verder niets. Een fysieke puck ligt er nog
+   steeds; zijn track wissen zet zijn menu, thema en markering terug op nul
+   terwijl niemand hem heeft aangeraakt. */
+function clearPucks(dropTracks=true){
+  if(simPucks.length===0 && (!dropTracks||tracks.size===0)) return;
+  simPucks.length=0; puckTouches.length=0; drag=null;
+  if(dropTracks){ tracks.clear(); puckMemory.clear(); }
+  markTray();
 }
 let trayDrag=null;
 function moveGhost(e){
@@ -1063,6 +1075,7 @@ addEventListener("mouseup",e=>{
     movePinTo(pinDrag.pin,e.clientX,e.clientY); pinDrag=null;
     document.body.classList.remove("dragging-dot"); save();
   }
+  if(drag && wasTap(drag)) tryConfirmPuck(e.clientX,e.clientY);
   drag=null; mousePan=null;
 });
 addEventListener("wheel",e=>{
@@ -1112,6 +1125,9 @@ function recognise(points){
   return {pucks:out,usedIdx:used};
 }
 const tracks=new Map();
+/* De stand van een puck die net van de tafel viel, hooguit `CFG.puckMemoryMS`
+   oud. Zie de uitleg bij het opruimen van tracks, onderaan `track()`. */
+const puckMemory=new Map();
 function track(dets,now){
   for(const d of dets){
     let t=tracks.get(d.id);
@@ -1127,7 +1143,18 @@ function track(dets,now){
                // gebeurt zodra de puck herkend is (zie hieronder).
                menu:"root",mode:"move",topicIdx:0,landing:true,
                dwellIdx:-1,dwellT0:now,dwellDone:true,zoomRefY:d.y,zoomAnchor:null}; tracks.set(d.id,t);
-              t.dwellIdx=ringIndexOf(d.angle,4); }
+              // Kwam dezelfde puck net van de tafel? Dan is dit geen nieuwe
+              // puck maar dezelfde die even wegviel: hij pakt zijn stand weer
+              // op en kiest dus niet opnieuw.
+              const mem=puckMemory.get(d.id);
+              if(mem&&now-mem.t<CFG.puckMemoryMS){
+                t.menu=mem.menu; t.mode=mem.mode; t.topicIdx=mem.topicIdx;
+                t.pinId=mem.pinId; t.armed=mem.armed; t.landing=false;
+                t.angleOrigin=mem.angleOrigin; t.angle=mem.angleOrigin;
+                t.zoomAnchor=mem.zoomAnchor;
+              }
+              puckMemory.delete(d.id);
+              t.dwellIdx=ringIndexOf(t.angle,ringItems(t).length); }
     t.frames++; t.lastSeen=now; t.conf=t.conf*.7+d.conf*.3;
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
     t.x=t.buf.reduce((s,p)=>s+p.x,0)/t.buf.length;
@@ -1164,7 +1191,18 @@ function track(dets,now){
   const seen=new Set(dets.map(d=>d.id));
   for(const [id,t] of tracks){
     if(seen.has(id)) continue;
-    if(now-t.lastSeen>CFG.dropoutMS) tracks.delete(id);
+    if(now-t.lastSeen>CFG.dropoutMS){
+      // Een puck die wegvalt is bijna nooit een puck die weggehaald wordt: één
+      // slecht contact, een stoot tegen de tafel, een mouw over het glas. Zijn
+      // stand gaat daarom kort in de wacht in plaats van meteen weg. Anders
+      // komt hij terug als verse puck, kiest hij meteen de stand waar zijn
+      // neus toevallig op staat, en is hij zijn markering kwijt.
+      for(const [k,m] of puckMemory) if(now-m.t>=CFG.puckMemoryMS) puckMemory.delete(k);
+      puckMemory.set(id,{t:now,menu:t.menu,mode:t.mode,topicIdx:t.topicIdx,
+                         pinId:t.pinId,armed:t.armed,angleOrigin:t.angle,
+                         zoomAnchor:t.zoomAnchor});
+      tracks.delete(id);
+    }
     else if(t.state==="recognised") t.state="incomplete";
     else tracks.delete(id);
   }
@@ -1285,9 +1323,12 @@ function applyPuckZoom(t){
   MV.zoomBy(dy/CFG.puckZoomPX,a.x,a.y);
   t.zoomRefY=t.y;
 }
-/* Een tik of klik op de puck legt de markering vast. Wat een tik is: kort
-   aangeraakt, nauwelijks verschoven en nauwelijks gedraaid — zo blijft slepen
-   en draaien gewoon slepen en draaien. */
+/* Een tik of klik in het hart van de puck legt de markering vast. Het hart is
+   het kijkgat, en dat is precies het punt dat als coördinaat wordt bewaard: je
+   wijst dus aan wat je vastlegt. De band eromheen blijft van slepen en draaien
+   en de ring eromheen van het menu, dus vastleggen botst met geen van beide.
+   Wat een tik is: kort aangeraakt, nauwelijks verschoven en nauwelijks
+   gedraaid — zo blijft slepen en draaien gewoon slepen en draaien. */
 function wasTap(g){
   return performance.now()-g.t0<400
       && Math.hypot(g.puck.x-g.px,g.puck.y-g.py)<10
@@ -1303,9 +1344,21 @@ function puckTrackAt(x,y){
   }
   return best;
 }
+/* De puck waarvan het kijkgat onder dit punt ligt. Bewust krap: alleen het
+   gat telt, niet de hele schijf. */
+function puckHoleAt(x,y){
+  const hole=CFG.puckRadiusMM*pxPerMM*PUCK_HOLE;
+  let best=null,bd=Infinity;
+  for(const t of tracks.values()){
+    if(t.state!=="recognised") continue;
+    const d=Math.hypot(t.x-x,t.y-y);
+    if(d<hole&&d<bd){ bd=d; best=t; }
+  }
+  return best;
+}
 function tryConfirmPuck(x,y){
-  const t=puckTrackAt(x,y);
-  if(!t||!t.armed||t.state!=="recognised") return false;
+  const t=puckHoleAt(x,y);
+  if(!t||!t.armed) return false;
   dropPin(t);
   return true;
 }
@@ -1464,6 +1517,9 @@ addEventListener("pointerup",e=>{
   const quick=performance.now()-tapStart.t<350 && Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y)<12;
   tapStart=null;
   if(!quick) return;
+  // Een tik in het kijkgat legt de markering vast; dat gaat voor op al het
+  // andere, want het is de enige handeling die iets nieuws op de kaart zet.
+  if(tryConfirmPuck(e.clientX,e.clientY)) return;
   // A tap that lands on a puck (simulated or detected) belongs to that puck.
   const R=CFG.puckRadiusMM*pxPerMM;
   if(simPuckAt(e.clientX,e.clientY)) return;
@@ -1489,7 +1545,7 @@ addEventListener("pointerup",e=>{
   if(node){ closeNote(); openKgInfo(node,e.clientX,e.clientY); return; }
   // Een leeg stuk tafel is kaartbediening en sluit geen open panelen. De
   // gebruiker sluit die bewust met hun sluitknop of met Escape.
-  clearPucks();
+  clearPucks(false);
 });
 /* De hoogte van het venster staat niet vooraf vast: eerst komt de lijst met
    nabije documenten binnen, daarna groeit het antwoord token voor token. Dus
@@ -1917,14 +1973,20 @@ function frame(){
     const band=(hole+R)/2;
     ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 15px 'Space Grotesk',system-ui,sans-serif";
     ctx.fillText(vName(t.tpl.verdict),t.x,t.y-band+5);
+    // Beide regels staan in de onderste helft van de band, niet in het gat:
+    // in het gat ligt de kaart en het vizier, en daar is geen tekst leesbaar.
     ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle="rgba(232,237,244,.55)";
-    ctx.fillText(t.armed?tr(uiMode==="touch"?"confirmTouch":"confirmMouse"):tr("placed"),t.x,t.y+R*0.52);
+    // Staat de puck in de zoomstand, dan staan er twee regels in die band en
+    // schuiven ze om het midden uit elkaar; anders staat deze regel alleen.
+    const bandH=R-hole;
+    ctx.fillText(t.armed?tr(tableUi()?"confirmTouch":"confirmMouse"):tr("placed"),
+                 t.x,t.y+band+bandH*(t.mode==="zoom"?0.28:0.12));
     // Zoomen is een modale stand: wie niet ziet dat hij aan staat, duwt de
     // kaart per ongeluk weg. Verplaatsen is de rusttoestand en zegt niets —
     // dat staat al op de ring, en twee regels onder elkaar is te druk.
     if(t.mode==="zoom"){
       ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle=c;
-      ctx.fillText(tr("modeZoom"),t.x,t.y+R*0.74);
+      ctx.fillText(tr("modeZoom"),t.x,t.y+band-bandH*0.22);
       // Het ijkpunt staat stil terwijl de puck vooruit gaat. Zonder teken zou
       // je niet zien waar de kaart om draait; een kruisje volstaat, en alleen
       // zodra de puck er merkbaar vanaf ligt.
@@ -2142,7 +2204,10 @@ function liftEditorAboveKeyboard(){
   setStem(n,nr.height/uiScale,(anchorY-top)/uiScale);
 }
 function showKeyboard(target){
-  if(uiMode!=="touch"||!target.classList.contains("touch-type")) return;
+  // Niet op `uiMode==="touch"` testen: `refreshKeyboardFields` zet het
+  // systeemtoetsenbord uit voor elke tafelstand, dus moet dit toetsenbord in
+  // diezelfde standen verschijnen. Anders kun je in de puckstand niets typen.
+  if(!tableUi()||!target.classList.contains("touch-type")) return;
   keyboardTarget=target;
   el("keyboardField").textContent=target.labels?.[0]?.textContent||target.placeholder||tr("typeHere");
   renderKeyboard();
@@ -2468,7 +2533,7 @@ el("modePuck").onclick=()=>{applyMode("puck");reorientMenu();};
 [...document.querySelectorAll(".btn-add-puck")].forEach(b=>b.onclick=openLearn);
 el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
 el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",debugMode);};
-[...document.querySelectorAll(".btn-clear")].forEach(b=>b.onclick=clearPucks);
+[...document.querySelectorAll(".btn-clear")].forEach(b=>b.onclick=()=>clearPucks(true));
 
 /* ── Kennisgraaf ───────────────────────────────────────────────── */
 function openKgInfo(node,x,y){
