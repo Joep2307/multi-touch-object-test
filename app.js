@@ -22,7 +22,7 @@ const CFG = {
      laatst bekende positie en hoek 0,9 s vast in plaats van hem na 0,18 s te
      verwijderen. */
   stableFrames:2, dropoutMS:900, smoothing:4,
-  jitterPX:22, rearmPX:70, ringPX:110, rotationGain:3,
+  jitterPX:22, rearmPX:70, ringPX:110, rotationGain:2,
   /* De ring om de puck is een menu geworden. Kiezen gaat door naar een optie
      te draaien en even stil te houden: tikken blijft zo gereserveerd voor het
      vastleggen van een markering. `puckDwellMS` is die stilstand in het
@@ -1313,11 +1313,13 @@ function track(dets,now){
     t.lastRawAngle=d.angle;
     t.measuredAngle+=rawStep;
     t.filteredAngle+=(t.measuredAngle-t.filteredAngle)*0.55;
-    // Eén graad aan de puck telt als drie graden op de keuzering. Daardoor is
-    // ongeveer 30 graden draaien genoeg om naar de volgende van vier opties te
-    // gaan, terwijl de filtering hierboven kleine contacttrillingen dempt.
-    // Meer versterking dan dit maakt de ring nerveus: dan tikt de trilling van
-    // de contactpunten al tegen een segmentgrens aan.
+    // Eén graad aan de puck telt als twee graden op de keuzering: 5 graden
+    // draaien is 10 graden op het scherm. Daarmee is ongeveer 45 graden
+    // draaien genoeg om naar de volgende van vier opties te gaan. Drie was te
+    // scherp — je schoot je optie voorbij; minder dan twee vraagt een halve
+    // slag per keuze. De filtering hierboven dempt kleine contacttrillingen,
+    // en meer versterking dan dit maakt de ring nerveus: dan tikt de trilling
+    // van de contactpunten al tegen een segmentgrens aan.
     t.angle=t.angleOrigin+(t.filteredAngle-t.rawOrigin)*CFG.rotationGain;
     t.state=t.frames>=CFG.stableFrames?"recognised":"candidate";
     const moved=Math.hypot(t.x-t.anchorX,t.y-t.anchorY);
@@ -1366,7 +1368,7 @@ function track(dets,now){
    een tafel is er geen tweede hand vrij voor een knop aan de rand. De ring
    is daarom een menu met twee niveaus geworden:
 
-     hoofdmenu   Verplaatsen · Kiezen · Zoomen · Terug
+     hoofdmenu   Verplaatsen · Zoomen · Kiezen · Terug  (vanaf boven, met de klok mee)
      kiezen      de thema's · Terug
 
    `Terug` staat in het hoofdmenu wel op de ring maar is uitgeschakeld: zo
@@ -1377,9 +1379,17 @@ function track(dets,now){
    niet dubbelop. Je draait naar een optie en houdt de puck even stil; na
    `CFG.puckDwellMS` staat de keuze. Dat is ook wat een zware schijf op tafel
    vanzelf doet — hij blijft liggen waar je hem loslaat. */
+/* De ring begint bovenaan. Het eerste segment ligt met zijn midden op twaalf
+   uur, en de rest volgt met de klok mee. Zonder die draaiing begon segment 0
+   linksboven, en dan wijst "de eerste optie" nergens naar — aan een tafel is
+   boven de enige stand die iedereen hetzelfde leest. De verschuiving hangt af
+   van het aantal opties (een halve segmentbreedte minus een kwartslag), zodat
+   het ook klopt voor de themalijst, die er meer heeft dan vier. */
+const ringOffset=n=>Math.PI/2-Math.PI/n;
+const ringStart=n=>-Math.PI+ringOffset(n);
 const ringIndexOf=(angle,n)=>{
   if(!n) return 0;
-  let a=(angle+Math.PI)/(Math.PI*2); a=(a%1+1)%1;
+  let a=(angle-ringStart(n))/(Math.PI*2); a=(a%1+1)%1;
   return Math.floor(a*n)%n;
 };
 
@@ -1387,16 +1397,17 @@ function ringItems(t){
   if(t.menu==="topics")
     return topics().map(name=>({key:"topic",label:name}))
                    .concat([{key:"back",label:tr("puckBack")}]);
+  // Boven begint Verplaatsen, dan met de klok mee Zoomen, Kiezen en Terug.
   return [{key:"move",  label:tr("puckMove")},
-          {key:"select",label:tr("puckSelect")},
           {key:"zoom",  label:tr("puckZoom")},
+          {key:"select",label:tr("puckSelect")},
           {key:"back",  label:tr("puckBack"),disabled:true}];
 }
 /* Welke optie op dit niveau als gekozen geldt: in het hoofdmenu de stand
    waar de puck in staat, in het thema-menu het gekozen thema. */
 function ringChosen(t){
   if(t.menu==="topics") return t.topicIdx;
-  return t.mode==="zoom"?2:0;
+  return t.mode==="zoom"?1:0;
 }
 const puckTopic=t=>{ const list=topics(); return list[(t.topicIdx||0)%list.length]||list[0]; };
 
@@ -2100,7 +2111,7 @@ function frame(){
     ctx.save(); ctx.globalAlpha=t.state==="incomplete"?0.35:1;
     for(let k=0;k<n;k++){
       const item=items[k], off=item.disabled;
-      const a0=-Math.PI+(k/n)*Math.PI*2+0.03, a1=-Math.PI+((k+1)/n)*Math.PI*2-0.03;
+      const a0=ringStart(n)+(k/n)*Math.PI*2+0.03, a1=ringStart(n)+((k+1)/n)*Math.PI*2-0.03;
       // Drie standen op de ring, en ze moeten van een meter afstand uit elkaar
       // te houden zijn: waar de puck nú op wijst (dik), wat er gekozen ís
       // (vol), en wat er verder te kiezen valt (dun). Uitgeschakeld is niet
