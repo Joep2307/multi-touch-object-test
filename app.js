@@ -635,6 +635,15 @@ function getTile(z,x,y){
   if(z>set.max) return null;                   // bron gaat niet dieper; parent vullen
   const key=MV.set+"/"+z+"/"+x+"/"+y;
   let img=tileCache.get(key);
+  /* Een tegel die één keer misging bleef voor altijd als gat in de kaart
+     staan: een netwerkhikje van vijf seconden was een blijvend gat tot iemand
+     van kaartbeeld wisselde. Na een halve minuut mag hij het opnieuw proberen. */
+  if(img&&img.bad&&performance.now()-(img.badAt||0)>30000){ tileCache.delete(key); img=null; }
+  if(img){
+    // Meest recent gebruikt achteraan: zo overleeft het gebied waar de tafel
+    // de hele dag omheen pant, in plaats van als eerste te vertrekken.
+    tileCache.delete(key); tileCache.set(key,img);
+  }
   if(!img){
     const src=set.url.replace("{s}","abc"[(x+y)%3])
                      .replace("{z}",z).replace("{x}",x).replace("{y}",y);
@@ -649,16 +658,19 @@ function getTile(z,x,y){
         taintedSets.add(setName);
         const retry=new Image(); retry.ok=false;
         retry.onload=()=>{retry.ok=true;tileChanged();};
-        retry.onerror=()=>{retry.bad=true;tilesFailed++;tileChanged();};
+        retry.onerror=()=>{retry.bad=true;retry.badAt=performance.now();tilesFailed++;tileChanged();};
         retry.src=src;
         tileCache.set(key,retry);
         return;
       }
-      img.bad=true; tilesFailed++; tileChanged();
+      img.bad=true; img.badAt=performance.now(); tilesFailed++; tileChanged();
     };
     img.src=src;
     tileCache.set(key,img); tilesTried++;
-    if(tileCache.size>1600){ const k=tileCache.keys().next().value; tileCache.delete(k); }
+    /* 1600 gedecodeerde tegels is honderden megabytes beeldgeheugen in een
+       browser die de hele dag doordraait, en het was de oudst tóégevoegde die
+       vertrok — niet de langst ongebruikte. Nu een echte LRU, en kleiner. */
+    while(tileCache.size>600){ const k=tileCache.keys().next().value; tileCache.delete(k); }
   }
   return img.ok ? img : null;
 }
@@ -1120,11 +1132,37 @@ addEventListener("wheel",e=>{
   }
 },{passive:false});
 
+/* De drievoudige lus liep over álle contactpunten. Aan een tafel met publiek
+   liggen er bij een druk gesprek makkelijk twintig vingers en een handpalm op
+   het glas: bij 24 punten zijn dat ruim tweeduizend combinaties per beeld, en
+   dat precies op het moment dat de tafel het hardst nodig is — waarop mensen
+   reageren door nóg meer aan te raken.
+
+   De punten gaan daarom eerst in een raster met cellen ter grootte van de
+   langste puckzijde. Drie punten die verder dan één cel uit elkaar liggen
+   kunnen nooit één puck zijn, dus alleen de eigen cel en zijn acht buren
+   hoeven bekeken te worden. De uitkomst is dezelfde; alleen het werk niet. */
 function recognise(points){
   const cands=[],maxSpan=maxTplLongest()*pxPerMM*1.45;
-  for(let i=0;i<points.length;i++) for(let j=i+1;j<points.length;j++){
+  const cell=Math.max(24,maxSpan), grid=new Map();
+  for(let i=0;i<points.length;i++){
+    const key=Math.floor(points[i].x/cell)+":"+Math.floor(points[i].y/cell);
+    let bucket=grid.get(key); if(!bucket) grid.set(key,bucket=[]);
+    bucket.push(i);
+  }
+  for(let i=0;i<points.length;i++){
+    const cx=Math.floor(points[i].x/cell), cy=Math.floor(points[i].y/cell);
+    const near=[];
+    for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
+      const bucket=grid.get((cx+dx)+":"+(cy+dy)); if(!bucket) continue;
+      for(const j of bucket) if(j>i) near.push(j);
+    }
+    near.sort((a,b)=>a-b);
+    for(let a=0;a<near.length;a++){
+    const j=near[a];
     if(dist(points[i],points[j])>maxSpan) continue;
-    for(let k=j+1;k<points.length;k++){
+    for(let b=a+1;b<near.length;b++){
+      const k=near[b];
       if(dist(points[i],points[k])>maxSpan||dist(points[j],points[k])>maxSpan) continue;
       const d=describe(points[i],points[j],points[k]); if(!d) continue;
       for(const tpl of activeTemplates()){
@@ -1140,6 +1178,7 @@ function recognise(points){
         if(sizeErr>(tracked?0.50:0.42)) continue;
         cands.push({tpl,err,idx:[i,j,k],d,conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
       }
+    }
     }
   }
   cands.sort((a,b)=>a.err-b.err);
@@ -1490,7 +1529,18 @@ function drawPuckKnowledgeRelations(ctx,pucks){
     if(puck.state!=="recognised"&&puck.state!=="incomplete") continue;
     const ll=MV.unproject(puck.x,puck.y);
     const topic=puckTopic(puck);
-    const relations=nearby(ll.lat,ll.lng,{theme:topic,limit:3,radiusM:1200});
+    /* `nearby()` rekent een haversine over alle knopen in de graaf. Dat voor
+       elke puck, elk beeld, is honderdduizend berekeningen per seconde voor
+       drie lijntjes die vrijwel nooit veranderen — en de weggegooide objecten
+       leveren een opruimpauze op precies wanneer iemand een puck draait. Dus
+       onthouden per puck, en pas opnieuw rekenen als hij een meter of tien
+       verschoven is of van thema wisselde. */
+    const key=ll.lat.toFixed(4)+","+ll.lng.toFixed(4)+"|"+topic+"|"+kg.nodes.length;
+    if(puck.kgKey!==key){
+      puck.kgKey=key;
+      puck.kgRelations=nearby(ll.lat,ll.lng,{theme:topic,limit:3,radiusM:1200});
+    }
+    const relations=puck.kgRelations||[];
     const color=vColor(puck.tpl.verdict);
 
     for(const relation of relations){
