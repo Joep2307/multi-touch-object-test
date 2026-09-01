@@ -1121,7 +1121,7 @@ function track(dets,now){
                // `dwellDone` staat aan zodat de stand waarin hij toevallig
                // op tafel landt niet meteen als keuze telt.
                menu:"root",mode:"move",topicIdx:0,
-               dwellIdx:-1,dwellT0:0,dwellDone:true,zoomRefY:d.y}; tracks.set(d.id,t);
+               dwellIdx:-1,dwellT0:0,dwellDone:true,zoomRefY:d.y,zoomAnchor:null}; tracks.set(d.id,t);
               t.dwellIdx=ringIndexOf(d.angle,4); }
     t.frames++; t.lastSeen=now; t.conf=t.conf*.7+d.conf*.3;
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
@@ -1145,6 +1145,9 @@ function track(dets,now){
     // Een puck die duidelijk verplaatst wordt, wordt een nieuwe bijdrage: opnieuw
     // een thema draaien en opnieuw bevestigen. De vorige markering blijft staan.
     if(moved>CFG.rearmPX && !t.armed){ t.armed=true; t.pinId=null; }
+    // Wie de puck echt oppakt en ergens anders neerlegt, wijst een nieuwe plek
+    // aan: het zoom-ijkpunt gaat mee.
+    if(moved>CFG.rearmPX) t.zoomAnchor=null;
     // Draaien bedient het menu, verschuiven bedient (in de zoomstand) de kaart.
     if(t.state==="recognised") updatePuckMenu(t,now);
     applyPuckZoom(t);
@@ -1217,9 +1220,11 @@ function commitPuckChoice(t,idx){
   }else if(item.key==="select"){
     t.menu="topics";
   }else if(item.key==="move"){
-    t.mode="move";
+    t.mode="move"; t.zoomAnchor=null;
   }else if(item.key==="zoom"){
-    t.mode="zoom"; t.zoomRefY=t.y;
+    // Het ijkpunt wordt hier vastgelegd, op de plek die op dat moment onder
+    // het vizier ligt. Zie applyPuckZoom.
+    t.mode="zoom"; t.zoomRefY=t.y; t.zoomAnchor=MV.unproject(t.x,t.y);
   }
   // Na een sprong naar een ander niveau wijst dezelfde hoek naar een andere
   // optie. Die telt als "al gezien", anders vuurt het volgende niveau meteen.
@@ -1243,15 +1248,28 @@ function puckDwellProgress(t,now){
 }
 
 /* Zoomen met de puck zelf: vooruit duwen (van je af, het scherm op) zoomt in,
-   naar je toe trekken zoomt uit. Er wordt gezoomd om het hart van de puck, dus
-   de plek waar je op wijst blijft onder het vizier staan. Een kleine dode zone
-   houdt de trilling van de gemiddelde puckpositie uit het zoomniveau. */
+   naar je toe trekken zoomt uit.
+
+   Het ijkpunt ligt vast. Zodra je de zoomstand kiest wordt onthouden welke
+   plek op de kaart er onder het vizier lag, en om die plek wordt gezoomd —
+   niet om het hart van de puck zoals dat op dit moment ligt. Dat scheelde,
+   want de puck schuift tijdens het duwen zelf vooruit: zoomde je om zijn
+   hart, dan verschoof het ijkpunt met elke duw mee vooruit en dreef de plek
+   waar je op wees onder je handen weg. Vooruit duwen is nu puur een hendel;
+   waar hij op wijst staat al vast.
+
+   Het ijkpunt wordt als geografisch punt bewaard, niet als schermplek: zo
+   blijft het kloppen als de kaart ondertussen draait, schuift of zoomt.
+   Een kleine dode zone houdt de trilling van de gemiddelde puckpositie uit
+   het zoomniveau. */
 function applyPuckZoom(t){
-  if(t.mode!=="zoom"||t.state!=="recognised"){ t.zoomRefY=t.y; return; }
-  if(t.zoomRefY==null){ t.zoomRefY=t.y; return; }
+  if(t.mode!=="zoom"||t.state!=="recognised"){ t.zoomRefY=t.y; t.zoomAnchor=null; return; }
+  if(t.zoomRefY==null) t.zoomRefY=t.y;
+  if(!t.zoomAnchor) t.zoomAnchor=MV.unproject(t.x,t.y);
   const dy=t.zoomRefY-t.y;
   if(Math.abs(dy)<CFG.puckZoomDeadPX) return;
-  MV.zoomBy(dy/CFG.puckZoomPX,t.x,t.y);
+  const a=MV.project(t.zoomAnchor.lng,t.zoomAnchor.lat);
+  MV.zoomBy(dy/CFG.puckZoomPX,a.x,a.y);
   t.zoomRefY=t.y;
 }
 /* Een tik of klik op de puck legt de markering vast. Wat een tik is: kort
@@ -1894,6 +1912,22 @@ function frame(){
     if(t.mode==="zoom"){
       ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle=c;
       ctx.fillText(tr("modeZoom"),t.x,t.y+R*0.74);
+      // Het ijkpunt staat stil terwijl de puck vooruit gaat. Zonder teken zou
+      // je niet zien waar de kaart om draait; een kruisje volstaat, en alleen
+      // zodra de puck er merkbaar vanaf ligt.
+      if(t.zoomAnchor){
+        const a=MV.project(t.zoomAnchor.lng,t.zoomAnchor.lat);
+        if(Math.hypot(a.x-t.x,a.y-t.y)>R*0.35){
+          ctx.strokeStyle=c; ctx.lineWidth=1.5; ctx.globalAlpha=0.7;
+          ctx.beginPath(); ctx.arc(a.x,a.y,7,0,Math.PI*2); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(a.x-12,a.y); ctx.lineTo(a.x-9,a.y);
+          ctx.moveTo(a.x+9,a.y);  ctx.lineTo(a.x+12,a.y);
+          ctx.moveTo(a.x,a.y-12); ctx.lineTo(a.x,a.y-9);
+          ctx.moveTo(a.x,a.y+9);  ctx.lineTo(a.x,a.y+12);
+          ctx.stroke(); ctx.globalAlpha=1;
+        }
+      }
     }
     ctx.restore();
   }
