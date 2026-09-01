@@ -155,6 +155,9 @@ const L = {
 
        sessionHead:"Sessie", sessionName:"Naam van de sessie", wipe:"Alles wissen",
        wipeConfirm:"Alle markeringen van deze sessie wissen?",
+       wipeAgain:"Zeker weten? Tik nogmaals",
+       searchBusy:"Zoeken…", searchNone:"Niets gevonden onder die naam.",
+       searchFailed:"Geen antwoord van de zoekdienst. Controleer de verbinding.",
        analyticsOpen:"Sessie-analyse", analyticsEyebrow:"SESSIE-OVERZICHT", analyticsTitle:"Analyse van de pucks",
        analyticsIntro:(n)=>`${n} vastgelegde ${n===1?"puck":"pucks"} in deze sessie.`,
        analyticsTypes:"Wat is er gelegd?", analyticsTopics:"Welke onderwerpen?", analyticsPlaces:"Waar liggen de pucks?",
@@ -294,6 +297,9 @@ const L = {
 
        sessionHead:"Session", sessionName:"Session name", wipe:"Clear everything",
        wipeConfirm:"Clear all markings from this session?",
+       wipeAgain:"Sure? Tap again",
+       searchBusy:"Searching…", searchNone:"Nothing found under that name.",
+       searchFailed:"No answer from the search service. Check the connection.",
        analyticsOpen:"Session analytics", analyticsEyebrow:"SESSION OVERVIEW", analyticsTitle:"Puck analytics",
        analyticsIntro:(n)=>`${n} recorded ${n===1?"puck":"pucks"} in this session.`,
        analyticsTypes:"What was placed?", analyticsTopics:"Which topics?", analyticsPlaces:"Where are the pucks?",
@@ -2155,6 +2161,7 @@ function frame(){
   }
 
   drawNoteTether(ctx,pucks);
+  drawLockBadge(ctx);
 
   if(debugMode) points.forEach((pt,i)=>{
     ctx.strokeStyle=usedIdx.has(i)?"#39d8a4":"#ff5f56"; ctx.lineWidth=2;
@@ -2306,6 +2313,33 @@ function closeAnalytics(){ el("analytics").classList.remove("open"); }
 function applyLock(){
   el("btnMove").classList.toggle("on",mapLocked);
   el("btnMove").textContent=mapLocked?tr("locked"):tr("move");
+}
+/* Een vastgezette kaart had alleen een spoor in het menu — dus in het enige
+   venster dat je sluit voordat je de kaart aanraakt. Wie hem daarna niet meer
+   kan verschuiven, denkt dat de tafel hangt. Een rand om het beeld en een chip
+   aan beide lange zijden zeggen het zonder woorden in de weg te leggen. */
+function drawLockBadge(ctx){
+  if(!mapLocked) return;
+  const label=tr("locked");
+  ctx.save();
+  ctx.setLineDash([9,7]);
+  ctx.strokeStyle="rgba(255,209,102,.55)"; ctx.lineWidth=2;
+  ctx.strokeRect(7,7,W-14,H-14);
+  ctx.setLineDash([]);
+  ctx.font="600 "+CHIP.font.toFixed(1)+"px "+CHIP_FAMILY;
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  const h=chipHeight(), w=Math.ceil(ctx.measureText(label).width)+CHIP.padX*2;
+  const chip=(x,y,turn)=>{
+    ctx.save(); ctx.translate(x,y); if(turn) ctx.rotate(Math.PI);
+    ctx.beginPath(); ctx.roundRect(-w/2,-h/2,w,h,Math.min(CHIP.radius,h/2));
+    ctx.fillStyle="rgba(9,12,17,.9)"; ctx.fill();
+    ctx.strokeStyle="rgba(255,209,102,.7)"; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle="#ffd166"; ctx.fillText(label,0,0.5);
+    ctx.restore();
+  };
+  chip(W/2,H-16-h/2,false);
+  if(sidesActive()) chip(W/2,16+h/2,true);
+  ctx.restore();
 }
 function applyPinMoveMode(){
   el("btnMoveDots").classList.toggle("on",pinMoveMode);
@@ -2997,13 +3031,24 @@ el("zOut").onclick=()=>MV.zoomBy(-1);
   const [la,lo,z]=b.dataset.go.split(",").map(Number);
   MV.lat=la; MV.lng=lo; MV.zoom=z;
 });
+/* Dit is de enige tekstinvoer aan de kaartkant, en hij faalde volledig in
+   stilte: offline, bij een tikfout of bij de snelheidslimiet van Nominatim
+   gebeurde er letterlijk niets. Wie "Ginneken" typt, Enter drukt en niets ziet
+   gebeuren, concludeert dat de tafel stuk is. Nu staat er onder het veld wat
+   er aan de hand is, en er zit een wachttijd op. */
 el("search").onkeydown=async e=>{
-  if(e.key!=="Enter"||!e.target.value.trim()) return;
+  if(e.key!=="Enter") return;
+  const q=e.target.value.trim(), hint=el("searchHint");
+  if(!q){ hint.textContent=""; return; }
+  hint.textContent=tr("searchBusy");
   try{
-    const r=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(e.target.value));
+    const r=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(q),
+                        {signal:AbortSignal.timeout(8000)});
+    if(!r.ok) throw new Error("HTTP "+r.status);
     const j=await r.json();
-    if(j[0]){ MV.lat=+j[0].lat; MV.lng=+j[0].lon; MV.zoom=15; }
-  }catch(err){}
+    if(j[0]){ MV.lat=+j[0].lat; MV.lng=+j[0].lon; MV.zoom=15; hint.textContent=j[0].display_name||""; }
+    else hint.textContent=tr("searchNone");
+  }catch(err){ hint.textContent=tr("searchFailed"); }
 };
 /* Elke aanslag gaat meteen naar de markering. Dit is een tafel waar meerdere
    mensen tegelijk bezig zijn: er is één notitievenster, en wachten tot iemand
@@ -3023,7 +3068,24 @@ el("noteSave").onclick=()=>{ if(selected){ setTimeout(()=>{ if(selected) renderM
 } closeNote(); };
 el("noteFlip").onclick=()=>flipNote();
 el("noteDel").onclick=()=>{ if(selected){const i=pins.indexOf(selected); if(i>=0)pins.splice(i,1); save();} closeNote(); };
-el("btnWipe").onclick=()=>{ if(confirm(tr("wipeConfirm"))){pins.length=0;save();} };
+/* `confirm()` verschijnt in de oriëntatie van de browser — dus op zijn kop
+   voor de helft van het gezelschap — staat buiten de bedieningsschaal en legt
+   de tekenlus stil zolang hij openstaat. Twee tikken op dezelfde knop doen
+   hetzelfde werk, in de leesrichting van wie hem indrukt. */
+let wipeArmedAt=0;
+function resetWipeButton(){
+  wipeArmedAt=0;
+  el("btnWipe").classList.remove("on");
+  el("btnWipe").textContent=tr("wipe");
+}
+el("btnWipe").onclick=()=>{
+  const now=performance.now();
+  if(wipeArmedAt&&now-wipeArmedAt<4000){ pins.length=0; save(); resetWipeButton(); return; }
+  wipeArmedAt=now;
+  el("btnWipe").classList.add("on");
+  el("btnWipe").textContent=tr("wipeAgain");
+  setTimeout(()=>{ if(wipeArmedAt&&performance.now()-wipeArmedAt>=4000) resetWipeButton(); },4100);
+};
 el("btnAnalytics").onclick=openAnalytics;
 el("flipAnalytics").onclick=flipAnalytics;
 el("closeAnalytics").onclick=closeAnalytics;
@@ -3391,6 +3453,7 @@ function applyLang(){
   el("kgStatus").textContent=kgStatusText();
   el("bakeHint").textContent=tr("bakeHint");
   buildLayerMenu();
+  resetWipeButton();
   applyLock();
   applyPinMoveMode();
   renderTray();

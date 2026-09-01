@@ -158,8 +158,19 @@ function findFixtureDataProblems(graph: GraphPayload): DataProblemsPayload {
   };
 }
 
+/** A backend that accepts the connection but never answers (Ollama loading a
+ *  model, a hung reverse proxy) used to leave the table waiting forever, with
+ *  no way to cancel. Every request now has a deadline. */
+const REQUEST_TIMEOUT_MS = 20_000;
+function withTimeout(signal: AbortSignal | undefined, ms = REQUEST_TIMEOUT_MS): AbortSignal {
+  const timeout = AbortSignal.timeout(ms);
+  if (!signal) return timeout;
+  const any = (AbortSignal as unknown as { any?: (s: AbortSignal[]) => AbortSignal }).any;
+  return any ? any([signal, timeout]) : signal;
+}
+
 async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
+  const res = await fetch(url, { signal: withTimeout(signal), headers: { Accept: "application/json" } });
   if (!res.ok) throw new ApiError(res.status, url);
   return (await res.json()) as T;
 }
@@ -269,7 +280,10 @@ export class HttpBiblioClient implements BiblioClient {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
       body: JSON.stringify({ message, history }),
-      signal,
+      // Alleen het openen van de verbinding heeft een deadline; daarna mag het
+      // antwoord zo lang duren als het duurt, want het komt token voor token
+      // binnen en dat is zichtbaar.
+      signal: withTimeout(signal, 30_000),
     });
     if (!res.ok || !res.body) throw new ApiError(res.status, this.url("api/biblio/chat"));
     yield* parseSse(res.body);
@@ -436,9 +450,19 @@ export function withFallback(primary: BiblioClient, fallback: BiblioClient, forc
     keywords: wrap(primary.keywords.bind(primary), fallback.keywords.bind(fallback)),
     async *chat(message, history, signal) {
       if (forceFallback) return yield* fallback.chat(message, history, signal);
+      /* Terugvallen mag alleen zolang er nog niets van het echte antwoord is
+       * doorgegeven. Brak de stream halverwege af, dan werd de demo-tekst uit
+       * de fixtures achter het halve echte antwoord geplakt: aan tafel stond
+       * er dan een antwoord dat half echt en half verzonnen was, zonder dat
+       * iets dat aangaf. Dan liever een zichtbare fout. */
+      let started = false;
       try {
-        yield* primary.chat(message, history, signal);
+        for await (const ev of primary.chat(message, history, signal)) {
+          started = true;
+          yield ev;
+        }
       } catch (e) {
+        if (started) throw e;
         if (e instanceof ApiError && e.status !== 404 && e.status < 500) throw e;
         console.warn("[sturnia-node] chat backend unavailable, using fixtures:", e);
         yield* fallback.chat(message, history, signal);
