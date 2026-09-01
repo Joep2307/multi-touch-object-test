@@ -386,9 +386,35 @@ let colorTheme=(()=>{
    `zoom` doet het werk in CSS; hier zit alleen de waarde. Alle plaatsing die
    in JavaScript gebeurt rekent in schermpixels en moet dus door deze factor
    gedeeld worden voordat ze als style.left/top op een venster belandt. */
-const UI_SCALES=[0.8,0.9,1,1.15,1.3,1.5,1.75,2];
-let uiScale=(()=>{ try{ const v=parseFloat(localStorage.getItem("pucktable-ui-scale"));
-                        return UI_SCALES.includes(v)?v:1; }catch(e){ return 1; } })();
+const UI_SCALES=[0.7,0.8,0.9,1,1.15,1.3,1.5,1.75,2];
+/* Tafel-eerst. styles.css is geschreven op de maat van de tafel: iemand die
+   staat, op zo'n 80 cm, onder een hoek. De laptop is het uitzonderingsgeval en
+   begint dus ingekrompen — vroeger stond het andersom en moest de tafel met de
+   hand omhoog. De schaal hoort bij de stand en wordt daarom per stand
+   onthouden: wie de tafel op 115% zet, zet daarmee niet de laptop scheef. */
+const defaultUiScale=()=>uiMode==="laptop"?0.8:1;
+function storedUiScale(){
+  try{ const v=parseFloat(localStorage.getItem("pucktable-ui-scale-"+uiMode));
+       return UI_SCALES.includes(v)?v:defaultUiScale(); }catch(e){ return defaultUiScale(); }
+}
+let uiScale=storedUiScale();
+/* Eén chipvorm voor de ring om de puck en de knoppen in de panelen: het is
+   allebei een woord waar je op kunt kiezen. De maten komen uit dezelfde tokens
+   als de knoppen (--chip-* en --text-2xs in styles.css) maal de bedienings-
+   schaal, zodat een label op de ring en een knop in het menu even groot zijn
+   en dezelfde hoeken hebben. */
+const CHIP_FAMILY="'Space Grotesk',system-ui,sans-serif";
+const CHIP={font:15,padX:18,padY:14,radius:16};
+function readChip(){
+  const cs=getComputedStyle(document.documentElement);
+  const px=(name,fallback)=>{ const v=parseFloat(cs.getPropertyValue(name));
+                              return Number.isFinite(v)?v:fallback; };
+  CHIP.font  =px("--text-2xs",15)*uiScale;
+  CHIP.padX  =px("--chip-pad-x",18)*uiScale;
+  CHIP.padY  =px("--chip-pad-y",14)*uiScale;
+  CHIP.radius=px("--chip-radius",16)*uiScale;
+}
+const chipHeight=()=>Math.round(CHIP.font*1.2+CHIP.padY);
 const VERDICTS=[{key:"good",color:"#39d8a4"},{key:"bad",color:"#ff5f56"},
                 {key:"talk",color:"#c48cff"},{key:"idea",color:"#ffd166"}];
 const vName=k=>L[lang][k], vColor=k=>VERDICTS.find(v=>v.key===k).color;
@@ -697,7 +723,7 @@ function drawMap(g){
     g.strokeStyle="rgba(255,209,102,.4)"; g.lineWidth=1; g.strokeRect(W/2-320,22,640,52);
     g.fillStyle="#ffd166"; g.font="13px 'Space Grotesk',system-ui,sans-serif";
     g.fillText(msg,W/2,46);
-    g.fillStyle="rgba(127,139,155,.9)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace";
+    g.fillStyle="rgba(127,139,155,.9)"; g.font="12px "+CHIP_FAMILY;
     g.fillText(tr("tilesFoot",tilesTried,tilesFailed),W/2,64);
   }
   // scale bar + attribution
@@ -711,7 +737,7 @@ function drawMap(g){
   g.moveTo(barX,H-31); g.lineTo(barX,H-21); g.moveTo(barX+barPx,H-31); g.lineTo(barX+barPx,H-21); g.stroke();
   g.fillStyle=colorTheme==="light"?"rgba(23,32,45,.72)":"rgba(232,237,244,.6)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace"; g.textAlign="left";
   g.fillText(barM>=1000?(barM/1000)+" km":barM+" m", barX, H-36);
-  g.textAlign="center"; g.fillStyle=colorTheme==="light"?"rgba(54,68,85,.76)":"rgba(127,139,155,.75)"; g.font="10px 'JetBrains Mono',ui-monospace,monospace";
+  g.textAlign="center"; g.fillStyle=colorTheme==="light"?"rgba(54,68,85,.76)":"rgba(127,139,155,.75)"; g.font="11px "+CHIP_FAMILY;
   g.fillText(TILE_SETS[MV.set]?.credit || "", W/2, H-10);
 }
 
@@ -1423,6 +1449,36 @@ function drawTarget(ctx,x,y,c,R){
   ctx.restore();
 }
 
+/* Het notitievenster hangt aan één puck. Zonder zichtbare verbinding zweeft
+   het ernaast, en met vier pucks op tafel is dan niet te zien van wie het is.
+   Een lijn van de rand van de puck naar de dichtstbijzijnde rand van het
+   venster, met een punt op de puck: het venster zit er zichtbaar aan vast.
+   Op het canvas, want het venster zelf klemt alles buiten zijn rand weg. */
+function drawNoteTether(ctx,pucks){
+  const n=el("note");
+  if(!selected||n.style.display!=="block") return;
+  const t=pucks.find(p=>p.pinId===selected.id);
+  if(!t) return;
+  const r=n.getBoundingClientRect();
+  if(!r.width) return;
+  // Dichtstbijzijnde punt op de rand van het venster: klemmen volstaat.
+  const px=Math.max(r.left,Math.min(r.right,t.x)), py=Math.max(r.top,Math.min(r.bottom,t.y));
+  const dx=px-t.x, dy=py-t.y, d=Math.hypot(dx,dy);
+  const R=CFG.puckRadiusMM*pxPerMM;
+  if(d<=R+8) return;                            // venster ligt tegen de puck aan
+  const ux=dx/d, uy=dy/d, c=vColor(selected.verdict);
+  ctx.save(); ctx.lineCap="round";
+  ctx.strokeStyle=c; ctx.globalAlpha=0.75; ctx.lineWidth=2.5;
+  ctx.beginPath();
+  ctx.moveTo(t.x+ux*R,t.y+uy*R); ctx.lineTo(t.x+ux*(d-1),t.y+uy*(d-1));
+  ctx.stroke();
+  ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.arc(t.x+ux*R,t.y+uy*R,Math.max(4,R*0.065),0,Math.PI*2);
+  ctx.fillStyle=c; ctx.fill();
+  ctx.strokeStyle="rgba(7,9,12,.8)"; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.restore();
+}
+
 function drawPuckKnowledgeRelations(ctx,pucks){
   if(!kg.enabled||!kg.loaded||!pucks.length) return;
   const visible=(x,y)=>x>=-24&&y>=-24&&x<=W+24&&y<=H+24;
@@ -1567,7 +1623,6 @@ function positionNote(recentre=true){
   const wanted=recentre?y-h/2:(Number.isFinite(prev)?prev*s:y-h/2);
   const top=Math.max(12,Math.min(max,wanted));
   n.style.top=(top/s)+"px";
-  setStem(n,h/s,(y-top)/s);
 }
 // Eén waarnemer voor de hele levensduur van de pagina: elke hoogtewijziging
 // trekt het venster zo nodig terug binnen beeld.
@@ -1587,14 +1642,8 @@ function positionNoteX(){
   const opensRight=x+width+reach<innerWidth-12;
   const left=opensRight?x+reach:x-reach-width;
   n.style.left=(Math.max(12,Math.min(innerWidth-width-12,left))/s)+"px";
-  n.style.setProperty("--stem-width",Math.max(26,reach/s-4)+"px");
   n.style.setProperty("--origin-x",opensRight?"0":"100%");
   n.style.setProperty("--enter-x",opensRight?"-28px":"28px");
-  // In een gedraaid venster wisselt links en rechts van plek, dus de stengel
-  // moet aan de andere kant beginnen om nog naar de puck te wijzen.
-  const flip=n.classList.contains("flipped");
-  n.classList.toggle("from-left",flip?!opensRight:opensRight);
-  n.classList.toggle("from-right",flip?opensRight:!opensRight);
 }
 
 /* Automatisch opent het venster naar de kant waar de tik vandaan komt, maar
@@ -1649,7 +1698,10 @@ function openNote(pin,x,y,fromPuck=false){
   n.style.setProperty("--note-color",vColor(pin.verdict));
   n.dataset.anchorX=String(x);
   n.dataset.anchorY=String(y);
-  n.dataset.puckReach=String(fromPuck?CFG.puckRadiusMM*pxPerMM+46:34);
+  // Het venster gaat naast de puck open, maar moet ook langs zijn ring met
+  // keuzes vallen: anders ligt het over "Kiezen" en "Zoomen" heen. De maat
+  // volgt daarom de ring en de chips die eromheen staan.
+  n.dataset.puckReach=String(fromPuck?Math.round(CFG.ringPX+chipHeight()*1.35+10):34);
   positionNoteX();
   positionNote();
   n.classList.remove("opening");
@@ -1865,7 +1917,7 @@ function frame(){
       ctx.strokeStyle=pinDrag?.pin===p?"#fff":c; ctx.lineWidth=pinDrag?.pin===p?3:2;
       ctx.setLineDash([5,4]); ctx.stroke(); ctx.setLineDash([]);
     }
-    if(p.title||p.description||p.note){ ctx.fillStyle="#07090c"; ctx.font="700 10px 'JetBrains Mono',ui-monospace,monospace"; ctx.textAlign="center";
+    if(p.title||p.description||p.note){ ctx.fillStyle="#07090c"; ctx.font="700 11px "+CHIP_FAMILY; ctx.textAlign="center";
                 ctx.fillText("•",s.x,s.y+3.5); }
     if(selected===p){ ctx.beginPath(); ctx.arc(s.x,s.y,24,0,Math.PI*2);
       ctx.strokeStyle="#e8edf4"; ctx.lineWidth=1.5; ctx.stroke(); }
@@ -1895,19 +1947,22 @@ function frame(){
         ctx.beginPath(); ctx.arc(t.x,t.y,CFG.ringPX,a0,a0+(a1-a0)*dwell);
         ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.lineWidth=9; ctx.stroke();
       }
-      const am=(a0+a1)/2, lr=CFG.ringPX+23;
+      const am=(a0+a1)/2, lr=CFG.ringPX+chipHeight()*0.85;
       const lx=t.x+Math.cos(am)*lr, ly=t.y+Math.sin(am)*lr;
       const selected=k===ti&&!off;
       const label=(k===chosen&&!off?"\u2022 ":"")+item.label;
-      ctx.font=selected?"700 14px 'Space Grotesk',system-ui,sans-serif":"600 13px 'Space Grotesk',system-ui,sans-serif";
+      // Dezelfde chip als een knop in een paneel: zelfde maat, zelfde hoeken.
+      // Wat gekozen is verschilt in rand en vulling, niet in formaat — een
+      // label dat groeit zodra je erlangs draait laat de hele ring dansen.
+      ctx.font=(selected?"700 ":"600 ")+CHIP.font.toFixed(1)+"px "+CHIP_FAMILY;
       ctx.textAlign="center"; ctx.textBaseline="middle";
 
       // Keep the option legible over detailed map tiles. A compact opaque label
       // also makes the active option much easier to spot from across the table.
-      const labelW=Math.ceil(ctx.measureText(label).width)+18;
-      const labelH=selected?28:25;
+      const labelW=Math.ceil(ctx.measureText(label).width)+CHIP.padX*2;
+      const labelH=chipHeight();
       ctx.beginPath();
-      ctx.roundRect(lx-labelW/2,ly-labelH/2,labelW,labelH,labelH/2);
+      ctx.roundRect(lx-labelW/2,ly-labelH/2,labelW,labelH,Math.min(CHIP.radius,labelH/2));
       ctx.fillStyle=selected?"rgba(9,12,17,.98)":"rgba(9,12,17,.88)";
       ctx.fill();
       ctx.strokeStyle=off?"rgba(232,237,244,.12)":(selected?c:(k===chosen?c+"88":"rgba(232,237,244,.28)"));
@@ -1971,11 +2026,14 @@ function frame(){
     // Het gat is groter dan de teksten aankunnen, dus die staan nu midden in de
     // zwarte band tussen gat en rand.
     const band=(hole+R)/2;
-    ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 15px 'Space Grotesk',system-ui,sans-serif";
-    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-band+5);
+    // De teksten op de puck horen bij de puck, niet bij een venster: ze schalen
+    // dus met zijn straal en niet met de bedieningsschaal.
+    const nameSize=Math.max(12,R*0.17), lineSize=Math.max(9,R*0.115);
+    ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 "+nameSize.toFixed(1)+"px "+CHIP_FAMILY;
+    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-band+nameSize*0.34);
     // Beide regels staan in de onderste helft van de band, niet in het gat:
     // in het gat ligt de kaart en het vizier, en daar is geen tekst leesbaar.
-    ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle="rgba(232,237,244,.55)";
+    ctx.font="500 "+lineSize.toFixed(1)+"px "+CHIP_FAMILY; ctx.fillStyle="rgba(232,237,244,.62)";
     // Staat de puck in de zoomstand, dan staan er twee regels in die band en
     // schuiven ze om het midden uit elkaar; anders staat deze regel alleen.
     const bandH=R-hole;
@@ -1985,7 +2043,7 @@ function frame(){
     // kaart per ongeluk weg. Verplaatsen is de rusttoestand en zegt niets —
     // dat staat al op de ring, en twee regels onder elkaar is te druk.
     if(t.mode==="zoom"){
-      ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.fillStyle=c;
+      ctx.font="500 "+lineSize.toFixed(1)+"px "+CHIP_FAMILY; ctx.fillStyle=c;
       ctx.fillText(tr("modeZoom"),t.x,t.y+band-bandH*0.22);
       // Het ijkpunt staat stil terwijl de puck vooruit gaat. Zonder teken zou
       // je niet zien waar de kaart om draait; een kruisje volstaat, en alleen
@@ -2006,6 +2064,8 @@ function frame(){
     }
     ctx.restore();
   }
+
+  drawNoteTether(ctx,pucks);
 
   if(debugMode) points.forEach((pt,i)=>{
     ctx.strokeStyle=usedIdx.has(i)?"#39d8a4":"#ff5f56"; ctx.lineWidth=2;
@@ -2201,7 +2261,6 @@ function liftEditorAboveKeyboard(){
   if(top===null) return;
   n.style.top=(Math.max(12,top)/uiScale)+"px";
   const anchorY=Number(n.dataset.anchorY)||top+nr.height/2;
-  setStem(n,nr.height/uiScale,(anchorY-top)/uiScale);
 }
 function showKeyboard(target){
   // Niet op `uiMode==="touch"` testen: `refreshKeyboardFields` zet het
@@ -2276,6 +2335,8 @@ function applyMode(mode){
   document.body.classList.toggle("mode-touch",mode!=="laptop");
   document.body.classList.toggle("mode-laptop",mode==="laptop");
   document.body.classList.toggle("mode-puck",mode==="puck");
+  // De schaal hoort bij de stand; hij wordt per stand onthouden.
+  uiScale=storedUiScale(); applyScale();
   [["modeTouch","touch"],["modeLaptop","laptop"],["modePuck","puck"]].forEach(([id,value])=>{
     const active=value===mode;
     el(id).classList.toggle("active",active);
@@ -2339,7 +2400,8 @@ function applyScale(){
   const i=UI_SCALES.indexOf(uiScale);
   el("btnScaleDown").disabled=i<=0;
   el("btnScaleUp").disabled=i>=UI_SCALES.length-1;
-  try{localStorage.setItem("pucktable-ui-scale",String(uiScale));}catch(e){}
+  readChip();
+  try{localStorage.setItem("pucktable-ui-scale-"+uiMode,String(uiScale));}catch(e){}
   // Een open venster hangt aan een punt op de kaart; dat punt verschuift niet
   // mee, dus beide vensters gaan opnieuw langs hun anker liggen.
   positionNoteX();
@@ -2684,13 +2746,6 @@ applySides();
    en moet het venster 180° gedraaid. */
 const flippedFor=y=>sidesActive() && y<innerHeight/2;
 
-/* De stengel wijst naar de puck. In een gedraaid venster loopt de lokale
-   y-as andersom, dus wat op het scherm `d` vanaf de bovenkant is, is lokaal
-   `h - d`. */
-function setStem(n,h,d){
-  const local=n.classList.contains("flipped")?h-d:d;
-  n.style.setProperty("--stem-top",Math.max(20,Math.min(h-20,local))+"px");
-}
 
 el("tiles").onchange=e=>{
   MV.set=e.target.value; tileCache.clear();

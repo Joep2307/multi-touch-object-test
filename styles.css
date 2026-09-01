@@ -7,6 +7,30 @@
   --good:#39d8a4; --bad:#ff5f56; --talk:#c48cff; --idea:#ffd166; --warn:#ffd166;
   --display:"Space Grotesk",system-ui,-apple-system,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace;
+  /* ── Typemaat, tafel-eerst ──────────────────────────────────────────
+     Deze waarden gelden voor de tafel: iemand die stáát, op zo'n 80 cm,
+     onder een hoek. Dat is de plek waar dit ding zijn werk doet, dus dat
+     is de maat waarin het geschreven staat. De laptop is het uitzonderings-
+     geval en krimpt met `--ui-scale` (app.js zet die op 0,7 zodra de
+     laptopstand aan gaat). Vroeger stond het andersom: laptopmaten in de
+     basis en overal `.mode-touch`-regels die alles weer omhoog duwden.
+     Dan is het toeval welk onderdeel wel en niet is meegegroeid. */
+  --text-3xs:12px;   /* bouwstempel, coordinaten, meta */
+  --text-2xs:15px;   /* hints, labels, chips */
+  --text-xs:17px;
+  --text-sm:19px;
+  --text:20px;       /* basis: invoer, kopjes */
+  --text-lg:26px;
+  --text-xl:34px;
+  --tap:56px;        /* kleinste raakvlak van een knop of veld */
+  --tap-sm:46px;     /* vierkante knoppen met een pictogram */
+  /* ── Eén chipvorm ──────────────────────────────────────────────────
+     Een label op de ring om de puck en een knop in een paneel zijn
+     hetzelfde ding: een woord waar je op kunt kiezen. Ze zagen er alleen
+     niet zo uit, want het ene wordt op het canvas getekend en het andere
+     is een <button>. Deze drie waarden gelden voor allebei — app.js leest
+     ze uit voor de ring (zie `CHIP` daar), zodat er één maat is. */
+  --chip-radius:16px; --chip-pad-y:14px; --chip-pad-x:18px;
 }
 :root[data-theme="light"]{
   --bg:#e8edf3; --surface:#ffffff; --line:#cbd5e1;
@@ -29,7 +53,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 body.moving-dots #c{cursor:grab}
 body.dragging-dot #c{cursor:grabbing}
 .panel{position:fixed;background:var(--panel);backdrop-filter:blur(14px);
-  border:1px solid var(--line);border-radius:14px;padding:14px 16px;z-index:10}
+  border:1px solid var(--line);border-radius:17px;padding:17px 19px;z-index:10}
 /* ── Grootte van de bediening ─────────────────────────────────────
    Eén regelaar voor alle zwevende vensters. `zoom` schaalt maat én
    plaatsing mee, zodat een venster dat groter wordt niet half van het
@@ -38,11 +62,11 @@ body.dragging-dot #c{cursor:grabbing}
    schaalt alleen de kaart-in-het-midden, niet de overlay zelf. */
 .panel,#sheet .inner,.learn-card{zoom:var(--ui-scale,1)}
 .scale-row{align-items:center;gap:6px;margin:9px 0 0}
-.scale-row button{flex:none;width:38px;padding:8px 0;font-size:15px;line-height:1}
-.scale-val{flex:1;text-align:center;font-size:11px;color:var(--ink-dim)}
+.scale-row button{flex:none;width:52px;padding:11px 0;font-size:var(--text-sm);line-height:1}
+.scale-val{flex:1;text-align:center;font-size:var(--text-2xs);color:var(--ink-dim)}
 .orientation-row{display:block}
 #btnOrientation{display:flex;align-items:center;justify-content:center;gap:9px;width:100%}
-.orientation-icon{font-size:18px;line-height:1;transform:rotate(90deg)}
+.orientation-icon{font-size:var(--text);line-height:1;transform:rotate(90deg)}
 /* Een kwartslag verandert ook de tafelrand waar een bediening aan vastzit.
    Alleen om het eigen midden draaien liet brede vensters buiten beeld vallen.
    De vaste bediening krijgt daarom hieronder zowel een kwartslag als de
@@ -54,9 +78,12 @@ body.controls-flipped>#kgInfo,
 body.controls-flipped .learn-card{rotate:90deg}
 button:disabled{opacity:.35;cursor:default}
 button:disabled:hover{border-color:var(--line);background:#151b24}
-.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
-.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim);
-  font-family:'JetBrains Mono',ui-monospace,monospace;margin:0 0 10px}
+/* Mono is de stem van het gereedschap: bouwstempel, coordinaten, het
+   bouwtekening-vel en wat achter ?dev zit. Alles wat een bezoeker leest —
+   labels, invoervelden, kopjes, antwoorden — staat in de displayfont. */
+.mono{font-family:var(--mono)}
+.eyebrow{font-size:var(--text-3xs);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);
+  font-weight:600;margin:0 0 10px}
 /* ── Menu: alles wat niet continu nodig is ──────────────────────────────
    Een tafel ligt plat en er staan mensen omheen. Elk paneel dat blijft staan
    ligt dus over de kaart en staat voor de helft van het gezelschap op zijn
@@ -65,7 +92,7 @@ button:disabled:hover{border-color:var(--line);background:#151b24}
    tegenover elkaar, zodat beide lange zijden er één binnen handbereik
    hebben; het menu opent bij de ingedrukte knop en in de leesrichting van
    die kant. */
-.menu-btn{left:auto;right:auto;width:52px;height:52px;padding:0;flex:none;
+.menu-btn{left:auto;right:auto;width:66px;height:66px;padding:0;flex:none;
   display:flex;align-items:center;justify-content:center;color:var(--ink);z-index:30}
 .menu-btn svg{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .menu-btn.on{color:#cfe0ff;border-color:var(--accent);background:rgba(61,123,255,.16)}
@@ -73,59 +100,48 @@ button:disabled:hover{border-color:var(--line);background:#151b24}
    staat het paar gespiegeld, zodat het voor wie daar staat — na de halve slag
    — in dezelfde volgorde ligt als aan kant A. */
 #btnMapA{left:18px;bottom:18px}
-#btnSetA{left:82px;bottom:18px}
+#btnSetA{left:100px;bottom:18px}
 #btnMapB{right:18px;top:18px;display:none}
-#btnSetB{right:82px;top:18px;display:none}
+#btnSetB{right:100px;top:18px;display:none}
 body.mode-touch.two-sided #btnMapB,body.mode-touch.two-sided #btnSetB{display:flex}
 /* Voor wie aan de overkant staat leest de knop — en straks het menu — pas
    rechtop als hij een halve slag om is. */
 body.two-sided #btnMapB,body.two-sided #btnSetB{transform:rotate(180deg)}
-.mode-touch .menu-btn{width:60px;height:60px}
-.mode-touch #btnSetA{left:90px}
-.mode-touch #btnSetB{right:90px}
 
 /* Virtuele kwartslag: onder-links wordt boven-links en boven-rechts wordt
    onder-rechts. Zo blijven de twee knoppenparen aan een echte tafelrand in
    plaats van alleen ter plekke zijwaarts te draaien. */
 body.controls-flipped #btnMapA{left:18px;top:18px;right:auto;bottom:auto;transform:rotate(90deg)}
-body.controls-flipped #btnSetA{left:18px;top:82px;right:auto;bottom:auto;transform:rotate(90deg)}
+body.controls-flipped #btnSetA{left:18px;top:100px;right:auto;bottom:auto;transform:rotate(90deg)}
 body.controls-flipped #btnMapB{left:auto;top:auto;right:18px;bottom:18px;transform:rotate(-90deg)}
-body.controls-flipped #btnSetB{left:auto;top:auto;right:18px;bottom:82px;transform:rotate(-90deg)}
-body.controls-flipped.mode-touch #btnSetA{left:18px;top:90px}
-body.controls-flipped.mode-touch #btnSetB{right:18px;bottom:90px}
+body.controls-flipped #btnSetB{left:auto;top:auto;right:18px;bottom:100px;transform:rotate(-90deg)}
 
-#menu{display:none;width:320px;max-height:calc(100vh - 112px);overflow-y:auto;z-index:31;
+#menu{display:none;width:400px;max-height:calc(100vh - 140px);overflow-y:auto;z-index:31;
   scrollbar-width:thin;scrollbar-color:#293443 transparent}
 #menu.open{display:block}
-#menu.at-a{left:18px;bottom:86px}
-#menu.at-b{right:18px;top:86px}
-.mode-touch #menu{max-height:calc(100vh - 128px)}
-.mode-touch #menu.at-a{bottom:94px}
-.mode-touch #menu.at-b{top:94px}
+#menu.at-a{left:18px;bottom:100px}
+#menu.at-b{right:18px;top:100px}
 #menu.flipped{transform:rotate(180deg);transform-origin:50% 50%}
 /* `translateY(-100%)` gebeurt vóór de rotatie en gebruikt daardoor de eigen,
    dynamische menuhoogte. Dat is precies de maat die na 90° de schermbreedte
    wordt; er zijn dus geen vaste aannames over open accordeons nodig. */
-body.controls-flipped #menu{max-height:calc(100vw - 112px);transform-origin:0 0}
-body.controls-flipped #menu.at-a{left:86px;top:18px;right:auto;bottom:auto;
+body.controls-flipped #menu{max-height:calc(100vw - 140px);transform-origin:0 0}
+body.controls-flipped #menu.at-a{left:100px;top:18px;right:auto;bottom:auto;
   transform:rotate(90deg) translateY(-100%)}
-body.controls-flipped #menu.at-b{left:calc(100vw - 86px);top:calc(100vh - 18px);right:auto;bottom:auto;
+body.controls-flipped #menu.at-b{left:calc(100vw - 100px);top:calc(100vh - 18px);right:auto;bottom:auto;
   transform:rotate(-90deg) translateY(-100%)}
-body.controls-flipped.mode-touch #menu.at-a{left:94px;top:18px;bottom:auto}
-body.controls-flipped.mode-touch #menu.at-b{left:calc(100vw - 94px);top:calc(100vh - 18px);right:auto}
 .menu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-.menu-head h1{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu-head h1{font-size:var(--text-sm);font-weight:700;margin:0;letter-spacing:-.01em;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Taalknop boven in het menu. Twee vakjes in plaats van één wisselknop:
    aan een tafel waar iemand langsloopt en even meekijkt moet in één blik
    te zien zijn welke taal aan staat, niet pas na het indrukken. */
 .lang-switch{display:flex;flex:none;gap:2px;padding:2px;border:1px solid var(--line);
   border-radius:9px;background:var(--subtle)}
-.lang-switch button{padding:5px 9px;min-height:0;border:0;background:transparent;
-  color:var(--ink-dim);border-radius:7px;font-size:11px;font-weight:700;letter-spacing:.06em}
+.lang-switch button{padding:7px 13px;min-height:0;border:0;background:transparent;
+  color:var(--ink-dim);border-radius:7px;font-size:var(--text-2xs);font-weight:700;letter-spacing:.06em}
 .lang-switch button[aria-pressed="true"]{background:var(--selected);color:var(--ink);
   box-shadow:0 1px 6px rgba(0,0,0,.25)}
-.mode-touch .lang-switch button{padding:8px 12px;font-size:13px}
-#menuClose{flex:none;width:34px;height:34px;padding:0;font-size:19px;line-height:1;border-radius:9px}
+#menuClose{flex:none;width:var(--tap-sm);height:var(--tap-sm);min-height:0;padding:0;font-size:var(--text);line-height:1;border-radius:9px}
 /* De onderdelen vormen rustige, losse blokken. Dat maakt het menu scanbaar
    zonder dat iedere regel om aandacht vraagt. */
 .menu-sec{margin-top:7px;border:1px solid var(--line);border-radius:10px;
@@ -145,33 +161,34 @@ body.controls-flipped.mode-touch #menu.at-b{left:calc(100vw - 94px);top:calc(100
 .src-only,label.field.src-only{display:none}
 .menu-sec.collapsed>.accordion-body{display:none}
 .accordion-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
-  width:100%;padding:11px 12px;border:0;background:transparent;color:var(--ink);
-  border-radius:0;font-size:14px;font-weight:650;text-align:left}
+  width:100%;padding:15px 16px;border:0;background:transparent;color:var(--ink);
+  border-radius:0;font-size:var(--text-sm);font-weight:650;text-align:left}
 .accordion-head:hover{border-color:transparent;background:rgba(255,255,255,.035);color:#fff}
 .accordion-head:focus-visible{outline-offset:-3px}
 .accordion-chev{width:8px;height:8px;flex:none;border-right:1.5px solid var(--ink-dim);
   border-bottom:1.5px solid var(--ink-dim);transform:rotate(45deg);transition:transform .18s ease}
 .menu-sec:not(.collapsed)>.accordion-head .accordion-chev{transform:rotate(225deg)}
 .menu-sec:not(.collapsed)>.accordion-head{background:rgba(61,123,255,.075);color:#dbe7ff}
-.accordion-body{padding:12px;border-top:1px solid var(--line)}
+.accordion-body{padding:16px;border-top:1px solid var(--line)}
 .menu-subhead{margin:18px 0 8px}
 .menu-subhead:first-child{margin-top:0}
-.stamp{margin:0 0 7px;font-size:10px;line-height:1.3;color:var(--ink-dim);opacity:.75;
+.stamp{margin:0 0 7px;font-size:var(--text-3xs);line-height:1.3;color:var(--ink-dim);opacity:.75;
   letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
-.head h1,.head h2{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
-.head .chev{color:var(--ink-dim);font-size:11px}
+.head h1,.head h2{font-size:var(--text-sm);font-weight:700;margin:0;letter-spacing:-.01em}
+.head .chev{color:var(--ink-dim);font-size:var(--text-2xs)}
 .mode-switch{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;padding:3px;
   border:1px solid var(--line);border-radius:11px;background:var(--subtle)}
 .mode-switch button{padding:8px 7px;border:0;background:transparent;color:var(--ink-dim);border-radius:7px}
 .mode-switch button.active{background:var(--selected);color:var(--ink);box-shadow:0 1px 6px var(--shadow)}
 .theme-switch{margin-top:-1px}
 .theme-switch button{display:flex;align-items:center;justify-content:center;gap:7px}
-.theme-icon{font-size:15px;line-height:1}
+.theme-icon{font-size:var(--text-sm);line-height:1}
 .body{margin-top:14px}
 .row{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap}
-button{font-family:inherit;font-size:12px;font-weight:500;color:var(--ink);
-  background:var(--control);border:1px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer;
+button{font-family:inherit;font-size:var(--text-2xs);font-weight:500;color:var(--ink);
+  background:var(--control);border:1px solid var(--line);border-radius:var(--chip-radius);
+  padding:var(--chip-pad-y) var(--chip-pad-x);min-height:var(--tap);cursor:pointer;
   flex:1;min-width:0;transition:border-color .15s,background .15s}
 button:hover{border-color:color-mix(in srgb,var(--line),var(--ink) 18%);background:var(--control-hover)}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -180,13 +197,13 @@ button.primary{background:#236cff;border-color:#4b89ff;color:#fff;font-weight:70
   box-shadow:0 5px 18px rgba(35,108,255,.3)}
 button.primary:hover{background:#3379ff;border-color:#75a5ff}
 button.danger.on{background:rgba(255,95,86,.18);border-color:var(--bad)}
-label.field{display:block;font-size:11px;color:var(--ink-dim);margin:12px 0 5px;
-  font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:.04em}
-input,select,textarea{width:100%;background:var(--control);border:1px solid var(--line);border-radius:8px;
-  color:var(--ink);padding:8px 10px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
-textarea{resize:none;line-height:1.5;min-height:88px}
+label.field{display:block;font-size:var(--text-2xs);color:var(--ink-dim);margin:12px 0 5px;
+  font-weight:600;letter-spacing:.01em}
+input,select,textarea{width:100%;background:var(--control);border:1px solid var(--line);border-radius:11px;
+  color:var(--ink);padding:11px 14px;font-family:inherit;font-size:var(--text);min-height:var(--tap)}
+textarea{resize:none;line-height:1.5;min-height:110px}
 input[type=range]{padding:0;accent-color:var(--accent);border:none;background:none}
-.hint{font-size:11px;line-height:1.55;color:var(--ink-dim);margin:12px 0 0}
+.hint{font-size:var(--text-2xs);line-height:1.55;color:var(--ink-dim);margin:12px 0 0}
 .hint b{color:var(--ink);font-weight:500}
 /* Gereedschap voor wie de tafel bouwt of ijkt. Staat er alleen bij als
    app.js de ontwikkelstand op de <body> heeft gezet (?dev in de URL). */
@@ -200,18 +217,18 @@ body.dev .dev-only{display:block}
    verschijnt terwijl iemand met pucks in de weer is, dus hij mag geen enkele
    aanraking opvangen. */
 #flag{display:none;left:18px;top:50%;transform:translateY(-50%);width:220px;padding:11px 13px;
-  font-size:11px;line-height:1.5;color:var(--warn);pointer-events:none;z-index:20}
+  font-size:var(--text-2xs);line-height:1.5;color:var(--warn);pointer-events:none;z-index:20}
 .analytics-launch{margin:12px 0 0}
-.pin{font-size:12px;line-height:1.45;padding:8px 0;border-bottom:1px solid var(--line);
+.pin{font-size:var(--text-2xs);line-height:1.45;padding:8px 0;border-bottom:1px solid var(--line);
   display:flex;gap:9px;align-items:flex-start}
 .pin:last-child{border-bottom:none}
 .pin i{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none}
 .pin .description{margin-top:3px;color:var(--ink-dim)}
-.pin .meta{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;color:var(--ink-dim)}
-.pin .del{color:var(--ink-dim);cursor:pointer;margin-left:auto;font-size:14px;padding:0 4px}
+.pin .meta{font-family:var(--mono);font-size:var(--text-3xs);color:var(--ink-dim)}
+.pin .del{color:var(--ink-dim);cursor:pointer;margin-left:auto;font-size:var(--text-sm);padding:0 4px}
 .pin .del:hover{color:var(--bad)}
-.empty{font-size:12px;color:var(--ink-dim);line-height:1.6}
-.dock{left:50%;width:330px;padding:12px 14px 13px}
+.empty{font-size:var(--text-2xs);color:var(--ink-dim);line-height:1.6}
+.dock{left:50%;width:415px;padding:15px 17px 16px}
 #puckDock{bottom:18px;transform:translateX(-50%)}
 /* De bovenste balk staat 180° gedraaid: alles erin — tekst, knop, pucks —
    leest daarmee rechtop voor wie aan de overkant van de tafel staat. */
@@ -227,20 +244,20 @@ body:not(.mode-touch) #sidesRow,
 body:not(.mode-touch) #sidesHint{display:none}
 /* Kleine regel onder de puckbalk: wanneer deze versie is gebouwd. Bedoeld om
    even te controleren, niet om te lezen — vandaar klein en gedempt. */
-.build-stamp{margin:9px 0 0;text-align:center;font-size:9.5px;line-height:1.3;
+.build-stamp{margin:9px 0 0;text-align:center;font-size:var(--text-3xs);line-height:1.3;
   color:var(--ink-dim);opacity:.62;
-  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-family:var(--mono);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .puck-dock-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:10px}
 .puck-dock-head .hint{margin:0;line-height:1.35;flex:1;min-width:0}
-.puck-dock-head .btn-clear{flex:none;width:auto;padding:8px 11px;font-size:11px}
-.puck-dock-head #btnClear{flex:none;width:auto;padding:7px 9px;font-size:10px}
+.puck-dock-head .btn-clear{flex:none;width:auto;padding:8px 11px;font-size:var(--text-2xs)}
+.puck-dock-head #btnClear{flex:none;width:auto;padding:7px 9px;font-size:var(--text-3xs)}
 #trayPucks{gap:10px}
 #puckDock #trayPucks{justify-content:center;margin:0;flex-wrap:nowrap}
-.traypuck{width:52px;height:52px;flex:none;border-radius:50%;background:rgba(9,12,17,.94);
+.traypuck{width:66px;height:66px;flex:none;border-radius:50%;background:rgba(9,12,17,.94);
   border:2px solid var(--line);color:var(--ink);cursor:grab;touch-action:none;
   display:flex;align-items:center;justify-content:center;
-  font-size:9px;font-weight:600;text-align:center;line-height:1.05;padding:3px;
+  font-size:var(--text-3xs);font-weight:600;text-align:center;line-height:1.05;padding:3px;
   transition:transform .12s,opacity .12s}
 .traypuck:hover{transform:scale(1.07)}
 .traypuck:active{cursor:grabbing}
@@ -249,41 +266,39 @@ body:not(.mode-touch) #sidesHint{display:none}
   padding:10px}
 body.controls-flipped #zoom{left:50%;top:calc(100vh - 18px);right:auto;bottom:auto;transform-origin:0 0;
   transform:rotate(90deg) translate(-100%,-50%)}
-#zoom button{width:44px;height:44px;font-size:18px;flex:none;padding:0}
-#note{position:fixed;z-index:20;display:none;width:310px;padding:17px 18px 16px;
+#zoom button{width:56px;height:56px;min-height:0;font-size:var(--text);flex:none;padding:0}
+#note{position:fixed;z-index:20;display:none;width:390px;padding:21px 22px 20px;
   transform:rotate(var(--flip,0deg));
   transform-origin:var(--origin-x,0) var(--origin-y,50%)}
 /* Gedraaid draait het venster om zijn eigen midden — anders zou het bij het
    kantelen van zijn plek af schuiven. */
 #note.flipped{transform-origin:50% 50%}
 #note.opening{animation:puck-note-out .32s cubic-bezier(.2,.85,.25,1.12) both}
-#note::before{content:"";position:absolute;top:var(--stem-top,50%);width:var(--stem-width,42px);
-  height:2px;background:linear-gradient(90deg,var(--note-color,#3d7bff),rgba(61,123,255,.18));
-  transform:translateY(-50%);pointer-events:none}
-#note.from-left::before{right:100%;transform:translateY(-50%)}
-#note.from-right::before{left:100%;transform:translateY(-50%) rotate(180deg)}
+/* De verbinding met de puck werd hier als ::before-stengel getekend, maar
+   `#note` heeft `overflow-y:auto` en dat klemt ook zijwaarts: die stengel is
+   dus nooit te zien geweest. Hij wordt nu op het canvas getekend, met een punt
+   op de rand van de puck — zie `drawNoteTether()` in app.js. */
 /* Kop met de draaiknop: één tik zet dit venster (en het toetsenbord) op de
    kant van wie aan de overkant staat. Alleen zichtbaar als de tafel twee
    kanten heeft — anders staat er niets om naartoe te draaien. */
 .note-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-#noteFlip{display:none;flex:none;width:34px;height:34px;min-height:0;padding:0;
-  font-size:16px;line-height:1;margin-top:-5px}
+#noteFlip{display:none;flex:none;width:var(--tap-sm);height:var(--tap-sm);min-height:0;padding:0;
+  font-size:var(--text);line-height:1;margin-top:-5px}
 body.two-sided #noteFlip{display:block}
-body.two-sided.mode-touch #noteFlip{width:44px;height:44px;font-size:19px;margin-top:-8px}
 #note input,#note textarea{margin-bottom:2px}
 #note .field{margin-top:10px}
 @keyframes puck-note-out{
   from{opacity:0;transform:rotate(var(--flip,0deg)) translateX(var(--enter-x,-28px)) scale(.72)}
   to{opacity:1;transform:rotate(var(--flip,0deg)) translateX(0) scale(1)}
 }
-#keyboard{left:50%;bottom:14px;z-index:40;display:none;width:min(820px,calc(100vw - 28px));
+#keyboard{left:50%;bottom:14px;z-index:40;display:none;width:min(1030px,calc(100vw - 28px));
   transform:translateX(-50%);padding:12px;background:rgba(10,14,20,.98);box-shadow:0 -14px 50px rgba(0,0,0,.42)}
 #keyboard.visible{display:block;animation:keyboard-up .2s ease-out both}
 .keyboard-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px 3px}
 .keyboard-head .eyebrow{margin:0}
-#keyboardField{font-size:10px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+#keyboardField{font-size:var(--text-3xs);color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
 .keyboard-row{display:flex;justify-content:center;gap:6px;margin-top:6px}
-#keyboard button{flex:1 1 0;min-width:42px;height:50px;padding:0 8px;font-size:18px;font-weight:600;
+#keyboard button{flex:1 1 0;min-width:52px;height:62px;min-height:0;padding:0 8px;font-size:var(--text);font-weight:600;
   background:#1a2230;border-color:#2b3748;touch-action:manipulation}
 #keyboard button:active{background:#31415a;transform:translateY(1px)}
 #keyboard .key-wide{flex:1.55}
@@ -300,34 +315,25 @@ body.two-sided.mode-touch #noteFlip{width:44px;height:44px;font-size:19px;margin
 #sheet{position:fixed;inset:0;background:rgba(3,5,8,.9);z-index:50;display:none;overflow:auto;padding:40px 20px}
 #sheet .inner{max-width:920px;margin:0 auto;background:var(--surface);border:1px solid var(--line);
   border-radius:18px;padding:34px}
-#sheet h2{font-size:22px;margin:0 0 6px;letter-spacing:-.02em}
-#sheet p{font-size:13px;line-height:1.6;color:var(--ink-dim);max-width:62ch}
+#sheet h2{font-size:var(--text-lg);margin:0 0 6px;letter-spacing:-.02em}
+#sheet p{font-size:var(--text-xs);line-height:1.6;color:var(--ink-dim);max-width:62ch}
 .sheetgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px;margin-top:26px}
 .sheetcard{border:1px solid var(--line);border-radius:12px;padding:16px}
-.sheetcard h3{font-size:13px;margin:0 0 10px;font-family:'JetBrains Mono',ui-monospace,monospace}
-.sheetcard table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px}
+.sheetcard h3{font-size:var(--text-xs);margin:0 0 10px;font-family:var(--mono)}
+.sheetcard table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:var(--text-2xs)}
 .sheetcard td{padding:3px 0;color:var(--ink-dim)}
 .sheetcard td:first-child{color:var(--ink)}
 #closeSheet{max-width:160px;margin-top:26px}
 /* Het vel is langer dan het scherm, dus de sluitknop onderaan is bij vier
    pucks al niet meer in beeld. Dit kruisje blijft meescrollen bovenin. */
 #sheet .inner{position:relative}
-#closeSheetTop{position:sticky;top:0;float:right;width:38px;height:38px;padding:0;
-  font-size:20px;line-height:1;border-radius:10px;z-index:1}
-.mode-touch #menu{width:350px}
-.mode-touch .dock{width:370px}
-.mode-touch button{min-height:44px;font-size:13px}
-.mode-touch .mode-switch button{min-height:40px}
-.mode-touch .scale-row button{width:46px;min-height:44px}
-.mode-touch input,.mode-touch select,.mode-touch textarea{font-size:16px;min-height:44px}
-.mode-touch .traypuck{width:60px;height:60px;font-size:10px}
-.mode-touch #zoom button{width:52px;height:52px;font-size:22px}
-.mode-touch .pin .del{font-size:19px;padding:2px 8px}
+#closeSheetTop{position:sticky;top:0;float:right;width:52px;height:52px;min-height:0;padding:0;
+  font-size:var(--text-lg);line-height:1;border-radius:10px;z-index:1}
 body.keyboard-open #note{z-index:45}
 @media (max-width:700px){
   #keyboard{width:calc(100vw - 12px);bottom:6px;padding:7px}
   .keyboard-row{gap:3px;margin-top:4px}
-  #keyboard button{min-width:0;height:45px;padding:0 3px;font-size:15px}
+  #keyboard button{min-width:0;height:45px;padding:0 3px;font-size:var(--text-sm)}
   #puckDock{bottom:8px;width:min(370px,calc(100vw - 16px))}
   .puck-dock-head .hint{display:none}
 }
@@ -335,9 +341,9 @@ body.keyboard-open #note{z-index:45}
 
 /* ── Kennisgraaf: het leesvenster bij een aangetikt punt uit coco-biblio.
    Bewust soberder dan #note — dit is bestaande kennis, geen bijdrage. ── */
-#kgInfo{position:fixed;z-index:19;display:none;width:280px;padding:15px 16px 14px;
+#kgInfo{position:fixed;z-index:19;display:none;width:350px;padding:15px 16px 14px;
         border-left:2px solid #7aa2f7}
-#kgInfo .kg-title{margin:4px 0 12px;font:600 15px/1.35 'Space Grotesk',system-ui,sans-serif;
+#kgInfo .kg-title{margin:4px 0 12px;font:600 var(--text-sm)/1.35 var(--display);
                   color:#e8edf4}
 
 /* ── Documentlezer ─────────────────────────────────────────────────────
@@ -350,40 +356,40 @@ body.keyboard-open #note{z-index:45}
   overflow:hidden;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 18px 60px rgba(0,0,0,.48)}
 .document-viewer-head{display:flex;align-items:center;gap:14px;padding:11px 12px 11px 18px;border-bottom:1px solid var(--line)}
 .document-viewer-title{flex:1;min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
-#closeDocumentViewer{flex:none;width:40px;height:40px;padding:0;font-size:24px;line-height:1}
+#closeDocumentViewer{flex:none;width:var(--tap);height:var(--tap);min-height:0;padding:0;font-size:var(--text-xl);line-height:1}
 #documentViewerFrame{width:100%;height:100%;border:0;background:#fff}
-.mode-touch #documentViewer{padding:12px}.mode-touch #closeDocumentViewer{width:48px;height:48px}
+.mode-touch #documentViewer{padding:12px}
 
 /* ── Kennisgraaf in het notitievenster: wat er over deze plek bekend is,
    en het antwoord dat coco-biblio's RAG-chat eruit trekt. ── */
 .kg-block{margin-top:14px;padding-top:12px;border-top:1px solid rgba(232,237,244,.12)}
 .kg-block .eyebrow{margin:0 0 8px}
 #noteNearby{margin-bottom:10px}
-#noteNearby .empty{margin:0;font:400 12px/1.4 'Space Grotesk',system-ui,sans-serif;
+#noteNearby .empty{margin:0;font:400 var(--text-2xs)/1.4 var(--display);
                    color:rgba(232,237,244,.45)}
 .kg-near{display:flex;gap:10px;align-items:baseline;justify-content:space-between;
-         padding:4px 0;font:400 12px/1.35 'Space Grotesk',system-ui,sans-serif;
+         padding:4px 0;font:400 var(--text-2xs)/1.35 var(--display);
          color:rgba(232,237,244,.78);border-bottom:1px solid rgba(232,237,244,.06)}
 .kg-near:last-child{border-bottom:0}
 /* Een document dat óók het thema van de puck draagt staat bovenaan én
    krijgt de themakleur, zodat de relevantie zichtbaar is en niet alleen
    een kwestie van volgorde. */
 .kg-near.match{color:#e8edf4}
-.kg-near.match .kg-near-label::before{content:"● ";color:#7aa2f7;font-size:9px;vertical-align:2px}
+.kg-near.match .kg-near-label::before{content:"● ";color:#7aa2f7;font-size:var(--text-3xs);vertical-align:2px}
 .kg-near-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.kg-near-dist{flex:none;font-size:10px;color:rgba(232,237,244,.4)}
+.kg-near-dist{flex:none;font-size:var(--text-3xs);color:rgba(232,237,244,.4)}
 /* Het antwoord houdt één hoogte aan. Terwijl het model doorschrijft zou het
    venster anders bij elk woord groeien en onder de vinger vandaan schuiven;
    nu blijft de knop op zijn plek en scrolt de tekst binnen dit kader. */
 #noteAnswer{display:none;margin-top:10px;padding:10px 11px;border-radius:8px;background:rgba(122,162,247,.09);
-            font:400 12.5px/1.5 'Space Grotesk',system-ui,sans-serif;color:#e8edf4;
+            font:400 var(--text-2xs)/1.5 var(--display);color:#e8edf4;
             white-space:pre-wrap;
             height:var(--answer-h,196px);overflow-y:auto;
             touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #noteAnswer::-webkit-scrollbar{width:5px}
 #noteAnswer::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(232,237,244,.22)}
 #noteAnswer::-webkit-scrollbar-track{background:transparent}
-#noteSources{display:none;margin-top:7px;font:400 10px/1.4 'JetBrains Mono',ui-monospace,monospace;
+#noteSources{display:none;margin-top:7px;font:400 var(--text-3xs)/1.4 var(--display);letter-spacing:.01em;
              color:rgba(232,237,244,.4)}
 /* Scrollen binnen een paneel. De body staat op touch-action:none omdat
    elke veeg daar een kaartgebaar of een puck is; in een paneel moet een
@@ -402,7 +408,7 @@ body.keyboard-open #note{z-index:45}
 #layersMenu .eyebrow:first-child{margin-top:0}
 #layersMenu .layer-basemap-head{padding-top:15px;border-top:1px solid var(--line)}
 #layersMenu .layer-group-head{margin-top:13px;color:#a9b4c2;letter-spacing:.12em}
-#layersMenu .hint{font-size:10.5px;line-height:1.45}
+#layersMenu .hint{font-size:var(--text-3xs);line-height:1.45}
 #layersMenu .layer{display:block;width:100%;text-align:left;margin-bottom:5px}
 #layersMenu .layer:last-child{margin-bottom:0}
 
@@ -421,28 +427,28 @@ body.keyboard-open #note{z-index:45}
   transform:rotate(var(--analytics-flip,0deg));transform-origin:50% 50%}
 #analytics.quarter-turn .analytics-inner{width:min(1040px,calc(100vh - 56px));
   height:min(1040px,calc(100vw - 56px));max-height:none}
-.analytics-inner h2{margin:0;font-size:28px;letter-spacing:-.035em}
-.analytics-intro{margin:8px 0 25px;color:var(--ink-dim);font-size:14px}
+.analytics-inner h2{margin:0;font-size:var(--text-xl);letter-spacing:-.035em}
+.analytics-intro{margin:8px 0 25px;color:var(--ink-dim);font-size:var(--text-sm)}
 .analytics-actions{position:absolute;right:18px;top:18px;display:flex;gap:8px}
-.analytics-actions button{width:40px;height:40px;padding:0;flex:none;line-height:1}
-#flipAnalytics{font-size:18px}
-.analytics-close{font-size:23px}
+.analytics-actions button{width:var(--tap);height:var(--tap);min-height:0;padding:0;flex:none;line-height:1}
+#flipAnalytics{font-size:var(--text)}
+.analytics-close{font-size:var(--text-lg)}
 .analytics-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .analytics-kpi{min-height:100px;padding:17px;border:1px solid var(--line);border-radius:12px;background:#111720;display:flex;flex-direction:column;justify-content:space-between}
-.analytics-kpi b{font:500 30px/1 var(--mono);color:#fff}.analytics-kpi span{font-size:11px;line-height:1.35;color:var(--ink-dim)}
+.analytics-kpi b{font:600 var(--text-xl)/1 var(--display);font-variant-numeric:tabular-nums;color:#fff}.analytics-kpi span{font-size:var(--text-2xs);line-height:1.35;color:var(--ink-dim)}
 .analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.analytics-card{min-width:0;padding:18px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.018)}
 /* Export en wissen onder het overzicht: de knop staat naast de cijfers
    waarop je hem indrukt, niet in het menu waar je de tafel mee bedient. */
 .analytics-footer{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px;padding-top:16px;
   border-top:1px solid var(--line)}
-.analytics-card h3{margin:0 0 13px;font-size:15px}.analytics-wide{grid-column:1/-1}.analytics-note{margin:-5px 0 13px;color:var(--ink-dim);font-size:11px;line-height:1.45}
-.analytics-bar{padding:7px 0}.analytics-bar-head{display:flex;justify-content:space-between;gap:12px;font-size:12px}.analytics-bar-head span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.analytics-bar-head b{font:500 12px var(--mono);color:var(--ink-dim)}
+.analytics-card h3{margin:0 0 13px;font-size:var(--text-sm)}.analytics-wide{grid-column:1/-1}.analytics-note{margin:-5px 0 13px;color:var(--ink-dim);font-size:var(--text-2xs);line-height:1.45}
+.analytics-bar{padding:7px 0}.analytics-bar-head{display:flex;justify-content:space-between;gap:12px;font-size:var(--text-2xs)}.analytics-bar-head span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.analytics-bar-head b{font:600 var(--text-2xs) var(--display);font-variant-numeric:tabular-nums;color:var(--ink-dim)}
 .analytics-rail{height:6px;margin-top:6px;border-radius:999px;background:#202936;overflow:hidden}.analytics-rail i{display:block;height:100%;border-radius:inherit;min-width:2px}
 .analytics-hotspot{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 8px;padding:11px 12px;border:1px solid rgba(255,209,102,.38);border-radius:10px;background:rgba(255,209,102,.08)}
-.analytics-hotspot span{font-size:11px;color:#ffe18b;text-transform:uppercase;letter-spacing:.08em}.analytics-hotspot b{font:500 12px var(--mono);color:#fff}
+.analytics-hotspot span{font-size:var(--text-2xs);color:#ffe18b;text-transform:uppercase;letter-spacing:.08em}.analytics-hotspot b{font:600 var(--text-2xs) var(--display);font-variant-numeric:tabular-nums;color:#fff}
 .analytics-place{display:flex;width:100%;padding:10px 0;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;align-items:baseline;gap:12px}.analytics-place:last-child{border-bottom:0}.analytics-place:hover{background:rgba(61,123,255,.08)}
-.analytics-place b{flex:none;font:500 12px var(--mono);color:#cfe0ff}.analytics-place span{color:var(--ink-dim);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mode-touch #analytics{padding:16px}.mode-touch .analytics-inner{padding:28px 20px}.mode-touch #analytics.quarter-turn .analytics-inner{width:min(1040px,calc(100vh - 32px));height:min(1040px,calc(100vw - 32px))}.mode-touch .analytics-inner h2{font-size:25px}.mode-touch .analytics-kpi{min-height:110px}.mode-touch .analytics-card h3{font-size:17px}.mode-touch .analytics-bar-head,.mode-touch .analytics-place b{font-size:14px}.mode-touch .analytics-place span{font-size:13px}.mode-touch .analytics-actions button{width:46px;height:46px}
+.analytics-place b{flex:none;font:600 var(--text-2xs) var(--display);font-variant-numeric:tabular-nums;color:#cfe0ff}.analytics-place span{color:var(--ink-dim);font-size:var(--text-2xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mode-touch #analytics{padding:16px}.mode-touch .analytics-inner{padding:28px 20px}.mode-touch #analytics.quarter-turn .analytics-inner{width:min(1040px,calc(100vh - 32px));height:min(1040px,calc(100vw - 32px))}.mode-touch .analytics-kpi{min-height:110px}
 @media (max-width:700px){.analytics-kpis,.analytics-grid{grid-template-columns:1fr}.analytics-wide{grid-column:auto}.analytics-inner{padding:30px 16px}.analytics-kpi{min-height:80px}.analytics-actions{right:10px;top:10px}}
 
 /* ── Aanklikbare graafitems ─────────────────────────────────────────────
@@ -452,12 +458,12 @@ body.keyboard-open #note{z-index:45}
 .kg-near:hover{background:rgba(122,162,247,.10)}
 .kg-quote{margin:2px 0 8px;padding:8px 10px;border-left:2px solid rgba(122,162,247,.5);
   background:rgba(122,162,247,.06);border-radius:0 8px 8px 0;
-  font:400 11.5px/1.5 'Space Grotesk',system-ui,sans-serif;color:rgba(232,237,244,.82)}
-.kg-quote .src{display:block;margin-top:5px;font:400 9.5px/1.4 'JetBrains Mono',ui-monospace,monospace;
+  font:400 var(--text-2xs)/1.5 var(--display);color:rgba(232,237,244,.82)}
+.kg-quote .src{display:block;margin-top:5px;font:400 var(--text-3xs)/1.4 var(--display);
   color:rgba(232,237,244,.4)}
 #noteMatches{margin-bottom:10px}
 #kgInfoBody{margin-bottom:12px}
-#kgInfo{width:300px}
+#kgInfo{width:375px}
 
 /* Het leesvenster van de kennisgraaf draait mee met dezelfde regel. */
 #kgInfo{transform:rotate(var(--kg-flip,0deg));transform-origin:50% 50%}
@@ -546,23 +552,23 @@ body.keyboard-open #note{z-index:45}
   max-height:calc(100vh - 48px);overflow:auto;
   background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;
   box-shadow:0 24px 60px rgba(0,0,0,.5)}
-.learn-card h2{font-size:20px;margin:0 0 6px;letter-spacing:-.02em}
-.learn-intro{font-size:13px;line-height:1.6;color:var(--ink-dim);margin:0 0 12px}
-.learn-status{font-size:13px;line-height:1.5;margin:0 0 9px;min-height:2.7em}
+.learn-card h2{font-size:var(--text-lg);margin:0 0 6px;letter-spacing:-.02em}
+.learn-intro{font-size:var(--text-xs);line-height:1.6;color:var(--ink-dim);margin:0 0 12px}
+.learn-status{font-size:var(--text-xs);line-height:1.5;margin:0 0 9px;min-height:2.7em}
 .learn-bar{height:4px;border-radius:3px;background:var(--line);overflow:hidden;margin:0 0 14px}
 .learn-bar i{display:block;height:100%;width:0;background:#39d8a4;transition:width .09s linear}
-.learn-warn{font-size:12.5px;line-height:1.55;color:var(--warn);margin:0 0 12px;
+.learn-warn{font-size:var(--text-2xs);line-height:1.55;color:var(--warn);margin:0 0 12px;
   border-left:2px solid var(--warn);padding-left:10px}
-.learn-which{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+.learn-which{font-size:var(--text-2xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   color:var(--ink-dim);margin:0 0 9px}
 .learn-pick{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;
   text-align:left;border-color:var(--c);margin:0 0 8px;padding:11px 13px}
-.learn-pick b{color:var(--c);font-size:14px;font-weight:700}
-.learn-pick span{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--ink-dim)}
+.learn-pick b{color:var(--c);font-size:var(--text-sm);font-weight:700}
+.learn-pick span{font-family:var(--mono);font-size:var(--text-2xs);color:var(--ink-dim)}
 .learn-foot{margin-top:14px;margin-bottom:0}
 .learn-foot #closeLearn{margin-left:auto}
 #closeLearnTop{position:absolute;top:9px;right:11px;border:0;background:none;
-  color:var(--ink-dim);font-size:22px;line-height:1;padding:4px 9px}
+  color:var(--ink-dim);font-size:var(--text-lg);line-height:1;padding:4px 9px}
 
 
 /* ---- Puckstand ---------------------------------------------------------
@@ -584,10 +590,10 @@ body:not(.mode-puck) .puck-mode-hint{display:none}
 .own-row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;
   width:100%;margin:0 0 7px;padding:9px 11px;border-radius:11px;
   border:1px solid var(--line);background:rgba(9,12,17,.5)}
-.own-row b{color:var(--c);font-size:14px;font-weight:700}
-.own-row span{grid-column:1;font-family:'JetBrains Mono',ui-monospace,monospace;
-  font-size:11px;color:var(--ink-dim)}
+.own-row b{color:var(--c);font-size:var(--text-sm);font-weight:700}
+.own-row span{grid-column:1;font-family:var(--mono);
+  font-size:var(--text-2xs);color:var(--ink-dim)}
 .own-row .own-del{grid-column:2;grid-row:1 / span 2;width:38px;height:38px;
-  padding:0;font-size:18px;line-height:1}
+  padding:0;font-size:var(--text);line-height:1}
 :root[data-theme="light"] .own-row{background:rgba(255,255,255,.6)}
 .mode-touch .own-row .own-del{width:44px;height:44px}
