@@ -1,4 +1,7 @@
 node_modules/
 dist/
+dist.nieuw/
+dist.oud/
+.puck-update-staat
 .DS_Store
 .vite/

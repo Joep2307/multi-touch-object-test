@@ -3,11 +3,16 @@
 #   puck-table.service  — serveert dist/ op poort 8080, ook na een herstart
 #   puck-update.timer   — kijkt elke minuut of er een nieuwe versie op GitHub staat
 #
+# Dit is de enige bijwerker die er hoort te staan. Zet een eerder opgezette
+# tweede uit voordat je dit draait; zie "Als de tafel niet bijwerkt" in
+# deploy/README.md.
+#
 # Draaien met: sudo ./deploy/install.sh   (vanuit de projectmap)
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 USER_NAME=${SUDO_USER:-$USER}
+USER_HOME=$(getent passwd "$USER_NAME" | cut -d: -f6)
 PORT=${PORT:-8080}
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -44,7 +49,12 @@ After=network-online.target
 Type=oneshot
 User=$USER_NAME
 WorkingDirectory=$REPO
+# Optionele instellingen (PUCK_BRANCH, PUCK_RELOAD); ontbreken mag.
+EnvironmentFile=-$USER_HOME/.config/puck-table.env
 ExecStart=$REPO/deploy/update.sh
+# npm ci plus een build haalt de standaard van 90 s makkelijk; zonder deze
+# regel schiet systemd er middenin op af en blijft er een halve build achter.
+TimeoutStartSec=900
 UNIT
 
 cat > /etc/systemd/system/puck-update.timer <<UNIT
