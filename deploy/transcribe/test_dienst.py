@@ -1,8 +1,20 @@
 """Contracttest: doet de dienst wat speech.js verwacht?
 Het model zelf zit hier niet in — dat is een aparte, trage zorg."""
-import io, json, threading, time, urllib.request, sys
+import io, json, math, struct, threading, time, urllib.request, sys, wave
 from http.server import ThreadingHTTPServer
 import transcribe as T
+
+def proef_audio():
+    """Een seconde toon als wav. Bewust met de stdlib en niet met ffmpeg: deze
+    test moet overal kunnen draaien, ook op een machine waar alleen python
+    staat. Wat erin zit maakt niet uit — de neppe uitschrijver luistert niet."""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
+        w.writeframes(b"".join(
+            struct.pack("<h", int(12000 * math.sin(i * 2 * math.pi * 440 / 16000)))
+            for i in range(16000)))
+    return buf.getvalue()
 
 class NepUitschrijver:
     klaar = True
@@ -32,7 +44,7 @@ ok("GET noemt het model", "model" in j)
 ok("CORS-kop staat erop", r.headers.get("Access-Control-Allow-Origin")=="*")
 
 # 2. een blokje opsturen, net als de tafel
-audio = open("proef.webm","rb").read()
+audio = proef_audio()
 grens = "----pucktest"
 body = b""
 body += f"--{grens}\r\nContent-Disposition: form-data; name=\"audio\"; filename=\"deel.webm\"\r\nContent-Type: audio/webm\r\n\r\n".encode()

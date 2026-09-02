@@ -98,7 +98,19 @@ Kijk eerst in `journalctl -u puck-update -n 30`. Drie dingen die eerder misginge
 
 Welke build er draait, zie je zonder in te loggen op `http://<tafel>:8080/version.json`.
 
-Het gesprek uitschrijven (de knop **Gesprek opnemen** in het venster) staat in
-[TRANSCRIPTIE.md](TRANSCRIPTIE.md): wat de uitschrijfdienst op `api/transcribe`
-moet kunnen, en waarom de kiosk chromium met `--use-fake-ui-for-media-stream`
-start.
+## De uitschrijver
+
+Het gesprek uitschrijven (de knop **Gesprek opnemen** in het venster) is een
+eigen dienst naast de tafel:
+
+```sh
+sudo ./deploy/transcribe/install.sh     # venv, model en puck-stt.service
+systemctl status puck-stt
+journalctl -u puck-stt -f
+```
+
+De tafel vindt hem vanzelf op poort 8770 van dezelfde machine; instellen hoeft
+alleen als hij ergens anders draait (`?stt=http://<machine>:8770`).
+[TRANSCRIPTIE.md](TRANSCRIPTIE.md) legt uit wat de dienst doet, welke
+instellingen er zijn, en waarom de kiosk chromium met
+`--use-fake-ui-for-media-stream` start.

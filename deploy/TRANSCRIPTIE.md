@@ -44,13 +44,61 @@ Blokjes worden op volgorde verstuurd en op volgorde verwerkt. Valt de dienst
 weg, dan blijft de opname doorlopen en verschijnt er één melding in het venster
 — niet één per blokje.
 
-## Wat er vanavond nog moet gebeuren
+## De dienst zelf
 
-Een klein servicetje naast coco-biblio, bijvoorbeeld `faster-whisper` met model
-`small` (Nederlands: `small` is de ondergrens voor straatnamen, `base` verzint
-te veel), een systemd-unit in de trant van `deploy/install.sh`, en die twee
-routes. Op een NUC zonder GPU haalt `small` ongeveer realtime; blijft hij
-achterlopen, dan is `CHUNK_MS` in `speech.js` de knop om aan te draaien.
+`deploy/transcribe/transcribe.py` is die dienst: `faster-whisper` met model
+`small` (voor Nederlands is dat de ondergrens voor straatnamen, `base` verzint
+te veel), een server op de standaardbibliotheek, geen framework. Op een NUC
+zonder GPU haalt `small` ongeveer realtime; blijft hij achterlopen, dan is
+`CHUNK_MS` in `speech.js` de knop om aan te draaien — of `PUCK_STT_MODEL=base`.
+
+Neerzetten op de NUC:
+
+```sh
+sudo ./deploy/transcribe/install.sh
+```
+
+Dat maakt een venv in `~/.local/share/puck-stt/venv` (bewust buiten de repo,
+want `deploy/update.sh` doet daar een `reset --hard`), haalt het model alvast
+op zodat de eerste groep bezoekers niet staat te wachten, en zet
+`puck-stt.service` neer. Controleren:
+
+```sh
+systemctl status puck-stt
+journalctl -u puck-stt -f
+curl http://localhost:8770/api/transcribe
+```
+
+Instellingen komen uit de omgeving en mogen in `~/.config/puck-table.env`:
+`PUCK_STT_MODEL` (small), `PUCK_STT_PORT` (8770), `PUCK_STT_BIND` (0.0.0.0),
+`PUCK_STT_DEVICE`/`PUCK_STT_COMPUTE` (cpu/int8), `PUCK_STT_MODEL_DIR` voor een
+machine zonder internet.
+
+Twee dingen zitten er expres in. Op stilte vult whisper de leegte met wat het
+uit ondertitelbestanden kent — "Ondertiteling door de Amara.org gemeenschap"
+in de opbrengst van een participatiemiddag is geen grap, dus er staat een
+VAD-filter voor en een lijst met bekende onzin achter. En een blokje dat
+misgaat geeft een 500 met uitleg terug in plaats van de dienst mee te nemen;
+de tafel meldt dat één keer en neemt door.
+
+`deploy/transcribe/test_dienst.py` controleert het contract zonder model: hij
+zet er een neppe uitschrijver in en kijkt of de polsslag, de CORS-kop, de
+multipart en de foutafhandeling kloppen. Draaien met gewoon `python3`.
+
+## Hoe de tafel de dienst vindt
+
+De statische server op de NUC is `python3 -m http.server` en kan niets
+doorsturen, dus de dienst draait naast de tafel op zijn eigen poort in plaats
+van op `/api` van dezelfde server. `speech.js` zoekt daarom in deze volgorde:
+
+1. het adres dat is opgegeven (`?stt=http://…`, of anders het adres van de
+   kennisgraaf) — is dat er, dan precies daar en nergens anders;
+2. deze server zelf (`api/transcribe`) — zo werkt de vite-dev-server, die die
+   route naar `localhost:8770` stuurt;
+3. dezelfde machine op poort 8770. Dat is wat de tafel op de NUC vindt.
+
+Dus: niets instellen is het gewone geval. Draait de uitschrijver op een andere
+machine, open de tafel dan met `?stt=http://<machine>:8770`.
 
 ## Microfoon
 

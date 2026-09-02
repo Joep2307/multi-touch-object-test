@@ -5,3 +5,5 @@ dist.oud/
 .puck-update-staat
 .DS_Store
 .vite/
+__pycache__/
+*.pyc

@@ -51,7 +51,12 @@ const CFG = {
      niet exact op hetzelfde middelpunt gemeten. 0,10 vangt die richtingsfout
      op; de vier standaardvormen liggen nog steeds verder uit elkaar. */
   tolerance:0.10,     // hoeveel de zijdeverhoudingen van een puck mogen afwijken
-  kgUrl:""            // adres van de kennisgraaf-backend; leeg = de fixtures
+  kgUrl:"",           // adres van de kennisgraaf-backend; leeg = de fixtures
+  /* Adres van de uitschrijfdienst. Leeg is het gewone geval: dan probeert
+     speech.js eerst deze server zelf en daarna de standaardpoort op dezelfde
+     machine. Alleen als de dienst ergens anders draait zet je hem hier of met
+     ?stt=http://… in de URL. */
+  sttUrl:""
 };
 
 /* ── Ontwikkelstand ──────────────────────────────────────────────────────
@@ -66,9 +71,14 @@ const DEV=QS.has("dev") && QS.get("dev")!=="0";
 { const d=parseFloat(QS.get("diag")); if(Number.isFinite(d)&&d>0) CFG.screenDiagIn=d; }
 { const t=parseFloat(QS.get("tol"));  if(Number.isFinite(t)&&t>0) CFG.tolerance=t; }
 if(QS.get("kg")) CFG.kgUrl=QS.get("kg").trim();
+if(QS.get("stt")) CFG.sttUrl=QS.get("stt").trim();
 /* Alles wat de graaf laadt vraagt het adres hier op, zodat er maar één plek
    is waar het vandaan komt. */
 const kgUrl=()=>CFG.kgUrl;
+/* De uitschrijver hoeft niet dezelfde machine te zijn als de kennisgraaf, maar
+   is dat meestal wel: staat er niets apart ingesteld, dan geldt het adres van
+   de graaf. Is dat óók leeg, dan zoekt speech.js hem zelf. */
+const sttUrl=()=>CFG.sttUrl||CFG.kgUrl;
 // De bouwstempel wordt pas onderaan dit bestand ingericht. Vóór die tijd is
 // verversen van de taal veilig een no-op (ook bij de eerste paginalaad).
 let refreshBuildStamp=()=>{};
@@ -2245,7 +2255,7 @@ function renderTalk(pin){
 function checkTalk(){
   if(stt.checked){ talkReady(); return; }
   setTalkMsg("talkCheck");
-  probeSTT(kgUrl()).then(()=>{ if(el("note").style.display==="block"&&!talk) talkReady(); });
+  probeSTT(sttUrl()).then(()=>{ if(el("note").style.display==="block"&&!talk) talkReady(); });
 }
 function talkReady(){
   if(talk) return;
@@ -2276,7 +2286,7 @@ async function toggleTalk(){
   talkBusy=true;
   try{
     setTalkMsg("talkStarting");
-    await probeSTT(kgUrl());
+    await probeSTT(sttUrl());
     if(selected!==pin) return;
     if(stt.mode==="geen"){ talkReady(); return; }
     const session=await startTalk({

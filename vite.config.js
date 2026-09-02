@@ -6,6 +6,12 @@ import { defineConfig } from "vite";
 // zet hem op 8081; met BIBLIO_API=... wijs je naar een andere.
 const API = process.env.BIBLIO_API ?? "http://localhost:8081";
 
+// De uitschrijver van het gesprek draait apart van de biblio-backend (zie
+// deploy/TRANSCRIPTIE.md). Op de tafel vindt de pagina hem zelf op poort 8770;
+// hier sturen we /api/transcribe erheen, zodat het tijdens het ontwikkelen
+// dezelfde oorsprong is en CORS geen rol speelt.
+const STT = process.env.STT_API ?? "http://localhost:8770";
+
 // Zonder backend werken is een volwaardige modus: de client valt dan terug op
 // public/fixtures/. Vite's proxy zou daar per verzoek een ECONNREFUSED-stack
 // bij loggen, dus polsen we de backend eerst (paar seconden gecached) en
@@ -27,6 +33,10 @@ function backendGate() {
     name: "biblio-backend-gate",
     configureServer(server) {
       server.middlewares.use("/api", async (_req, res, next) => {
+        // De uitschrijver is een eigen dienst; of de biblio-backend draait
+        // zegt niets over hém. Zonder deze regel krijgt de tafel hier een 503
+        // en concludeert ze dat er geen uitschrijver is.
+        if ((_req.url || "").startsWith("/transcribe")) return next();
         const now = Date.now();
         if (up === null || now - checked > 3000) {
           up = await probe();
@@ -68,7 +78,10 @@ export default defineConfig({
     strictPort: true,
     // Laat het veld "Adres van de backend" in de app leeg: de app vraagt dan
     // relatief om api/biblio/..., wat hier naar coco-biblio gaat.
-    proxy: { "/api": { target: API, changeOrigin: true } },
+    proxy: {
+      "/api/transcribe": { target: STT, changeOrigin: true },
+      "/api": { target: API, changeOrigin: true },
+    },
   },
   preview: { host: true, port: 8080 },
   build: { outDir: "dist", target: "es2022" },

@@ -56,11 +56,35 @@ const Recognition = () =>
 const hasMic = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 const hasRecorder = () => typeof MediaRecorder !== "undefined";
 
+/* De standaardpoort van de uitschrijver. De tafel wordt op de NUC geserveerd
+   door `python3 -m http.server`, en die kan niets doorsturen: de dienst draait
+   dus naast de tafel op zijn eigen poort in plaats van op /api van dezelfde
+   server. Vandaar dat we hem hier zoeken in plaats van er een instelling van
+   te maken die iemand op de dag zelf moet weten. */
+const STT_PORT = 8770;
+
 /* De uitschrijfdienst hangt aan hetzelfde adres als de kennisgraaf: leeg
    betekent "op deze server", zodat de tafel achter een subpad ook werkt. */
 function transcribeUrl(baseUrl) {
   const b = (baseUrl || "").trim().replace(/\/+$/, "");
   return (b ? b + "/" : "") + "api/transcribe";
+}
+
+/* Waar we gaan kijken. Is er een adres opgegeven, dan precies daar en nergens
+   anders — wie het instelt bedoelt het. Is er niets opgegeven, dan eerst deze
+   server zelf (zo werkt de vite-dev-server, die /api/transcribe doorstuurt) en
+   daarna dezelfde machine op de standaardpoort. Dat tweede adres is wat de
+   tafel op de NUC vindt. */
+function transcribeKandidaten(baseUrl) {
+  const eigen = transcribeUrl(baseUrl);
+  if ((baseUrl || "").trim()) return [eigen];
+  const lijst = [eigen];
+  try {
+    const l = location;
+    if (l.hostname && l.protocol.startsWith("http") && l.port !== String(STT_PORT))
+      lijst.push(`${l.protocol}//${l.hostname}:${STT_PORT}/api/transcribe`);
+  } catch (e) { /* geen location: dan blijft het bij de eigen oorsprong */ }
+  return lijst;
 }
 
 /* Wat kan deze tafel? Eén keer polsen per adres; het antwoord verandert niet
@@ -75,11 +99,12 @@ export function probeSTT(baseUrl = "") {
   probing = (async () => {
     stt.checked = false; stt.mode = "onbekend"; stt.reason = ""; stt.url = "";
     if (hasMic() && hasRecorder()) {
-      const url = transcribeUrl(baseUrl);
-      try {
-        const r = await fetch(url, { method: "GET", cache: "no-store" });
-        if (r.ok) { stt.mode = "backend"; stt.url = url; }
-      } catch (e) { /* geen dienst; de terugval hieronder pakt het op */ }
+      for (const url of transcribeKandidaten(baseUrl)) {
+        try {
+          const r = await fetch(url, { method: "GET", cache: "no-store" });
+          if (r.ok) { stt.mode = "backend"; stt.url = url; break; }
+        } catch (e) { /* deze niet; de volgende, anders de terugval hieronder */ }
+      }
     }
     if (stt.mode !== "backend") {
       if (Recognition()) stt.mode = "browser";
