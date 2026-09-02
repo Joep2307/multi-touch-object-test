@@ -75,8 +75,8 @@ body.dragging-dot #c{cursor:grabbing}
    De vaste bediening krijgt daarom hieronder zowel een kwartslag als de
    bijbehorende nieuwe randpositie. Vensters die aan een kaartpunt hangen
    blijven om hun eigen anker draaien. */
-body.controls-flipped>#note,
-body.controls-flipped>#keyboard,
+body.controls-flipped>.note,
+body.controls-flipped>.keyboard,
 body.controls-flipped>#kgInfo,
 body.controls-flipped .learn-card{rotate:90deg}
 button:disabled{opacity:.35;cursor:default}
@@ -264,53 +264,55 @@ body:not(.mode-touch) #sidesHint{display:none}
   transition:transform .12s,opacity .12s}
 .traypuck:hover{transform:scale(1.07)}
 .traypuck:active{cursor:grabbing}
-.traypuck.used{opacity:.28}
+/* De balk blokkeert niets meer (zie markTray): van elke soort mogen er
+   meerdere op tafel. Wat er ligt is alleen wat gedempt. */
+.traypuck.on-table{opacity:.55}
 #zoom{right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;
   padding:10px}
 body.controls-flipped #zoom{left:50%;top:calc(100vh - 18px);right:auto;bottom:auto;transform-origin:0 0;
   transform:rotate(90deg) translate(-100%,-50%)}
 #zoom button{width:56px;height:56px;min-height:0;font-size:var(--text);flex:none;padding:0}
-#note{position:fixed;z-index:20;display:none;width:390px;padding:21px 22px 20px;
+.note{position:fixed;z-index:20;display:none;width:390px;padding:21px 22px 20px;
   transform:rotate(var(--flip,0deg));
   transform-origin:var(--origin-x,0) var(--origin-y,50%)}
 /* Gedraaid draait het venster om zijn eigen midden — anders zou het bij het
    kantelen van zijn plek af schuiven. */
-#note.flipped{transform-origin:50% 50%}
-#note.opening{animation:puck-note-out .32s cubic-bezier(.2,.85,.25,1.12) both}
+.note.flipped{transform-origin:50% 50%}
+.note.opening{animation:puck-note-out .32s cubic-bezier(.2,.85,.25,1.12) both}
 /* De verbinding met de puck werd hier als ::before-stengel getekend, maar
-   `#note` heeft `overflow-y:auto` en dat klemt ook zijwaarts: die stengel is
+   `.note` heeft `overflow-y:auto` en dat klemt ook zijwaarts: die stengel is
    dus nooit te zien geweest. Hij wordt nu op het canvas getekend, met een punt
    op de rand van de puck — zie `drawNoteTether()` in app.js. */
 /* Kop met de draaiknop: één tik zet dit venster (en het toetsenbord) op de
    kant van wie aan de overkant staat. Alleen zichtbaar als de tafel twee
    kanten heeft — anders staat er niets om naartoe te draaien. */
 .note-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-#noteFlip{display:none;flex:none;width:var(--tap-sm);height:var(--tap-sm);min-height:0;padding:0;
+.note-flip{display:none;flex:none;width:var(--tap-sm);height:var(--tap-sm);min-height:0;padding:0;
   font-size:var(--text);line-height:1;margin-top:-5px}
-body.two-sided #noteFlip{display:block}
-#note input,#note textarea{margin-bottom:2px}
-#note .field{margin-top:10px}
+body.two-sided .note-flip{display:block}
+.note input,.note textarea{margin-bottom:2px}
+.note .field{margin-top:10px}
 @keyframes puck-note-out{
   from{opacity:0;transform:rotate(var(--flip,0deg)) translateX(var(--enter-x,-28px)) scale(.72)}
   to{opacity:1;transform:rotate(var(--flip,0deg)) translateX(0) scale(1)}
 }
-#keyboard{left:50%;bottom:14px;z-index:40;display:none;width:min(1030px,calc(100vw - 28px));
+.keyboard{left:50%;bottom:14px;z-index:40;display:none;width:min(1030px,calc(100vw - 28px));
   transform:translateX(-50%);padding:12px;background:rgba(10,14,20,.98);box-shadow:0 -14px 50px rgba(0,0,0,.42)}
-#keyboard.visible{display:block;animation:keyboard-up .2s ease-out both}
+.keyboard.visible{display:block;animation:keyboard-up .2s ease-out both}
 .keyboard-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px 3px}
 .keyboard-head .eyebrow{margin:0}
-#keyboardField{font-size:var(--text-3xs);color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.keyboard-field{font-size:var(--text-3xs);color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
 .keyboard-row{display:flex;justify-content:center;gap:6px;margin-top:6px}
-#keyboard button{flex:1 1 0;min-width:52px;height:62px;min-height:0;padding:0 8px;font-size:var(--text);font-weight:600;
+.keyboard button{flex:1 1 0;min-width:52px;height:62px;min-height:0;padding:0 8px;font-size:var(--text);font-weight:600;
   background:#1a2230;border-color:#2b3748;touch-action:manipulation}
-#keyboard button:active{background:#31415a;transform:translateY(1px)}
-#keyboard .key-wide{flex:1.55}
-#keyboard .key-space{flex:4}
-#keyboard .key-active{background:rgba(61,123,255,.28);border-color:var(--accent)}
+.keyboard button:active{background:#31415a;transform:translateY(1px)}
+.keyboard .key-wide{flex:1.55}
+.keyboard .key-space{flex:4}
+.keyboard .key-active{background:rgba(61,123,255,.28);border-color:var(--accent)}
 @keyframes keyboard-up{from{opacity:0;transform:translate(-50%,22px)}to{opacity:1;transform:translate(-50%,0)}}
 /* Toetsenbord voor iemand aan de overkant: bovenaan en op zijn kop. */
-#keyboard.flipped{top:14px;bottom:auto;transform:translateX(-50%) rotate(180deg)}
-#keyboard.flipped.visible{animation:keyboard-down .2s ease-out both}
+.keyboard.flipped{top:14px;bottom:auto;transform:translateX(-50%) rotate(180deg)}
+.keyboard.flipped.visible{animation:keyboard-down .2s ease-out both}
 @keyframes keyboard-down{
   from{opacity:0;transform:translate(-50%,-22px) rotate(180deg)}
   to{opacity:1;transform:translate(-50%,0) rotate(180deg)}
@@ -332,18 +334,18 @@ body.two-sided #noteFlip{display:block}
 #sheet .inner{position:relative}
 #closeSheetTop{position:sticky;top:0;float:right;width:52px;height:52px;min-height:0;padding:0;
   font-size:var(--text-lg);line-height:1;border-radius:10px;z-index:1}
-body.keyboard-open #note{z-index:45}
+body.keyboard-open .note{z-index:45}
 @media (max-width:700px){
-  #keyboard{width:calc(100vw - 12px);bottom:6px;padding:7px}
+  .keyboard{width:calc(100vw - 12px);bottom:6px;padding:7px}
   .keyboard-row{gap:3px;margin-top:4px}
-  #keyboard button{min-width:0;height:45px;padding:0 3px;font-size:var(--text-sm)}
+  .keyboard button{min-width:0;height:45px;padding:0 3px;font-size:var(--text-sm)}
   #puckDock{bottom:8px;width:min(370px,calc(100vw - 16px))}
   .puck-dock-head .hint{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 /* ── Kennisgraaf: het leesvenster bij een aangetikt punt uit coco-biblio.
-   Bewust soberder dan #note — dit is bestaande kennis, geen bijdrage. ── */
+   Bewust soberder dan .note — dit is bestaande kennis, geen bijdrage. ── */
 #kgInfo{position:fixed;z-index:19;display:none;width:350px;padding:15px 16px 14px;
         border-left:2px solid #7aa2f7}
 #kgInfo .kg-title{margin:4px 0 12px;font:600 var(--text-sm)/1.35 var(--display);
@@ -372,15 +374,15 @@ body.keyboard-open #note{z-index:45}
 .talk{margin-top:14px;padding-top:12px;border-top:1px solid rgba(232,237,244,.12)}
 .talk-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
 .talk-head .eyebrow{margin:0}
-#talkTime{font-size:var(--text-3xs);color:rgba(232,237,244,.5)}
-#talkBtn::before{content:"";display:inline-block;width:9px;height:9px;margin-right:8px;
+.talk-time{font-size:var(--text-3xs);color:rgba(232,237,244,.5)}
+.talk-btn::before{content:"";display:inline-block;width:9px;height:9px;margin-right:8px;
   border-radius:50%;background:currentColor;opacity:.5;vertical-align:baseline}
-#talkBtn.rec{background:rgba(255,95,86,.16);border-color:var(--bad);color:#ffd9d6}
-#talkBtn.rec::before{background:var(--bad);opacity:1;animation:talk-pulse 1.4s ease-in-out infinite}
+.talk-btn.rec{background:rgba(255,95,86,.16);border-color:var(--bad);color:#ffd9d6}
+.talk-btn.rec::before{background:var(--bad);opacity:1;animation:talk-pulse 1.4s ease-in-out infinite}
 @keyframes talk-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.45}}
 .talk-clear{flex:none;min-width:0}
-#talkText{min-height:82px;font-size:var(--text-xs);line-height:1.5}
-#talkText:disabled{opacity:1}
+.talk-text{min-height:82px;font-size:var(--text-xs);line-height:1.5}
+.talk-text:disabled{opacity:1}
 .talk-partial{margin:6px 0 0;min-height:1.4em;font:400 var(--text-2xs)/1.4 var(--display);
   color:rgba(232,237,244,.42);font-style:italic}
 .talk-status{margin:5px 0 0;font:400 var(--text-3xs)/1.45 var(--display);color:rgba(232,237,244,.45)}
@@ -390,8 +392,8 @@ body.keyboard-open #note{z-index:45}
    en het antwoord dat coco-biblio's RAG-chat eruit trekt. ── */
 .kg-block{margin-top:14px;padding-top:12px;border-top:1px solid rgba(232,237,244,.12)}
 .kg-block .eyebrow{margin:0 0 8px}
-#noteNearby{margin-bottom:10px}
-#noteNearby .empty{margin:0;font:400 var(--text-2xs)/1.4 var(--display);
+.note-nearby{margin-bottom:10px}
+.note-nearby .empty{margin:0;font:400 var(--text-2xs)/1.4 var(--display);
                    color:rgba(232,237,244,.45)}
 .kg-near{display:flex;gap:10px;align-items:baseline;justify-content:space-between;
          padding:4px 0;font:400 var(--text-2xs)/1.35 var(--display);
@@ -407,15 +409,15 @@ body.keyboard-open #note{z-index:45}
 /* Het antwoord houdt één hoogte aan. Terwijl het model doorschrijft zou het
    venster anders bij elk woord groeien en onder de vinger vandaan schuiven;
    nu blijft de knop op zijn plek en scrolt de tekst binnen dit kader. */
-#noteAnswer{display:none;margin-top:10px;padding:10px 11px;border-radius:8px;background:rgba(122,162,247,.09);
+.note-answer{display:none;margin-top:10px;padding:10px 11px;border-radius:8px;background:rgba(122,162,247,.09);
             font:400 var(--text-2xs)/1.5 var(--display);color:#e8edf4;
             white-space:pre-wrap;
             height:var(--answer-h,196px);overflow-y:auto;
             touch-action:none;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-#noteAnswer::-webkit-scrollbar{width:5px}
-#noteAnswer::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(232,237,244,.22)}
-#noteAnswer::-webkit-scrollbar-track{background:transparent}
-#noteSources{display:none;margin-top:7px;font:400 var(--text-3xs)/1.4 var(--display);letter-spacing:.01em;
+.note-answer::-webkit-scrollbar{width:5px}
+.note-answer::-webkit-scrollbar-thumb{border-radius:3px;background:rgba(232,237,244,.22)}
+.note-answer::-webkit-scrollbar-track{background:transparent}
+.note-sources{display:none;margin-top:7px;font:400 var(--text-3xs)/1.4 var(--display);letter-spacing:.01em;
              color:rgba(232,237,244,.4)}
 /* Scrollen binnen een paneel. De body staat op touch-action:none omdat
    elke veeg daar een kaartgebaar of een puck is; in een paneel moet een
@@ -424,11 +426,11 @@ body.keyboard-open #note{z-index:45}
 /* Geen `pan-y` maar `none`: het scrollen gebeurt in app.js, met de vinger die
    het begon. De browser scrollt namelijk niet meer zodra er nog een contactpunt
    op het glas ligt, en aan deze tafel ligt er altijd een puck. */
-#note,#menu,#sheet{touch-action:none;overscroll-behavior:contain;
+.note,#menu,#sheet{touch-action:none;overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch}
-#note{max-height:calc(100vh - 24px);overflow-y:auto}
-#noteAnswer .kg-h{display:inline-block;margin-top:6px;color:#fff;font-weight:700}
-#noteAnswer .kg-li::before{content:"• ";color:rgba(122,162,247,.8)}
+.note{max-height:calc(100vh - 24px);overflow-y:auto}
+.note-answer .kg-h{display:inline-block;margin-top:6px;color:#fff;font-weight:700}
+.note-answer .kg-li::before{content:"• ";color:rgba(122,162,247,.8)}
 
 /* ── Kaartlagen ─────────────────────────────────────────────────────────
    Als eerste keuze in het menu: het kaartbeeld wisselt vaker dan wat dan ook
@@ -490,7 +492,7 @@ body.keyboard-open #note{z-index:45}
   font:400 var(--text-2xs)/1.5 var(--display);color:rgba(232,237,244,.82)}
 .kg-quote .src{display:block;margin-top:5px;font:400 var(--text-3xs)/1.4 var(--display);
   color:rgba(232,237,244,.4)}
-#noteMatches{margin-bottom:10px}
+.note-matches{margin-bottom:10px}
 #kgInfoBody{margin-bottom:12px}
 #kgInfo{width:375px}
 
@@ -527,7 +529,7 @@ body.keyboard-open #note{z-index:45}
 #zoom .panel-grip{width:100%;height:14px;margin:0}
 /* Zodra een venster met de hand verplaatst is wijst de stengel niet meer naar
    zijn markering; dan hoort hij weg. */
-#note.moved::before{display:none}
+.note.moved::before{display:none}
 
 /* ── Licht thema ───────────────────────────────────────────────────────
    De algemene componenten volgen de variabelen hierboven. Deze laatste
@@ -540,27 +542,27 @@ body.keyboard-open #note{z-index:45}
 :root[data-theme="light"] .accordion-head:hover{background:rgba(23,32,45,.045);color:var(--ink)}
 :root[data-theme="light"] .menu-sec:not(.collapsed)>.accordion-head{background:rgba(40,104,230,.08);color:#174fae}
 :root[data-theme="light"] .traypuck{background:rgba(255,255,255,.96)}
-:root[data-theme="light"] #keyboard{background:rgba(248,250,252,.98);box-shadow:0 -14px 50px var(--shadow)}
-:root[data-theme="light"] #keyboard button{background:#e8eef5;border-color:#c4cfdd}
-:root[data-theme="light"] #keyboard button:active{background:#d7e1ec}
+:root[data-theme="light"] .keyboard{background:rgba(248,250,252,.98);box-shadow:0 -14px 50px var(--shadow)}
+:root[data-theme="light"] .keyboard button{background:#e8eef5;border-color:#c4cfdd}
+:root[data-theme="light"] .keyboard button:active{background:#d7e1ec}
 :root[data-theme="light"] #sheet,
 :root[data-theme="light"] #documentViewer,
 :root[data-theme="light"] #analytics{background:var(--overlay)}
 :root[data-theme="light"] .document-viewer-inner{box-shadow:0 18px 60px var(--shadow)}
 :root[data-theme="light"] #kgInfo .kg-title,
 :root[data-theme="light"] .kg-near.match,
-:root[data-theme="light"] #noteAnswer,
-:root[data-theme="light"] #noteAnswer .kg-h{color:var(--ink)}
-:root[data-theme="light"] #noteNearby .empty{color:rgba(23,32,45,.48)}
+:root[data-theme="light"] .note-answer,
+:root[data-theme="light"] .note-answer .kg-h{color:var(--ink)}
+:root[data-theme="light"] .note-nearby .empty{color:rgba(23,32,45,.48)}
 :root[data-theme="light"] .kg-near{color:rgba(23,32,45,.78);border-bottom-color:rgba(23,32,45,.08)}
 :root[data-theme="light"] .kg-near-dist,
-:root[data-theme="light"] #noteSources{color:rgba(23,32,45,.48)}
+:root[data-theme="light"] .note-sources{color:rgba(23,32,45,.48)}
 :root[data-theme="light"] .kg-block{border-top-color:rgba(23,32,45,.12)}
 :root[data-theme="light"] .talk{border-top-color:rgba(23,32,45,.12)}
-:root[data-theme="light"] #talkTime,
+:root[data-theme="light"] .talk-time,
 :root[data-theme="light"] .talk-partial,
 :root[data-theme="light"] .talk-status{color:rgba(23,32,45,.5)}
-:root[data-theme="light"] #talkBtn.rec{background:rgba(214,54,42,.12);color:#8c2b22}
+:root[data-theme="light"] .talk-btn.rec{background:rgba(214,54,42,.12);color:#8c2b22}
 :root[data-theme="light"] .kg-quote{color:rgba(23,32,45,.82);background:rgba(40,104,230,.07)}
 :root[data-theme="light"] .kg-quote .src{color:rgba(23,32,45,.48)}
 :root[data-theme="light"] .analytics-kpi{background:#f1f5f9}

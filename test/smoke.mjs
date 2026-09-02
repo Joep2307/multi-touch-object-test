@@ -56,15 +56,19 @@ const W = 1600, H = 1000;
 const pxPerMM = Math.hypot(W, H) / (43 * 25.4);
 const R = 45 * pxPerMM, HOLE = R * 0.58;   // moet CFG.puckRadiusMM en PUCK_HOLE volgen
 const log = [];
-const ok = (naam, goed) => { log.push((goed ? "\u2713 " : "\u2717 ") + naam); if (!goed) process.exitCode = 1; };
+const ok = (naam, goed) => { const regel=(goed ? "\u2713 " : "\u2717 ") + naam;
+  log.push(regel); console.log(regel); if (!goed) process.exitCode = 1; };
 
 const browser = await chromium.launch(
   process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {});
 
-async function newPage(uiMode){
+async function newPage(uiMode, {twoSided=false}={}){
   const ctx = await browser.newContext({ viewport:{width:W,height:H} });
   const page = await ctx.newPage();
-  await page.addInitScript(m=>{ try{ localStorage.clear(); localStorage.setItem('pucktable-ui-mode',m); }catch(e){} }, uiMode);
+  await page.addInitScript(o=>{ try{ localStorage.clear();
+    localStorage.setItem('pucktable-ui-mode',o.m);
+    if(o.zijden) localStorage.setItem('pucktable-two-sided','1'); }catch(e){} },
+    {m:uiMode, zijden:twoSided});
   const errs=[];
   page.on('pageerror', e=>errs.push(String(e)));
   page.on('console', m=>{ if(m.type()==='error' && !/tile|tunnel|ERR_|favicon|Failed to load resource/i.test(m.text())) errs.push(m.text()); });
@@ -381,6 +385,73 @@ async function newPage(uiMode){
   ok('opnemen zegt wat er gebeurt (of waarom het niet kan)',
      gemeld.rec || gemeld.status.length>0 || (console.log('gesprek:',gemeld),false));
   ok('geen JS-fouten (gesprek)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx.close();
+}
+
+// ── twee pucks tegelijk: dezelfde soort, en een venster per tafelkant ──
+{
+  const {page, ctx, errs} = await newPage('touch', {twoSided:true});
+  const trays = page.locator('#puckDock .traypuck');
+  const pinsNow = () => page.evaluate(()=>{
+    const k='pucktable-'+document.getElementById('sess').value;
+    try{ return JSON.parse(localStorage.getItem(k)||'[]').length; }catch(e){ return -1; }
+  });
+  const zichtbaar = id => page.evaluate(i=>{
+    const n=document.getElementById(i);
+    return !!n && getComputedStyle(n).display!=='none';
+  }, id);
+  // Een venster of toetsenbord ligt over de puckbalk heen; eerst dicht.
+  const leg = async (i,x,y) => {
+    await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+    const b=await trays.nth(i).boundingBox();
+    await page.mouse.move(b.x+b.width/2,b.y+b.height/2); await page.mouse.down();
+    await page.mouse.move(x,y,{steps:12}); await page.mouse.up();
+    await page.waitForTimeout(400);
+  };
+  const base = await pinsNow();
+
+  /* Twee pucks van dezelfde soort: de balk mag dat niet meer blokkeren.
+     Ze liggen links, ruim buiten de puckbalk: een puck die op een paneel
+     terechtkomt schuift naar het midden (zie endTrayDrag) en ligt dan niet
+     meer waar de test tikt. */
+  await leg(0,260,700);
+  await page.mouse.click(260,700); await page.waitForTimeout(500);
+  await leg(0,260,300);
+  await page.mouse.click(260,300); await page.waitForTimeout(500);
+  ok('twee pucks van dezelfde soort, twee markeringen', await pinsNow()===base+2);
+
+  // een tik op een puck die al vastligt opent zijn venster opnieuw
+  await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  ok('venster is dicht na Escape', !(await zichtbaar('note')));
+  await page.mouse.click(260,700); await page.waitForTimeout(500);
+  ok('tikken op een vastgelegde puck opent zijn venster weer', await zichtbaar('note'));
+  ok('en legt niets nieuws vast', await pinsNow()===base+2);
+
+  // de derde puck aan de overkant krijgt het venster van díe kant
+  await leg(1,1150,240);
+  await page.mouse.click(1150,240); await page.waitForTimeout(600);
+  ok('de overkant heeft een eigen venster', await zichtbaar('note-b'));
+  await page.mouse.click(260,700); await page.waitForTimeout(600);
+  ok('en dat van deze kant staat er nog naast', await zichtbaar('note'));
+  ok('elk venster hangt aan zijn eigen puck', await page.evaluate(()=>
+    document.getElementById('note').dataset.anchorY!==document.getElementById('note-b').dataset.anchorY));
+  ok('twee toetsenborden, één per kant', await page.evaluate(()=>
+    document.getElementById('keyboard').classList.contains('visible') &&
+    document.getElementById('keyboard-b').classList.contains('visible')));
+  ok('het toetsenbord van de overkant staat op zijn kop', await page.evaluate(()=>
+    document.getElementById('keyboard-b').classList.contains('flipped') &&
+    !document.getElementById('keyboard').classList.contains('flipped')));
+
+  // typen aan de ene kant komt niet in het venster van de andere terecht
+  await page.locator('#noteTitle').fill('Kant A');
+  await page.locator('#noteTitle-b').fill('Kant B');
+  await page.waitForTimeout(700);
+  ok('elk venster bewaart zijn eigen bijdrage', await page.evaluate(()=>{
+    const k='pucktable-'+document.getElementById('sess').value;
+    const p=JSON.parse(localStorage.getItem(k)||'[]');
+    return p.some(x=>x.title==='Kant A') && p.some(x=>x.title==='Kant B');
+  }));
+  ok('geen JS-fouten (twee kanten)', errs.length===0 || (console.log(errs.slice(0,3)),false));
   await ctx.close();
 }
 

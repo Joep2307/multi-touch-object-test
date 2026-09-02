@@ -304,10 +304,10 @@
   </div>
 </div>
 
-<div class="panel" id="note">
+<div class="panel note" id="note">
   <div class="note-head">
     <p class="eyebrow" id="noteHead" data-i18n="newNote">Nieuwe bijdrage</p>
-    <button type="button" id="noteFlip" title="Naar de overkant" aria-label="Naar de overkant" data-i18n-title="flipNote" data-i18n-aria="flipNote">⇅</button>
+    <button type="button" id="noteFlip" class="note-flip" title="Naar de overkant" aria-label="Naar de overkant" data-i18n-title="flipNote" data-i18n-aria="flipNote">⇅</button>
   </div>
   <label class="field" for="noteTitle" data-i18n="fTitle">Titel</label>
   <input id="noteTitle" placeholder="Geef deze bijdrage een titel" data-i18n-ph="titlePh" maxlength="80">
@@ -319,14 +319,14 @@
   <div class="talk">
     <div class="talk-head">
       <p class="eyebrow" data-i18n="talkHead">Gesprek</p>
-      <span id="talkTime" class="mono"></span>
+      <span id="talkTime" class="mono talk-time"></span>
     </div>
     <div class="row">
-      <button id="talkBtn" data-i18n="talkStart">Gesprek opnemen</button>
+      <button id="talkBtn" class="talk-btn" data-i18n="talkStart">Gesprek opnemen</button>
       <button id="talkClear" class="talk-clear" data-i18n="talkClear">Tekst wissen</button>
       <button id="talkAudio" class="talk-clear" data-i18n="talkAudio" style="display:none">Opname bewaren</button>
     </div>
-    <textarea id="talkText" placeholder="Wat er gezegd wordt komt hier te staan." data-i18n-ph="talkPh" rows="3"></textarea>
+    <textarea id="talkText" class="talk-text" placeholder="Wat er gezegd wordt komt hier te staan." data-i18n-ph="talkPh" rows="3"></textarea>
     <p id="talkPartial" class="talk-partial"></p>
     <p id="talkStatus" class="talk-status"></p>
   </div>
@@ -338,23 +338,23 @@
 
   <div class="kg-block">
     <p class="eyebrow" data-i18n="alreadyKnown">Wat is hier al bekend</p>
-    <div id="noteNearby"><p class="empty" data-i18n="kgLoading">Kennisgraaf wordt geladen…</p></div>
+    <div id="noteNearby" class="note-nearby"><p class="empty" data-i18n="kgLoading">Kennisgraaf wordt geladen…</p></div>
     <p class="eyebrow" id="noteMatchHead" data-i18n="aboutWhatYouSay" style="display:none">Gaat over wat je zegt</p>
-    <div id="noteMatches"></div>
+    <div id="noteMatches" class="note-matches"></div>
     <div class="row" style="margin-bottom:0">
       <button id="noteAsk" class="primary" data-i18n="askSolution">Vraag om een oplossing</button>
     </div>
-    <div id="noteAnswer"></div>
-    <div id="noteSources"></div>
+    <div id="noteAnswer" class="note-answer"></div>
+    <div id="noteSources" class="note-sources"></div>
   </div>
 </div>
 
-<div class="panel" id="keyboard" aria-label="Schermtoetsenbord" data-i18n-aria="onscreenKeyboard">
+<div class="panel keyboard" id="keyboard" aria-label="Schermtoetsenbord" data-i18n-aria="onscreenKeyboard">
   <div class="keyboard-head">
     <p class="eyebrow" data-i18n="keyboardHead">Toetsenbord</p>
-    <span id="keyboardField" class="mono"></span>
+    <span id="keyboardField" class="mono keyboard-field"></span>
   </div>
-  <div id="keyboardKeys"></div>
+  <div id="keyboardKeys" class="keyboard-keys"></div>
 </div>
 
 <!-- ── Puck herkennen ────────────────────────────────────

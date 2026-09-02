@@ -247,6 +247,7 @@ const L = {
        talkBackendGone:"De uitschrijfdienst antwoordt niet meer. De opname loopt door.",
        talkBrowserGone:"De spraakherkenning van deze browser doet niets. Probeer het in Chrome, of zet de uitschrijfdienst aan.",
        talkCheck:"Kijken wat deze tafel kan\u2026",
+       talkBusy:"De microfoon is aan de overkant in gebruik.",
        alreadyKnown:"Wat is hier al bekend", aboutWhatYouSay:"Gaat over wat je zegt",
        askSolution:"Vraag om een oplossing",
        onscreenKeyboard:"Schermtoetsenbord", keyboardHead:"Toetsenbord",
@@ -413,6 +414,7 @@ const L = {
        talkBackendGone:"The transcription service stopped answering. The recording continues.",
        talkBrowserGone:"This browser's speech recognition does nothing. Try Chrome, or start the transcription service.",
        talkCheck:"Checking what this table can do\u2026",
+       talkBusy:"The microphone is in use on the other side.",
        alreadyKnown:"What is already known here", aboutWhatYouSay:"Relates to what you say",
        askSolution:"Ask for a solution",
        onscreenKeyboard:"On-screen keyboard", keyboardHead:"Keyboard",
@@ -1096,7 +1098,7 @@ addEventListener("pointerdown",e=>{
     const pin=pinAt(e.clientX,e.clientY);
     if(pin){
       pinDrag={pin,pointerId:e.pointerId,kind:"touch"};
-      document.body.classList.add("dragging-dot"); closeNote();
+      document.body.classList.add("dragging-dot"); closeNotes();
     }
     gesture=null; return;
   }
@@ -1202,9 +1204,12 @@ function renderTray(){
   }
   markTray();
 }
+/* De balk blokkeert niets meer: twee mensen met allebei een Probleem-puck is
+   een gewone tafel, geen fout. Hij laat alleen zien wat er ligt, met een
+   telling zodra het er meer dan één van een soort zijn. */
 function markTray(){
   [...document.querySelectorAll(".traypuck")].forEach(d=>
-    d.classList.toggle("used",simPucks.some(s=>s.tpl.id===d.dataset.id)));
+    d.classList.toggle("on-table",simPucks.some(s=>s.tpl.id===d.dataset.id)));
 }
 /* Deselecteren: take every puck off the table and forget the live tracks.
    Marks that were already dropped stay on the map — only the selection goes.
@@ -1216,24 +1221,24 @@ function markTray(){
 function clearPucks(dropTracks=true){
   if(simPucks.length===0 && (!dropTracks||tracks.size===0)) return;
   simPucks.length=0; puckTouches.length=0; drag=null;
-  if(dropTracks){ tracks.clear(); puckMemory.clear(); }
+  if(dropTracks){ tracks.clear(); puckMemory.length=0; }
   markTray();
 }
-let trayDrag=null;
+/* Eén sleep per vinger. Dit was één variabele, en dan overschreef de tweede
+   hand de eerste: die puck landde nooit en zijn sleepkopie bleef als spookje
+   op het glas hangen. Aan een tafel grijpen twee mensen tegelijk in de balk. */
+const trayDrags=new Map();
+let simSeq=0;
 function moveGhost(e){
-  if(!trayDrag||e.pointerId!==trayDrag.pointerId) return;
-  trayDrag.ghost.style.left=(e.clientX/uiScale-27)+"px";
-  trayDrag.ghost.style.top=(e.clientY/uiScale-27)+"px";
+  const d=trayDrags.get(e.pointerId); if(!d) return;
+  d.ghost.style.left=(e.clientX/uiScale-27)+"px";
+  d.ghost.style.top=(e.clientY/uiScale-27)+"px";
 }
 function endTrayDrag(e){
-  if(!trayDrag||e.pointerId!==trayDrag.pointerId) return;
-  const {tpl,ghost,node,x0,y0}=trayDrag;
+  const d=trayDrags.get(e.pointerId); if(!d) return;
+  const {tpl,ghost,x0,y0}=d;
   ghost.remove();
-  removeEventListener("pointermove",moveGhost);
-  removeEventListener("pointerup",endTrayDrag);
-  removeEventListener("pointercancel",endTrayDrag);
-  trayDrag=null;
-  if(simPucks.some(s=>s.tpl.id===tpl.id)) return;
+  trayDrags.delete(e.pointerId);
   if(Math.hypot(e.clientX-x0,e.clientY-y0)<24) return;     // a tap, not a drag — ignore
   // Drop where released; if that's still under a panel, slide it toward the middle
   // until it clears, so the puck actually lands somewhere visible on the table.
@@ -1246,34 +1251,38 @@ function endTrayDrag(e){
     return x>=r.left-M&&x<=r.right+M&&y>=r.top-M&&y<=r.bottom+M;});
   for(let i=0;i<400 && buried();i++){ x+=(innerWidth/2-x)*0.05; y+=(innerHeight/2-y)*0.05; }
   const ll=MV.unproject(x,y);
-  simPucks.push({tpl,x,y,lng:ll.lng,lat:ll.lat,rot:Math.random()*Math.PI*2});
+  // Elke sleepkopie krijgt een eigen nummer. De soort zegt niet meer wie hij
+  // is -- er mogen er twee van dezelfde liggen -- maar de herkenning moet de
+  // contactpunten van twee pucks wel uit elkaar kunnen houden.
+  simPucks.push({tpl,uid:++simSeq,x,y,lng:ll.lng,lat:ll.lat,rot:Math.random()*Math.PI*2});
   markTray();
 }
 trays().forEach(t=>t.addEventListener("pointerdown",onTrayDown));
 function onTrayDown(e){
   const node=e.target.closest(".traypuck");
-  if(!node||node.classList.contains("used")) return;
+  if(!node) return;
   const tpl=templates.find(t=>t.id===node.dataset.id);
   if(!tpl) return;
   e.preventDefault();
   const ghost=node.cloneNode(true);
   ghost.style.cssText="position:fixed;z-index:60;margin:0;pointer-events:none;opacity:.9;zoom:"+uiScale;
   document.body.appendChild(ghost);
-  trayDrag={tpl,ghost,node,pointerId:e.pointerId,x0:e.clientX,y0:e.clientY};
+  trayDrags.set(e.pointerId,{tpl,ghost,node,x0:e.clientX,y0:e.clientY});
   moveGhost(e);
-  // Luister op het venster: sommige touchscreens sturen het loslaten naar het
-  // canvas zodra de vinger de puck-balk verlaat. Dan bleef voorheen alleen de
-  // sleepkopie hangen en werd er geen puck geplaatst.
-  addEventListener("pointermove",moveGhost);
-  addEventListener("pointerup",endTrayDrag);
-  addEventListener("pointercancel",endTrayDrag);
 }
+/* Luister op het venster: sommige touchscreens sturen het loslaten naar het
+   canvas zodra de vinger de puck-balk verlaat. Dan bleef voorheen alleen de
+   sleepkopie hangen en werd er geen puck geplaatst. Eén keer aangemeld, want
+   er kunnen meer slepen tegelijk lopen. */
+addEventListener("pointermove",moveGhost);
+addEventListener("pointerup",endTrayDrag);
+addEventListener("pointercancel",endTrayDrag);
 
 function simPads(){
   const out=[];
   for(const s of simPucks) for(const p of padsFor(s.tpl,tplLongest(s.tpl)*pxPerMM)){
     const c=Math.cos(s.rot),si=Math.sin(s.rot);
-    out.push({x:s.x+p.x*c-p.y*si,y:s.y+p.x*si+p.y*c,sim:true});
+    out.push({x:s.x+p.x*c-p.y*si,y:s.y+p.x*si+p.y*c,sim:true,uid:s.uid});
   }
   return out;
 }
@@ -1290,7 +1299,7 @@ function syncSimPucksToMap(){
     const p=MV.project(s.lng,s.lat), dx=p.x-s.x, dy=p.y-s.y;
     if(Math.abs(dx)<0.001&&Math.abs(dy)<0.001) continue;
     s.x=p.x; s.y=p.y;
-    const t=tracks.get(s.tpl.id);
+    const t=trackForSim(s);
     if(t){
       t.x+=dx; t.y+=dy; t.anchorX+=dx; t.anchorY+=dy;
       // Ook het zoom-ijkpunt schuift mee: een puck die door de kaart onder
@@ -1307,7 +1316,7 @@ addEventListener("mousedown",e=>{
   if(pinMoveMode){
     e.preventDefault();
     const pin=pinAt(e.clientX,e.clientY);
-    if(pin){pinDrag={pin,kind:"mouse"};document.body.classList.add("dragging-dot");closeNote();}
+    if(pin){pinDrag={pin,kind:"mouse"};document.body.classList.add("dragging-dot");closeNotes();}
     return;
   }
   const hit=simPuckAt(e.clientX,e.clientY);
@@ -1366,6 +1375,8 @@ addEventListener("wheel",e=>{
    hoeven bekeken te worden. De uitkomst is dezelfde; alleen het werk niet. */
 function recognise(points){
   const cands=[],maxSpan=maxTplLongest()*pxPerMM*1.45;
+  // Welke soorten er al liggen: die krijgen wat meer speelruimte (zie hieronder).
+  const onTable=new Set([...tracks.values()].map(t=>t.tpl.id));
   const cell=Math.max(24,maxSpan), grid=new Map();
   for(let i=0;i<points.length;i++){
     const key=Math.floor(points[i].x/cell)+":"+Math.floor(points[i].y/cell);
@@ -1386,13 +1397,18 @@ function recognise(points){
     for(let b=a+1;b<near.length;b++){
       const k=near[b];
       if(dist(points[i],points[k])>maxSpan||dist(points[j],points[k])>maxSpan) continue;
+      /* Een sleepkopie draagt zijn eigen nummer. Punten van twee verschillende
+         pucks vormen samen nooit een puck, dus die driehoek slaan we over --
+         anders pikt zo'n spookdriehoek een contactpunt van een echte puck weg. */
+      const uid=points[i].uid??points[j].uid??points[k].uid;
+      if(uid!==undefined&&(points[i].uid!==uid||points[j].uid!==uid||points[k].uid!==uid)) continue;
       const d=describe(points[i],points[j],points[k]); if(!d) continue;
       for(const tpl of activeTemplates()){
         const err=Math.hypot(d.ratios[0]-tpl.ratios[0],d.ratios[1]-tpl.ratios[1]);
         /* Tijdens draaien vervormen de gemeten contactpunten enkele pixels.
            Een puck die al gevolgd wordt krijgt daarom wat extra speelruimte;
            de eerste herkenning blijft op de ingestelde, strenge tolerantie. */
-        const tracked=tracks.has(tpl.id);
+        const tracked=onTable.has(tpl.id);
         const errLimit=tracked?Math.min(0.14,tolerance*1.4):tolerance;
         if(err>errLimit) continue;
         const want=tplLongest(tpl)*pxPerMM;
@@ -1403,47 +1419,126 @@ function recognise(points){
     }
     }
   }
-  cands.sort((a,b)=>a.err-b.err);
-  const used=new Set(),taken=new Set(),out=[];
+  /* Hetzelfde sjabloon mag meerdere keren gekozen worden: twee mensen met
+     allebei een Probleem-puck is een gewone tafel. Wat een kandidaat nog wél
+     uitsluit:
+
+       - contactpunten die al bij een andere puck horen;
+       - een zwaartepunt binnen `puckSepPX()` van een al gekozen puck. Twee
+         schijven kunnen niet op elkaar liggen, dus zo'n driehoek loopt dwars
+         over twee pucks heen en is een spook.
+
+     De volgorde weegt bovendien mee wie er al lag: een kandidaat die een puck
+     voortzet wint van een spookdriehoek met een net iets kleinere fout. Zonder
+     dat wisselde bij twee pucks naast elkaar per beeldje welke van de twee
+     "de beste" was en knipperden ze om beurten weg. */
+  const sep=puckSepPX();
+  const continues=c=>[...tracks.values()].some(t=>t.tpl.id===c.tpl.id&&
+        Math.hypot(t.x-c.d.cx,t.y-c.d.cy)<sep);
+  for(const c of cands) c.score=c.err-(continues(c)?0.05:0);
+  cands.sort((a,b)=>a.score-b.score);
+  const used=new Set(),out=[];
   for(const c of cands){
-    if(taken.has(c.tpl.id)||c.idx.some(i=>used.has(i))) continue;
-    c.idx.forEach(i=>used.add(i)); taken.add(c.tpl.id);
-    out.push({id:c.tpl.id,tpl:c.tpl,conf:c.conf,x:c.d.cx,y:c.d.cy,
+    if(c.idx.some(i=>used.has(i))) continue;
+    if(out.some(o=>Math.hypot(o.x-c.d.cx,o.y-c.d.cy)<sep)) continue;
+    c.idx.forEach(i=>used.add(i));
+    out.push({tpl:c.tpl,conf:c.conf,x:c.d.cx,y:c.d.cy,
               angle:Math.atan2(c.d.anchor.y-c.d.cy,c.d.anchor.x-c.d.cx)});
   }
   return {pucks:out,usedIdx:used};
 }
+/* Hoe dicht twee pucks bij elkaar kunnen liggen. Een puck is een schijf, dus
+   twee middelpunten liggen nooit dichter bij elkaar dan zijn breedte; deze maat
+   houdt daar ruim afstand van en dient twee doelen: kandidaten die te dicht op
+   een gekozen puck liggen afwijzen, en een detectie aan de juiste puck van
+   dezelfde soort koppelen. */
+const puckSepPX=()=>CFG.puckRadiusMM*pxPerMM*0.9;
+/* Pucks worden bijgehouden op een eigen volgnummer, niet op hun soort. Dat
+   was eerst hetzelfde: één puck per sjabloon. Maar dan kan er nooit een tweede
+   Probleem-puck op tafel, en dat is precies wat een tafel met twee groepen
+   nodig heeft. Wie welke is, volgt nu uit waar hij ligt (zie `track`). */
 const tracks=new Map();
-/* De stand van een puck die net van de tafel viel, hooguit `CFG.puckMemoryMS`
-   oud. Zie de uitleg bij het opruimen van tracks, onderaan `track()`. */
-const puckMemory=new Map();
+let trackSeq=0;
+/* De stand van pucks die net van de tafel vielen, hooguit `CFG.puckMemoryMS`
+   oud. Een lijst, want de soort is geen sleutel meer: er kunnen er twee van
+   dezelfde in staan. Zie de uitleg bij het opruimen van tracks, onderaan
+   `track()`. */
+const puckMemory=[];
+/* Bij een sleepkopie hoort de track die er het dichtst bij ligt en dezelfde
+   soort heeft; met twee pucks van één soort zegt het sjabloon niet meer welke. */
+function trackForSim(s){
+  let best=null,bd=puckSepPX();
+  for(const t of tracks.values()){
+    if(t.tpl.id!==s.tpl.id) continue;
+    const d=Math.hypot(t.x-s.x,t.y-s.y);
+    if(d<bd){ bd=d; best=t; }
+  }
+  return best;
+}
+function startTrack(d,now){
+  const t={id:"puck-"+(++trackSeq),tpl:d.tpl,x:d.x,y:d.y,angle:d.angle,
+           measuredAngle:d.angle,filteredAngle:d.angle,lastRawAngle:d.angle,
+           angleOrigin:d.angle,rawOrigin:d.angle,
+           frames:0,state:"candidate",buf:[],
+           conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
+           // De puck begint in het hoofdmenu. In welke stand hij landt is
+           // meteen de keuze: leg je hem neer met de neus op Zoomen, dan
+           // zoomt hij, zonder eerst weg te draaien en zonder te wachten.
+           // `landing` zegt dat die keuze nog gemaakt moet worden; dat
+           // gebeurt zodra de puck herkend is (zie hieronder).
+           menu:"root",mode:"move",topicIdx:0,landing:true,
+           dwellIdx:-1,dwellT0:now,dwellDone:true,zoomRefY:d.y,zoomAnchor:null};
+  tracks.set(t.id,t);
+  // Kwam dezelfde puck net van de tafel? Dan is dit geen nieuwe puck maar
+  // dezelfde die even wegviel: hij pakt zijn stand weer op en kiest dus niet
+  // opnieuw. Dezelfde soort én ongeveer dezelfde plek, want de soort alleen
+  // zou de stand van de ene puck aan de andere kunnen geven.
+  const mi=puckMemory.findIndex(m=>m.tplId===d.tpl.id&&now-m.t<CFG.puckMemoryMS&&
+                                   Math.hypot(m.x-d.x,m.y-d.y)<puckSepPX()*1.6);
+  if(mi>=0){
+    const mem=puckMemory.splice(mi,1)[0];
+    t.menu=mem.menu; t.mode=mem.mode; t.topicIdx=mem.topicIdx;
+    t.pinId=mem.pinId; t.armed=mem.armed; t.landing=false;
+    t.angleOrigin=mem.angleOrigin; t.angle=mem.angleOrigin;
+    t.zoomAnchor=mem.zoomAnchor;
+  }
+  t.dwellIdx=ringIndexOf(t.angle,ringItems(t).length);
+  return t;
+}
+/* Welke detectie hoort bij welke puck die er al lag? Niet op sjabloon -- twee
+   pucks kunnen dezelfde soort hebben -- maar op plek: het dichtstbijzijnde paar
+   eerst, en nooit verder dan `puckSepPX()`. Die maat ligt ruim onder de
+   afstand tussen twee schijven, dus twee gelijke pucks wisselen niet stiekem
+   van identiteit (en daarmee van thema en markering). */
 function track(dets,now){
+  const forDet=new Map(), taken=new Set();
+  const koppel=reach=>{
+    const pairs=[];
+    for(const d of dets){
+      if(forDet.has(d)) continue;
+      for(const t of tracks.values()){
+        if(taken.has(t)||t.tpl.id!==d.tpl.id) continue;
+        const gap=Math.hypot(t.x-d.x,t.y-d.y);
+        if(gap<=reach) pairs.push({d,t,gap});
+      }
+    }
+    pairs.sort((a,b)=>a.gap-b.gap);
+    for(const p of pairs){
+      if(forDet.has(p.d)||taken.has(p.t)) continue;
+      forDet.set(p.d,p.t); taken.add(p.t);
+    }
+  };
+  koppel(puckSepPX());
+  /* Tweede ronde, ruimer. Wie een puck met een zwaai over de tafel schuift
+     legt in één beeldje meer af dan de eerste ronde toestaat; die zou dan als
+     nieuwe puck binnenkomen en zijn markering en thema kwijt zijn. De krappe
+     ronde heeft de voor de hand liggende paren dan al vergeven, dus twee pucks
+     van dezelfde soort kunnen hier niet meer van identiteit wisselen. */
+  koppel(puckSepPX()*2.5);
+  const seen=new Set();
   for(const d of dets){
-    let t=tracks.get(d.id);
-    if(!t){ t={id:d.id,tpl:d.tpl,x:d.x,y:d.y,angle:d.angle,
-               measuredAngle:d.angle,filteredAngle:d.angle,lastRawAngle:d.angle,
-               angleOrigin:d.angle,rawOrigin:d.angle,
-               frames:0,state:"candidate",buf:[],
-               conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
-               // De puck begint in het hoofdmenu. In welke stand hij landt is
-               // meteen de keuze: leg je hem neer met de neus op Zoomen, dan
-               // zoomt hij, zonder eerst weg te draaien en zonder te wachten.
-               // `landing` zegt dat die keuze nog gemaakt moet worden; dat
-               // gebeurt zodra de puck herkend is (zie hieronder).
-               menu:"root",mode:"move",topicIdx:0,landing:true,
-               dwellIdx:-1,dwellT0:now,dwellDone:true,zoomRefY:d.y,zoomAnchor:null}; tracks.set(d.id,t);
-              // Kwam dezelfde puck net van de tafel? Dan is dit geen nieuwe
-              // puck maar dezelfde die even wegviel: hij pakt zijn stand weer
-              // op en kiest dus niet opnieuw.
-              const mem=puckMemory.get(d.id);
-              if(mem&&now-mem.t<CFG.puckMemoryMS){
-                t.menu=mem.menu; t.mode=mem.mode; t.topicIdx=mem.topicIdx;
-                t.pinId=mem.pinId; t.armed=mem.armed; t.landing=false;
-                t.angleOrigin=mem.angleOrigin; t.angle=mem.angleOrigin;
-                t.zoomAnchor=mem.zoomAnchor;
-              }
-              puckMemory.delete(d.id);
-              t.dwellIdx=ringIndexOf(t.angle,ringItems(t).length); }
+    const t=forDet.get(d)||startTrack(d,now);
+    seen.add(t);
     t.frames++; t.lastSeen=now; t.conf=t.conf*.7+d.conf*.3;
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
     t.x=t.buf.reduce((s,p)=>s+p.x,0)/t.buf.length;
@@ -1479,19 +1574,19 @@ function track(dets,now){
     }
     applyPuckZoom(t);
   }
-  const seen=new Set(dets.map(d=>d.id));
-  for(const [id,t] of tracks){
-    if(seen.has(id)) continue;
+  for(const [id,t] of [...tracks]){
+    if(seen.has(t)) continue;
     if(now-t.lastSeen>CFG.dropoutMS){
       // Een puck die wegvalt is bijna nooit een puck die weggehaald wordt: één
       // slecht contact, een stoot tegen de tafel, een mouw over het glas. Zijn
       // stand gaat daarom kort in de wacht in plaats van meteen weg. Anders
       // komt hij terug als verse puck, kiest hij meteen de stand waar zijn
       // neus toevallig op staat, en is hij zijn markering kwijt.
-      for(const [k,m] of puckMemory) if(now-m.t>=CFG.puckMemoryMS) puckMemory.delete(k);
-      puckMemory.set(id,{t:now,menu:t.menu,mode:t.mode,topicIdx:t.topicIdx,
-                         pinId:t.pinId,armed:t.armed,angleOrigin:t.angle,
-                         zoomAnchor:t.zoomAnchor});
+      while(puckMemory.length&&now-puckMemory[0].t>=CFG.puckMemoryMS) puckMemory.shift();
+      puckMemory.push({tplId:t.tpl.id,x:t.x,y:t.y,t:now,
+                       menu:t.menu,mode:t.mode,topicIdx:t.topicIdx,
+                       pinId:t.pinId,armed:t.armed,angleOrigin:t.angle,
+                       zoomAnchor:t.zoomAnchor});
       tracks.delete(id);
     }
     else if(t.state==="recognised") t.state="incomplete";
@@ -1656,8 +1751,15 @@ function puckHoleAt(x,y){
 }
 function tryConfirmPuck(x,y){
   const t=puckHoleAt(x,y);
-  if(!t||!t.armed) return false;
-  dropPin(t);
+  if(!t) return false;
+  if(t.armed){ dropPin(t); return true; }
+  /* Al vastgelegd? Dan is een tik in het kijkgat "laat zien wat hier staat":
+     het venster van deze puck komt terug. Zonder dat kon je een venster dat je
+     zelf had gesloten alleen nog terugkrijgen door de puck op te tillen en
+     opnieuw neer te leggen -- en dan was het een nieuwe bijdrage. */
+  const pin=t.pinId?pins.find(p=>p.id===t.pinId):null;
+  if(!pin) return false;
+  openNote(pin,t.x,t.y,true);
   return true;
 }
 function dropPin(t){
@@ -1681,7 +1783,8 @@ function syncPlacedPinTopic(t){
   if(pin.topic===topic) return;
   pin.topic=topic;
   save();
-  if(selected===pin) el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
+  const view=noteViewFor(pin);
+  if(view) notePart(view,"noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
 }
 
 /* Als de kennisgraaf open staat, krijgt een puck ook een zichtbare relatie
@@ -1727,9 +1830,11 @@ function drawTarget(ctx,x,y,c,R){
    venster, met een punt op de puck: het venster zit er zichtbaar aan vast.
    Op het canvas, want het venster zelf klemt alles buiten zijn rand weg. */
 function drawNoteTether(ctx,pucks){
-  const n=el("note");
-  if(!selected||n.style.display!=="block") return;
-  const t=pucks.find(p=>p.pinId===selected.id);
+  for(const v of openNotes()) drawOneTether(ctx,pucks,v);
+}
+function drawOneTether(ctx,pucks,v){
+  const n=v.el, pin=v.pin;
+  const t=pucks.find(p=>p.pinId===pin.id);
   if(!t) return;
   const r=n.getBoundingClientRect();
   if(!r.width) return;
@@ -1738,7 +1843,7 @@ function drawNoteTether(ctx,pucks){
   const dx=px-t.x, dy=py-t.y, d=Math.hypot(dx,dy);
   const R=CFG.puckRadiusMM*pxPerMM;
   if(d<=R+8) return;                            // venster ligt tegen de puck aan
-  const ux=dx/d, uy=dy/d, c=vColor(selected.verdict);
+  const ux=dx/d, uy=dy/d, c=vColor(pin.verdict);
   ctx.save(); ctx.lineCap="round";
   ctx.strokeStyle=c; ctx.globalAlpha=0.75; ctx.lineWidth=2.5;
   ctx.beginPath();
@@ -1872,7 +1977,7 @@ function restore(){
     }
   }catch(e){}
 }
-let tapStart=null, selected=null;
+let tapStart=null;
 /* Twee tikken kort na elkaar op dezelfde markering. Na een dubbeltik begint de
    telling opnieuw, zodat drie tikken niet als twee dubbeltikken tellen. */
 let lastTapId=null, lastTapT=0;
@@ -1899,9 +2004,14 @@ addEventListener("pointerup",e=>{
   if(simPuckAt(e.clientX,e.clientY)) return;
   const onTrack=puckTrackAt(e.clientX,e.clientY);
   if(onTrack){
-    // Een puck die al vast ligt: dubbeltikken zet zijn venster op de andere kant.
+    /* Een puck die al vast ligt: tikken opent zijn venster weer, dubbeltikken
+       zet het op de andere kant. Dat eerste ontbrak -- wie zijn venster had
+       gesloten kwam er niet meer bij zonder de puck op te tillen. */
     const own=onTrack.pinId?pins.find(p=>p.id===onTrack.pinId):null;
-    if(own&&doubleTap(own.id)) flipNote(own,onTrack.x,onTrack.y);
+    if(own){
+      if(doubleTap(own.id)) flipNote(own,onTrack.x,onTrack.y);
+      else openNote(own,onTrack.x,onTrack.y,true);
+    }
     return;
   }
   const hit=[...pins].reverse().find(p=>{
@@ -1916,7 +2026,7 @@ addEventListener("pointerup",e=>{
   }
   // Geen eigen markering geraakt? Dan mag de kennisgraaf de tik hebben.
   const node=kgAt(MV,e.clientX,e.clientY);
-  if(node){ closeNote(); openKgInfo(node,e.clientX,e.clientY); return; }
+  if(node){ closeNotes(); openKgInfo(node,e.clientX,e.clientY); return; }
   // Een leeg stuk tafel is kaartbediening en sluit geen open panelen. De
   // gebruiker sluit die bewust met hun sluitknop of met Escape.
   clearPucks(false);
@@ -1930,29 +2040,105 @@ addEventListener("pointerup",e=>{
    staat en schuift het alleen omhoog zodra het anders van het scherm zou
    lopen. Zonder dat onderscheid zou het bij elk binnengekomen woord
    verspringen. */
-function positionNote(recentre=true){
-  const n=el("note");
-  if(n.style.display!=="block") return;
+/* ── Twee vensters, één per tafelkant ────────────────────────────────────
+   Aan een tafel met twee kanten werken twee groepen tegelijk. Met één venster
+   pakte de tweede puck het venster van de eerste af, midden in een zin. Er
+   zijn er daarom twee: één per kant, elk met zijn eigen toetsenbord. Meer dan
+   twee niet -- dan staat het glas vol en is niet meer te zien welk venster bij
+   wie hoort; een derde puck neemt het venster van zijn eigen kant over.
+
+   `#note` en `#keyboard` in index.html zijn de voorkant. De overkant is een
+   kloon waarvan elke id een "-b" krijgt, zodat ids uniek blijven. Alles wat de
+   opmaak nodig heeft hangt daarom aan klassen (`.note`, `.talk-btn`, …), niet
+   aan ids; de ids zijn er alleen nog voor JS en voor de rooktest. */
+function cloneWithSuffix(node,suffix){
+  const c=node.cloneNode(true);
+  const fix=n=>{ if(n.id) n.id+=suffix; if(n.htmlFor) n.htmlFor+=suffix; };
+  fix(c); c.querySelectorAll("[id],label[for]").forEach(fix);
+  return c;
+}
+const noteViews=[];
+/* Een onderdeel van dít venster. Zonder achtervoegsel is het de voorkant, dus
+   `notePart(voorkant,"noteTitle")` is gewoon `#noteTitle`. */
+const notePart=(v,id)=>document.getElementById(id+v.suffix);
+const noteViewOf=node=>noteViews.find(v=>v.el.contains(node))||null;
+const openNotes=()=>noteViews.filter(v=>v.pin);
+const noteViewFor=pin=>noteViews.find(v=>v.pin===pin)||null;
+const noteViewOnSide=side=>noteViews.find(v=>v.side===side)||noteViews[0];
+function buildNoteViews(){
+  for(const side of ["a","b"]){
+    const suffix=side==="a"?"":"-b";
+    const root=side==="a"?el("note"):cloneWithSuffix(el("note"),suffix);
+    if(side!=="a"){ root.style.display="none"; document.body.appendChild(root); }
+    const v={side,suffix,el:root,pin:null,askAbort:null,flip:side==="b",
+             talkMsg:{key:"",args:[],warn:false}};
+    noteViews.push(v);
+    wireNote(v);
+  }
+}
+/* Elke knop in het venster hoort bij dít venster. Vandaar hier en niet één
+   keer op een id: er zijn er twee van alles. */
+function wireNote(v){
+  const q=id=>notePart(v,id);
+  q("noteFlip").onclick=()=>flipNote(v.pin);
+  q("noteSave").onclick=()=>{
+    const pin=v.pin;
+    if(pin){ setTimeout(()=>{ if(v.pin===pin) renderMatches(v,pin); },0); noteToPin(v); save(); }
+    closeNote(v);
+  };
+  q("noteDel").onclick=()=>{
+    if(v.pin){ const i=pins.indexOf(v.pin); if(i>=0) pins.splice(i,1); save(); }
+    closeNote(v);
+  };
+  q("noteAsk").onclick=()=>askKnowledge(v);
+  for(const id of ["noteTitle","noteText"])
+    q(id).addEventListener("input",()=>{ noteToPin(v); saveSoon(); });
+  q("talkBtn").onclick=()=>toggleTalk(v);
+  q("talkClear").onclick=()=>{
+    if(!v.pin) return;
+    v.pin.transcript=""; q("talkText").value=""; q("talkClear").style.display="none"; save();
+  };
+  q("talkText").addEventListener("input",()=>{
+    if(!v.pin) return;
+    v.pin.transcript=q("talkText").value; saveSoon();
+  });
+  q("talkAudio").onclick=saveTalkAudio;
+  // Elk venster kijkt naar zijn eigen hoogte: groeit het antwoord, dan schuift
+  // dit venster terug in beeld en het andere niet.
+  if(typeof ResizeObserver!=="undefined")
+    new ResizeObserver(()=>positionNote(v,false)).observe(v.el);
+}
+buildNoteViews();
+
+function positionNote(v,recentre=true){
+  const n=v?.el;
+  if(!n||n.style.display!=="block") return;
   const s=uiScale;
   const y=+n.dataset.anchorY||innerHeight/2;   // schermpixels
   const h=n.offsetHeight*s;                    // idem: offsetHeight telt ongeschaald
-  const max=Math.max(12,innerHeight-h-12);
+  let lo=12, hi=Math.max(12,innerHeight-h-12);
+  /* Staan er twee vensters open, dan houdt elk zich aan zijn eigen helft van
+     de tafel: anders schuift het venster van de overkant over dat van jou
+     heen. Past het venster daar niet in, dan gaat lezen voor en mag het over
+     de middenlijn. */
+  if(openNotes().length>1 && h<=innerHeight/2-18){
+    if(v.flip) hi=Math.min(hi,innerHeight/2-h-6);
+    else lo=Math.max(lo,innerHeight/2+6);
+  }
   const prev=parseFloat(n.style.top);
   const wanted=recentre?y-h/2:(Number.isFinite(prev)?prev*s:y-h/2);
-  const top=Math.max(12,Math.min(max,wanted));
+  const top=Math.max(lo,Math.min(hi,wanted));
   n.style.top=(top/s)+"px";
 }
-// Eén waarnemer voor de hele levensduur van de pagina: elke hoogtewijziging
-// trekt het venster zo nodig terug binnen beeld.
-if(typeof ResizeObserver!=="undefined")
-  new ResizeObserver(()=>positionNote(false)).observe(el("note"));
+// Elk venster heeft zijn eigen waarnemer (zie wireNote): elke hoogtewijziging
+// trekt het zo nodig terug binnen beeld.
 
 /* Aan welke kant van de markering het venster opengaat hangt af van waar nog
    ruimte is. Die ruimte verandert zodra de bediening groter of kleiner wordt,
    dus dit staat los van openNote en kan opnieuw gedraaid worden. */
-function positionNoteX(){
-  const n=el("note");
-  if(n.style.display!=="block") return;
+function positionNoteX(v){
+  const n=v?.el;
+  if(!n||n.style.display!=="block") return;
   const s=uiScale;
   const x=+n.dataset.anchorX||innerWidth/2;
   const reach=+n.dataset.puckReach||34;
@@ -1971,51 +2157,47 @@ function positionNoteX(){
 const flipFor=(pin,y)=>
   sidesActive() && typeof pin?.flip==="boolean" ? pin.flip : flippedFor(y);
 
-/* Van kant wisselen zonder het venster te sluiten: het draait om zijn eigen
-   midden, de stengel zoekt de puck weer op en het toetsenbord verhuist mee
-   naar de kant waar nu getypt wordt. */
-function applyNoteFlip(flip){
-  const n=el("note");
-  if(n.style.display!=="block") return;
-  n.classList.toggle("flipped",flip);
-  n.style.setProperty("--flip",flip?"180deg":"0deg");
-  positionNoteX();
-  positionNote(false);
-  const kb=el("keyboard");
-  if(kb.classList.contains("visible")&&keyboardTarget&&!keyboardTarget.closest("#menu")){
-    kb.classList.toggle("flipped",flip);
-    requestAnimationFrame(liftEditorAboveKeyboard);
-  }
-}
-function flipNote(pin=selected,x,y){
+/* Van kant wisselen is nu verhuizen: elke kant heeft zijn eigen venster, dus
+   de markering gaat naar het venster aan de overkant (met zijn toetsenbord).
+   Een lopende opname loopt door -- het is dezelfde markering. */
+function flipNote(pin,x,y){
   if(!pin||!sidesActive()) return;
-  const n=el("note");
-  const open=selected===pin&&n.style.display==="block";
-  const anchorY=open?(+n.dataset.anchorY||innerHeight/2):(y??innerHeight/2);
-  pin.flip=!flipFor(pin,anchorY);
+  const v=noteViewFor(pin);
+  const ax=v?(+v.el.dataset.anchorX||innerWidth/2):(x??innerWidth/2);
+  const ay=v?(+v.el.dataset.anchorY||innerHeight/2):(y??innerHeight/2);
+  pin.flip=!flipFor(pin,ay);
   save();
-  if(open) applyNoteFlip(pin.flip);
-  else openNote(pin,x??innerWidth/2,y??innerHeight/2,true);
+  openNote(pin,ax,ay,true);
 }
-/* Wisselt de tafelstand terwijl er een venster open staat, dan hoort dat
-   venster mee te draaien in plaats van dicht te gaan. */
+/* Wisselt de tafelstand terwijl er vensters open staan, dan horen die mee te
+   verhuizen in plaats van dicht te gaan. Eerst opnemen wat er open staat: het
+   heropenen verplaatst vensters, en dan schuift de lijst onder je vandaan. */
 function reorientNote(){
-  if(selected) applyNoteFlip(flipFor(selected,+el("note").dataset.anchorY||innerHeight/2));
+  const open=openNotes().map(v=>({pin:v.pin,
+      x:+v.el.dataset.anchorX||innerWidth/2, y:+v.el.dataset.anchorY||innerHeight/2}));
+  for(const o of open) openNote(o.pin,o.x,o.y,true);
 }
 
 function openNote(pin,x,y,fromPuck=false){
-  // Eén microfoon, één gesprek: een opname die bij een andere markering hoort
-  // stopt hier, zodat er nooit stilletjes wordt meegeluisterd.
-  if(talk&&talkPin!==pin) stopTalk();
-  selected=pin; const n=el("note");
+  // Welke kant van de tafel: bovenaan het scherm staat iemand aan de overkant.
+  const v=noteViewOnSide(flipFor(pin,y)?"b":"a");
+  // Dezelfde markering hoort in één venster te staan. Stond hij aan de andere
+  // kant, dan verhuist hij hierheen -- met zijn opname, want het is dezelfde
+  // bijdrage en dezelfde microfoon.
+  const was=noteViewFor(pin);
+  if(was&&was!==v) closeNote(was,{keepTalk:true});
+  // Wat er aan déze kant stond gaat dicht; die opname hoort wel te stoppen,
+  // want er luistert dan niemand meer mee.
+  if(v.pin&&v.pin!==pin) closeNote(v);
+  v.pin=pin;
+  const n=v.el;
   // Een venster hangt aan een markering. Gaat het bij een andere markering
   // open, dan hoort het weer naast díe markering te beginnen — de vorige
   // verschuiving met de hand geldt niet voor een nieuw venster.
   resetPanelOffset(n);
   n.style.display="block";
-  const flip=flipFor(pin,y);
-  n.classList.toggle("flipped",flip);
-  n.style.setProperty("--flip",flip?"180deg":"0deg");
+  n.classList.toggle("flipped",v.flip);
+  n.style.setProperty("--flip",v.flip?"180deg":"0deg");
   n.style.setProperty("--note-color",vColor(pin.verdict));
   n.dataset.anchorX=String(x);
   n.dataset.anchorY=String(y);
@@ -2023,17 +2205,18 @@ function openNote(pin,x,y,fromPuck=false){
   // keuzes vallen: anders ligt het over "Kiezen" en "Zoomen" heen. De maat
   // volgt daarom de ring en de chips die eromheen staan.
   n.dataset.puckReach=String(fromPuck?Math.round(CFG.ringPX+chipHeight()*1.35+10):34);
-  positionNoteX();
-  positionNote();
+  positionNoteX(v);
+  positionNote(v);
   n.classList.remove("opening");
   if(fromPuck){ void n.offsetWidth; n.classList.add("opening"); }
-  el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
-  el("noteTitle").value=pin.title||"";
-  el("noteText").value=pin.description||pin.note||"";
-  renderTalk(pin);
-  if(!talkRunning(pin)) checkTalk();
-  fillNoteKnowledge(pin);
-  el("noteTitle").focus();
+  notePart(v,"noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
+  notePart(v,"noteTitle").value=pin.title||"";
+  notePart(v,"noteText").value=pin.description||pin.note||"";
+  renderTalk(v);
+  if(!talkRunning(pin)) checkTalk(v);
+  fillNoteKnowledge(v,pin);
+  notePart(v,"noteTitle").focus();
+  return v;
 }
 
 /* ── Wat de kennisgraaf over deze plek weet ──────────────────────────────
@@ -2048,18 +2231,17 @@ function openNote(pin,x,y,fromPuck=false){
 function emptyLine(text){
   const p=document.createElement("p"); p.className="empty"; p.textContent=text; return p;
 }
-let askAbort=null;
-function fillNoteKnowledge(pin){
-  askAbort?.abort(); askAbort=null;
-  el("noteAnswer").textContent=""; el("noteAnswer").style.display="none";
-  el("noteSources").textContent=""; el("noteSources").style.display="none";
-  const box=el("noteNearby");
+function fillNoteKnowledge(v,pin){
+  v.askAbort?.abort(); v.askAbort=null;
+  notePart(v,"noteAnswer").textContent=""; notePart(v,"noteAnswer").style.display="none";
+  notePart(v,"noteSources").textContent=""; notePart(v,"noteSources").style.display="none";
+  const box=notePart(v,"noteNearby");
   box.innerHTML=""; box.appendChild(emptyLine(tr("kgLoading")));
-  el("noteMatches").textContent=""; el("noteMatchHead").style.display="none";
+  notePart(v,"noteMatches").textContent=""; notePart(v,"noteMatchHead").style.display="none";
   ensureKG(kgUrl()).then(()=>{
-    if(selected!==pin) return;
-    renderNearby(pin);
-    renderMatches(pin);
+    if(v.pin!==pin) return;
+    renderNearby(v,pin);
+    renderMatches(v,pin);
   });
 }
 /* Eén regel in een graaflijst. Labels via textContent, zodat een titel uit
@@ -2076,9 +2258,12 @@ function kgRow(label,right,extraClass=""){
 /* Tikken op een regel. Een document opent zichzelf; bij een plek halen we op
    wat er létterlijk over geschreven staat en vouwen dat eronder open. */
 async function kgReveal(row,node){
+  // Welk venster dit is, volgt uit de regel zelf: met twee vensters open kan
+  // dit er een van beide zijn.
+  const v=noteViewOf(row);
   const open=row.nextElementSibling?.classList.contains("kg-quote");
   [...row.parentElement.querySelectorAll(".kg-quote")].forEach(q=>q.remove());
-  if(open){ positionNote(false); return; }
+  if(open){ positionNote(v,false); return; }
   if(node.type==="document"){
     openDocument(node.id,node.label);
     return;
@@ -2086,11 +2271,11 @@ async function kgReveal(row,node){
   const box=document.createElement("div");
   box.className="kg-quote"; box.textContent=tr("searching");
   row.after(box);
-  positionNote(false);
+  positionNote(v,false);
   const k=await knowledgeOf(node.id);
   const chunks=(k?.chunks||[]).slice(0,3);
-  if(!k){ box.textContent=tr("noBackend"); positionNote(false); return; }
-  if(!chunks.length){ box.textContent=tr("noExcerpts"); positionNote(false); return; }
+  if(!k){ box.textContent=tr("noBackend"); positionNote(v,false); return; }
+  if(!chunks.length){ box.textContent=tr("noExcerpts"); positionNote(v,false); return; }
   box.textContent="";
   const titleOf=new Map((k.documents||[]).map(d=>[d.id,d.title]));
   for(const c of chunks){
@@ -2103,11 +2288,11 @@ async function kgReveal(row,node){
     q.appendChild(src);
     box.appendChild(q);
   }
-  positionNote(false);
+  positionNote(v,false);
 }
 
-function renderNearby(pin){
-  const box=el("noteNearby");
+function renderNearby(v,pin){
+  const box=notePart(v,"noteNearby");
   box.textContent="";
   if(!kg.loaded){ box.appendChild(emptyLine(tr("kgUnreachable"))); return; }
   const near=nearby(pin.lat,pin.lng,{theme:pin.topic,limit:4});
@@ -2117,25 +2302,25 @@ function renderNearby(pin){
     row.onclick=()=>kgReveal(row,r.node);
     box.appendChild(row);
   }
-  positionNote();
+  positionNote(v);
 }
 
 /* Zoeken op de bétekenis van wat er gezegd is, los van de afstand. Vandaar
    een eigen lijstje: dit zijn stukken die over het onderwerp gaan, ook als
    ze aan de andere kant van de stad hangen. */
-async function renderMatches(pin){
-  const box=el("noteMatches"), head=el("noteMatchHead");
+async function renderMatches(v,pin){
+  const box=notePart(v,"noteMatches"), head=notePart(v,"noteMatchHead");
   box.textContent=""; head.style.display="none";
   const q=[pin.title,pin.description||pin.note].filter(Boolean).join(" ");
   const docs=await relevantDocs(q);
-  if(selected!==pin||!docs.length) return;
+  if(v.pin!==pin||!docs.length) return;
   head.style.display="block";
   for(const d of docs){
     const row=kgRow(d.title,d.year?String(d.year):"");
     row.onclick=()=>openDocument(d.id,d.title);
     box.appendChild(row);
   }
-  positionNote(false);
+  positionNote(v,false);
 }
 /* Het antwoord komt als markdown terug. Een volledige parser is hier
    overdreven; dit dekt wat er in de praktijk uit komt — koppen, vet,
@@ -2150,10 +2335,10 @@ function mdToHtml(md){
     .replace(/^\s*[-•]\s+(.+)$/gm,'<span class="kg-li">$1</span>');
 }
 
-async function askKnowledge(){
-  const pin=selected; if(!pin) return;
+async function askKnowledge(v){
+  const pin=v?.pin; if(!pin) return;
   const near=kg.loaded?nearby(pin.lat,pin.lng,{theme:pin.topic,limit:4}):[];
-  const out=el("noteAnswer"), src=el("noteSources");
+  const out=notePart(v,"noteAnswer"), src=notePart(v,"noteSources");
   out.style.display="block"; out.textContent=tr("thinking"); out.scrollTop=0;
   src.style.display="none"; src.textContent="";
   /* Het kader heeft een vaste hoogte, dus schuift de tekst zelf mee zolang
@@ -2161,7 +2346,7 @@ async function askKnowledge(){
   const atEnd=()=>out.scrollHeight-out.scrollTop-out.clientHeight<24;
   let follow=true;
   out.onscroll=()=>{ follow=atEnd(); };
-  askAbort?.abort(); askAbort=new AbortController();
+  v.askAbort?.abort(); v.askAbort=new AbortController();
   const question=buildQuestion({
     title:pin.title, description:pin.description||pin.note, topic:pin.topic,
     verdictName:vName(pin.verdict),
@@ -2170,11 +2355,11 @@ async function askKnowledge(){
   });
   try{
     await ask(question,{
-      signal:askAbort.signal,
-      onToken:t=>{ if(selected!==pin) return;
+      signal:v.askAbort.signal,
+      onToken:t=>{ if(v.pin!==pin) return;
         out.innerHTML=mdToHtml(t);
         if(follow) out.scrollTop=out.scrollHeight; },
-      onSources:list=>{ if(selected!==pin||!list.length) return;
+      onSources:list=>{ if(v.pin!==pin||!list.length) return;
         src.style.display="block";
         src.textContent=tr("basedOn",[...new Set(list.map(s=>s.title))].slice(0,4).join(" · ")); },
     });
@@ -2182,15 +2367,23 @@ async function askKnowledge(){
     if(e.name!=="AbortError") out.textContent=tr("noAnswer",e.message);
   }
 }
-function closeNote(){
+/* Eén venster sluiten. `keepTalk` is er voor het verhuizen naar de andere
+   kant: dan gaat dit venster dicht terwijl dezelfde markering aan de overkant
+   verder praat. */
+function closeNote(v,{keepTalk=false}={}){
+  if(!v||!v.pin) return;
+  if(!keepTalk&&talkPin===v.pin) stopTalk(true);
   // Wat er in de velden stond staat al in de markering (zie noteToPin), maar
   // de opslag kan nog in de wacht staan; die trekken we hier recht.
-  if(talk) stopTalk(true);
-  if(selected&&saveTimer){ clearTimeout(saveTimer); saveTimer=null; save(); }
-  askAbort?.abort(); askAbort=null;
-  const n=el("note"); n.style.display="none"; n.classList.remove("opening"); selected=null;
-  if([el("noteTitle"),el("noteText"),el("talkText")].includes(keyboardTarget)) hideKeyboard(true);
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; save(); }
+  v.askAbort?.abort(); v.askAbort=null;
+  const n=v.el; n.style.display="none"; n.classList.remove("opening");
+  v.pin=null;
+  hideKeyboardIn(n);
 }
+/* Alles dicht: bij het wisselen van stand, het verslepen van markeringen, of
+   een tik op de kennisgraaf hoort er geen venster te blijven staan. */
+function closeNotes(){ for(const v of noteViews) closeNote(v); }
 
 
 /* ── Het gesprek uitschrijven ────────────────────────────────────────────
@@ -2211,17 +2404,21 @@ let talk=null;                 // lopende opname (sessie uit speech.js)
 let talkPin=null;              // markering waar die opname bij hoort
 let talkStartedAt=0, talkTick=null;
 let talkAudioBlob=null;        // alleen in de opnamestand: het geluid zelf
-let talkMsg={key:"",args:[],warn:false};
 
 const talkTextOf=pin=>typeof pin?.transcript==="string"?pin.transcript:"";
 const talkRunning=pin=>!!talk&&talkPin===pin;
+/* Het venster waar de lopende opname in staat, als het nog open is. Er is één
+   microfoon, dus hoogstens één venster neemt op; de andere kant ziet dat aan
+   zijn eigen melding (`talkBusy`). */
+const talkView=()=>talkPin?noteViewFor(talkPin):null;
 
 /* De melding onder het tekstvak wordt door JS gezet, dus onthouden we welke
    het is: bij een taalwissel moet dezelfde zin in de andere taal komen te
    staan in plaats van te blijven hangen. */
-function setTalkMsg(key,{warn=false,args=[]}={}){
-  talkMsg={key,args,warn};
-  const p=el("talkStatus");
+function setTalkMsg(v,key,{warn=false,args=[]}={}){
+  if(!v) return;
+  v.talkMsg={key,args,warn};
+  const p=notePart(v,"talkStatus");
   p.textContent=key?tr(key,...args):"";
   p.classList.toggle("warn",!!key&&warn);
 }
@@ -2230,38 +2427,49 @@ function talkClock(){
   const s=Math.max(0,Math.round((performance.now()-talkStartedAt)/1000));
   return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
 }
+function showTalkClock(){
+  const v=talkView();
+  if(v) notePart(v,"talkTime").textContent=talk?talkClock():"";
+}
 function startTalkClock(){
   stopTalkClock();
-  el("talkTime").textContent=talkClock();
-  talkTick=setInterval(()=>{ if(talk) el("talkTime").textContent=talkClock(); },1000);
+  showTalkClock();
+  talkTick=setInterval(showTalkClock,1000);
 }
-function stopTalkClock(){ clearInterval(talkTick); talkTick=null; el("talkTime").textContent=""; }
+function stopTalkClock(){
+  clearInterval(talkTick); talkTick=null;
+  for(const v of noteViews) notePart(v,"talkTime").textContent="";
+}
 
-function renderTalk(pin){
-  const box=el("talkText");
+function renderTalk(v){
+  const pin=v.pin, box=notePart(v,"talkText");
   box.value=talkTextOf(pin);
-  el("talkPartial").textContent="";
-  el("talkClear").style.display=box.value?"":"none";
-  el("talkAudio").style.display=(talkAudioBlob&&talkPin===pin)?"":"none";
+  notePart(v,"talkPartial").textContent="";
+  notePart(v,"talkClear").style.display=box.value?"":"none";
+  notePart(v,"talkAudio").style.display=(talkAudioBlob&&talkPin===pin)?"":"none";
   const rec=talkRunning(pin);
-  el("talkBtn").classList.toggle("rec",rec);
-  el("talkBtn").textContent=tr(rec?"talkStop":"talkStart");
-  if(!rec) el("talkTime").textContent="";
+  notePart(v,"talkBtn").classList.toggle("rec",rec);
+  notePart(v,"talkBtn").textContent=tr(rec?"talkStop":"talkStart");
+  if(!rec) notePart(v,"talkTime").textContent="";
 }
 
 /* Wat kan deze tafel? Eén keer polsen, en het antwoord meteen laten zien:
    dat "uitschrijven hier niet kan" hoort te blijken vóór iemand tien minuten
    in een microfoon praat, niet erna. */
-function checkTalk(){
-  if(stt.checked){ talkReady(); return; }
-  setTalkMsg("talkCheck");
-  probeSTT(sttUrl()).then(()=>{ if(el("note").style.display==="block"&&!talk) talkReady(); });
+function checkTalk(v){
+  if(stt.checked){ talkReady(v); return; }
+  setTalkMsg(v,"talkCheck");
+  probeSTT(sttUrl()).then(()=>{ if(v.pin) talkReady(v); });
 }
-function talkReady(){
-  if(talk) return;
-  if(stt.mode==="geen") setTalkMsg(stt.reason==="insecure"?"talkInsecure":"talkNoMic",{warn:true});
-  else if(stt.mode==="audio") setTalkMsg("talkOnlyAudio",{warn:true});
-  else setTalkMsg("");
+function talkReady(v){
+  if(talk){
+    // Eén microfoon: aan de overkant loopt er al een opname.
+    if(talkPin!==v.pin) setTalkMsg(v,"talkBusy",{warn:true});
+    return;
+  }
+  if(stt.mode==="geen") setTalkMsg(v,stt.reason==="insecure"?"talkInsecure":"talkNoMic",{warn:true});
+  else if(stt.mode==="audio") setTalkMsg(v,"talkOnlyAudio",{warn:true});
+  else setTalkMsg(v,"");
 }
 
 function appendTalk(pin,text){
@@ -2269,91 +2477,89 @@ function appendTalk(pin,text){
   if(!t) return;
   const had=talkTextOf(pin).replace(/\s+$/,"");
   pin.transcript=had?had+" "+t:t;
-  if(selected===pin){
-    const box=el("talkText");
+  const v=noteViewFor(pin);
+  if(v){
+    const box=notePart(v,"talkText");
     box.value=pin.transcript;
     box.scrollTop=box.scrollHeight;
-    el("talkClear").style.display="";
+    notePart(v,"talkClear").style.display="";
   }
   saveSoon();
 }
 
 let talkBusy=false;
-async function toggleTalk(){
-  if(talk){ stopTalk(); return; }
-  const pin=selected;
+async function toggleTalk(v){
+  if(talkRunning(v.pin)){ stopTalk(); return; }
+  const pin=v.pin;
   if(!pin||talkBusy) return;
+  /* Eén microfoon voor de hele tafel. Neemt de overkant op, dan is dat geen
+     fout maar iets om te zeggen -- anders drukt iemand tien keer op een knop
+     die niets lijkt te doen. */
+  if(talk){ setTalkMsg(v,"talkBusy",{warn:true}); return; }
   talkBusy=true;
   try{
-    setTalkMsg("talkStarting");
+    setTalkMsg(v,"talkStarting");
     await probeSTT(sttUrl());
-    if(selected!==pin) return;
-    if(stt.mode==="geen"){ talkReady(); return; }
+    if(v.pin!==pin) return;
+    if(stt.mode==="geen"){ talkReady(v); return; }
     const session=await startTalk({
       lang,
       onSegment:text=>appendTalk(pin,text),
-      onPartial:text=>{ if(talkPin===pin) el("talkPartial").textContent=text; },
+      onPartial:text=>{ const w=noteViewFor(pin);
+        if(talkPin===pin&&w) notePart(w,"talkPartial").textContent=text; },
       onError:key=>talkError(key),
       onAudio:blob=>{
         talkAudioBlob=blob;
-        if(selected===pin){ el("talkAudio").style.display=""; setTalkMsg("talkAudioReady"); }
+        const w=noteViewFor(pin);
+        if(w){ notePart(w,"talkAudio").style.display=""; setTalkMsg(w,"talkAudioReady"); }
       },
     });
     if(!session) return;                       // speech.js heeft de reden al gemeld
-    if(selected!==pin){ session.stop(); return; }
+    if(v.pin!==pin){ session.stop(); return; }
     talk=session; talkPin=pin;
-    talkAudioBlob=null; el("talkAudio").style.display="none";
+    talkAudioBlob=null; notePart(v,"talkAudio").style.display="none";
     talkStartedAt=performance.now(); startTalkClock();
-    renderTalk(pin);
-    setTalkMsg(session.mode==="browser"?"talkListening"
-              :session.mode==="backend"?"talkWriting":"talkRecording");
+    renderTalk(v);
+    setTalkMsg(v,session.mode==="browser"?"talkListening"
+                :session.mode==="backend"?"talkWriting":"talkRecording");
   }finally{ talkBusy=false; }
 }
 
 function stopTalk(quiet=false){
-  const session=talk, pin=talkPin;
+  const session=talk, pin=talkPin, v=talkView();
   talk=null; talkPin=null;
   stopTalkClock();
-  el("talkPartial").textContent="";
-  el("talkBtn").classList.remove("rec");
-  el("talkBtn").textContent=tr("talkStart");
+  if(v){
+    notePart(v,"talkPartial").textContent="";
+    notePart(v,"talkBtn").classList.remove("rec");
+    notePart(v,"talkBtn").textContent=tr("talkStart");
+  }
   const mode=session?.mode;
   /* De uitschrijfstand heeft misschien nog een blokje onderweg; die laatste
      woorden horen er nog bij voordat we zeggen hoeveel het er zijn. */
   Promise.resolve(session?.stop()).then(()=>{
     save();
-    if(quiet||selected!==pin) return;
+    if(quiet||!v||v.pin!==pin) return;
     if(mode==="audio") return;                 // onAudio zet zijn eigen melding
     const words=talkTextOf(pin).split(/\s+/).filter(Boolean).length;
-    setTalkMsg(words?"talkDone":"talkNoText",{args:[words]});
-    renderTalk(pin);
+    setTalkMsg(v,words?"talkDone":"talkNoText",{args:[words]});
+    renderTalk(v);
   });
 }
 
 function talkError(key){
+  const v=talkView()||openNotes()[0];
   // Wegvallende uitschrijfdienst: melden, maar door blijven opnemen.
-  if(key==="backend"){ setTalkMsg("talkBackendGone",{warn:true}); return; }
+  if(key==="backend"){ setTalkMsg(v,"talkBackendGone",{warn:true}); return; }
   if(talk) stopTalk(true);
-  setTalkMsg(key==="denied"?"talkDenied"
-            :key==="insecure"?"talkInsecure"
-            :key==="browser"?"talkBrowserGone":"talkNoMic",{warn:true});
+  setTalkMsg(v,key==="denied"?"talkDenied"
+              :key==="insecure"?"talkInsecure"
+              :key==="browser"?"talkBrowserGone":"talkNoMic",{warn:true});
 }
-
-el("talkBtn").onclick=toggleTalk;
-el("talkClear").onclick=()=>{
-  if(!selected) return;
-  selected.transcript="";
-  el("talkText").value=""; el("talkClear").style.display="none";
-  save();
-};
-el("talkText").addEventListener("input",()=>{
-  if(!selected) return;
-  selected.transcript=el("talkText").value;
-  saveSoon();
-});
+/* De knoppen van het gesprek worden per venster aangesloten; zie `wireNote`. */
 /* Zonder uitschrijfdienst is het geluid het enige wat er is; dat mag niet
    met het venster verdwijnen. Downloaden dus, met de sessienaam erin. */
-el("talkAudio").onclick=()=>{
+function saveTalkAudio(){
   if(!talkAudioBlob) return;
   const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
   const a=document.createElement("a");
@@ -2361,7 +2567,7 @@ el("talkAudio").onclick=()=>{
   a.download=(el("sess").value||"tafel")+"-gesprek-"+stamp+
              (talkAudioBlob.type.includes("mp4")?".m4a":".webm");
   a.click();
-};
+}
 
 /* ═══════════════════════════════════════════════════════════════
    5. FRAME
@@ -2417,7 +2623,7 @@ function frame(){
     }
     if(p.title||p.description||p.note){ ctx.fillStyle="#07090c"; ctx.font="700 11px "+CHIP_FAMILY; ctx.textAlign="center";
                 ctx.fillText("•",s.x,s.y+3.5); }
-    if(selected===p){ ctx.beginPath(); ctx.arc(s.x,s.y,24,0,Math.PI*2);
+    if(noteViewFor(p)){ ctx.beginPath(); ctx.arc(s.x,s.y,24,0,Math.PI*2);
       ctx.strokeStyle="#e8edf4"; ctx.lineWidth=1.5; ctx.stroke(); }
   }
 
@@ -2705,7 +2911,7 @@ function openAnalytics(){
   // dezelfde tafelrand te verschijnen en in de leesrichting daarvan te staan.
   analyticsSide=menuSide||"a";
   analyticsRotation=analyticsSide==="b"&&sidesActive()?180:0;
-  closeMenu(); closeNote(); analyticsRevision=pinsRevision; renderAnalytics(); applyAnalyticsOrientation();
+  closeMenu(); closeNotes(); analyticsRevision=pinsRevision; renderAnalytics(); applyAnalyticsOrientation();
   const a=el("analytics"); a.classList.add("open");
   el("analytics").scrollTop=0; el("analytics").querySelector(".analytics-inner").scrollTop=0;
 }
@@ -2761,14 +2967,43 @@ const KEY_ROWS=[
   ["shift","z","x","c","v","b","n","m","backspace"],
   ["close",",","space",".","enter"]
 ];
-let keyboardTarget=null, keyboardShift=false;
+/* Twee toetsenborden, één per tafelkant. Eén toetsenbord onderaan is voor wie
+   aan de overkant staat onbereikbaar én ondersteboven, en zolang het er één
+   was moesten twee mensen om de beurt typen. Elk toetsenbord onthoudt zijn
+   eigen veld en zijn eigen shift, dus ze zitten elkaar niet in de weg. */
+const keyboards=[];
+const kbPart=(kb,id)=>document.getElementById(id+kb.suffix);
+const kbOnSide=side=>keyboards.find(k=>k.side===side)||keyboards[0];
+const kbVisible=kb=>kb.el.classList.contains("visible");
+function buildKeyboards(){
+  for(const side of ["a","b"]){
+    const suffix=side==="a"?"":"-b";
+    const root=side==="a"?el("keyboard"):cloneWithSuffix(el("keyboard"),suffix);
+    if(side!=="a") document.body.appendChild(root);
+    // De overkant staat op zijn kop en bovenaan; dat is vast, niet per veld.
+    root.classList.toggle("flipped",side==="b");
+    const kb={side,suffix,el:root,target:null,shift:false};
+    keyboards.push(kb);
+    wireKeyboard(kb);
+  }
+}
+/* Aan welke kant hoort dit veld? Een veld in een venster hoort bij de kant van
+   dat venster, een veld in het menu bij de kant waar het menu openstaat. */
+function keyboardSideFor(target){
+  if(!sidesActive()) return "a";
+  const v=noteViewOf(target);
+  if(v) return v.side;
+  if(target.closest("#menu")) return menuFlipped()?"b":"a";
+  return "a";
+}
 const keyboardLabel=key=>({shift:"⇧",backspace:"⌫",space:tr("keySpace"),enter:tr("keyEnter"),close:tr("keyClose")})[key]||key;
-function renderKeyboard(){
-  el("keyboardKeys").innerHTML=KEY_ROWS.map(row=>`<div class="keyboard-row">${row.map(key=>{
+function renderKeyboard(kb){
+  if(!kb){ for(const k of keyboards) renderKeyboard(k); return; }
+  kbPart(kb,"keyboardKeys").innerHTML=KEY_ROWS.map(row=>`<div class="keyboard-row">${row.map(key=>{
     const wide=["shift","backspace","enter","close"].includes(key)?" key-wide":"";
     const space=key==="space"?" key-space":"";
-    const active=key==="shift"&&keyboardShift?" key-active":"";
-    const label=/^[a-z]$/.test(key)&&keyboardShift?key.toUpperCase():keyboardLabel(key);
+    const active=key==="shift"&&kb.shift?" key-active":"";
+    const label=/^[a-z]$/.test(key)&&kb.shift?key.toUpperCase():keyboardLabel(key);
     return `<button type="button" class="${wide}${space}${active}" data-key="${key}">${label}</button>`;
   }).join("")}</div>`).join("");
 }
@@ -2782,11 +3017,13 @@ function refreshKeyboardFields(){
     else field.removeAttribute("inputmode");
   });
 }
-function liftEditorAboveKeyboard(){
-  const n=el("note"), kb=el("keyboard");
-  if(n.style.display!=="block"||!kb.classList.contains("visible")) return;
-  const nr=n.getBoundingClientRect(), kr=kb.getBoundingClientRect();
-  const flip=n.classList.contains("flipped");
+/* Het venster waarin getypt wordt boven zijn eigen toetsenbord houden. */
+function liftEditorAboveKeyboard(kb){
+  const v=kb?.target?noteViewOf(kb.target):null;
+  if(!v||!v.pin||!kbVisible(kb)) return;
+  const n=v.el;
+  const nr=n.getBoundingClientRect(), kr=kb.el.getBoundingClientRect();
+  const flip=v.flip;
   // Het toetsenbord staat aan dezelfde kant als de persoon: onderaan voor wie
   // vooraan staat, bovenaan voor wie aan de overkant staat. Het venster wijkt
   // dus de andere kant op.
@@ -2795,63 +3032,74 @@ function liftEditorAboveKeyboard(){
   else if(!flip && nr.bottom>kr.top-12) top=Math.max(12,kr.top-nr.height-12);
   if(top===null) return;
   n.style.top=(Math.max(12,top)/uiScale)+"px";
-  const anchorY=Number(n.dataset.anchorY)||top+nr.height/2;
 }
 function showKeyboard(target){
   // Niet op `uiMode==="touch"` testen: `refreshKeyboardFields` zet het
   // systeemtoetsenbord uit voor elke tafelstand, dus moet dit toetsenbord in
   // diezelfde standen verschijnen. Anders kun je in de puckstand niets typen.
   if(!tableUi()||!target.classList.contains("touch-type")) return;
-  keyboardTarget=target;
-  el("keyboardField").textContent=target.labels?.[0]?.textContent||target.placeholder||tr("typeHere");
-  renderKeyboard();
-  // Het toetsenbord volgt de kant waar getypt wordt: het menu heeft zijn eigen
-  // leesrichting, een notitievenster die van de puck waar het aan hangt.
-  el("keyboard").classList.toggle("flipped",
-    target.closest("#menu")?menuFlipped():el("note").classList.contains("flipped"));
-  el("keyboard").classList.add("visible");
+  // Het toetsenbord staat aan de kant waar getypt wordt; zie keyboardSideFor.
+  const kb=kbOnSide(keyboardSideFor(target));
+  // Hetzelfde veld kan niet aan twee toetsenborden tegelijk hangen.
+  for(const other of keyboards) if(other!==kb&&other.target===target) hideKeyboard(other);
+  kb.target=target;
+  kbPart(kb,"keyboardField").textContent=target.labels?.[0]?.textContent||target.placeholder||tr("typeHere");
+  renderKeyboard(kb);
+  kb.el.classList.add("visible");
   document.body.classList.add("keyboard-open");
-  requestAnimationFrame(liftEditorAboveKeyboard);
-  setTimeout(liftEditorAboveKeyboard,360);
+  requestAnimationFrame(()=>liftEditorAboveKeyboard(kb));
+  setTimeout(()=>liftEditorAboveKeyboard(kb),360);
 }
-function hideKeyboard(blur=false){
-  el("keyboard").classList.remove("visible");
-  document.body.classList.remove("keyboard-open");
-  if(blur&&keyboardTarget) keyboardTarget.blur();
-  keyboardTarget=null; keyboardShift=false;
+function hideKeyboard(kb,blur=false){
+  if(!kb) return;
+  kb.el.classList.remove("visible");
+  if(blur&&kb.target) kb.target.blur();
+  kb.target=null; kb.shift=false;
+  document.body.classList.toggle("keyboard-open",keyboards.some(kbVisible));
 }
-function insertKeyboardText(text){
-  const target=keyboardTarget; if(!target) return;
+function hideKeyboards(blur=false){ for(const kb of keyboards) hideKeyboard(kb,blur); }
+/* Alles wat in dit stuk scherm getypt werd is weg; het bijbehorende
+   toetsenbord hoort mee te verdwijnen. */
+function hideKeyboardIn(root){
+  if(!root) return;
+  for(const kb of keyboards) if(kb.target&&root.contains(kb.target)) hideKeyboard(kb,true);
+}
+function insertKeyboardText(kb,text){
+  const target=kb?.target; if(!target) return;
   const start=target.selectionStart??target.value.length, end=target.selectionEnd??start;
   target.setRangeText(text,start,end,"end");
   target.dispatchEvent(new Event("input",{bubbles:true}));
   target.focus({preventScroll:true});
 }
-el("keyboard").addEventListener("pointerdown",e=>{if(e.target.closest("button")) e.preventDefault();});
-el("keyboard").addEventListener("click",e=>{
-  const button=e.target.closest("button[data-key]"); if(!button||!keyboardTarget) return;
-  const key=button.dataset.key;
-  if(key==="shift"){keyboardShift=!keyboardShift;renderKeyboard();return;}
-  if(key==="close"){hideKeyboard(true);return;}
-  if(key==="backspace"){
-    const target=keyboardTarget, start=target.selectionStart??target.value.length, end=target.selectionEnd??start;
-    if(start!==end) target.setRangeText("",start,end,"end");
-    else if(start>0) target.setRangeText("",start-1,start,"end");
-    target.dispatchEvent(new Event("input",{bubbles:true})); return;
-  }
-  if(key==="enter"){
-    if(keyboardTarget.tagName==="TEXTAREA") insertKeyboardText("\n");
-    else if(keyboardTarget===el("noteTitle")){el("noteText").focus();}
-    else{
-      keyboardTarget.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
-      keyboardTarget.dispatchEvent(new Event("change",{bubbles:true}));
-      hideKeyboard(true);
+function wireKeyboard(kb){
+  kb.el.addEventListener("pointerdown",e=>{if(e.target.closest("button")) e.preventDefault();});
+  kb.el.addEventListener("click",e=>{
+    const button=e.target.closest("button[data-key]"); if(!button||!kb.target) return;
+    const key=button.dataset.key;
+    if(key==="shift"){kb.shift=!kb.shift;renderKeyboard(kb);return;}
+    if(key==="close"){hideKeyboard(kb,true);return;}
+    if(key==="backspace"){
+      const target=kb.target, start=target.selectionStart??target.value.length, end=target.selectionEnd??start;
+      if(start!==end) target.setRangeText("",start,end,"end");
+      else if(start>0) target.setRangeText("",start-1,start,"end");
+      target.dispatchEvent(new Event("input",{bubbles:true})); return;
     }
-    return;
-  }
-  insertKeyboardText(key==="space"?" ":keyboardShift?key.toUpperCase():key);
-  if(keyboardShift){keyboardShift=false;renderKeyboard();}
-});
+    if(key==="enter"){
+      const v=noteViewOf(kb.target);
+      if(kb.target.tagName==="TEXTAREA") insertKeyboardText(kb,"\n");
+      else if(v&&kb.target===notePart(v,"noteTitle")){ notePart(v,"noteText").focus(); }
+      else{
+        kb.target.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+        kb.target.dispatchEvent(new Event("change",{bubbles:true}));
+        hideKeyboard(kb,true);
+      }
+      return;
+    }
+    insertKeyboardText(kb,key==="space"?" ":kb.shift?key.toUpperCase():key);
+    if(kb.shift){kb.shift=false;renderKeyboard(kb);}
+  });
+}
+buildKeyboards();
 addEventListener("focusin",e=>{if(e.target.classList?.contains("touch-type")) showKeyboard(e.target);});
 
 /* Twee regels tekst gaan over de balk onderaan, en die is er in de puckstand
@@ -2877,15 +3125,14 @@ function applyMode(mode){
     el(id).classList.toggle("active",active);
     el(id).setAttribute("aria-pressed",String(active));
   });
-  const fb=el("noteFlip");
-  fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide"));
+  refreshNoteFlipLabels();
   refreshModeTexts();
   refreshKeyboardFields();
   // Een venster dat op zijn kop staat hoort niet mee te verhuizen naar de
   // laptopstand, dus dat gaat dicht bij het wisselen.
   applySides();
-  closeNote();
-  if(mode==="laptop") hideKeyboard();
+  closeNotes();
+  if(mode==="laptop") hideKeyboards();
   /* Sleepkopieen horen bij de balk. Gaat de balk weg, dan gaan zij mee: anders
      blijft er een puck op tafel liggen die nergens meer op te pakken is. */
   if(mode==="puck") clearPucks();
@@ -2930,7 +3177,7 @@ document.querySelectorAll("#menu .menu-sec>.accordion-head").forEach(head=>{
 el("btnMove").onclick=()=>{mapLocked=!mapLocked;gesture=null;mousePan=null;applyLock();};
 el("btnCalm").onclick=()=>{calmMap=!calmMap;applyCalm();};
 el("btnResetKey").onclick=()=>{ resetLearning=!resetLearning; applyResetKey(); };
-el("btnMoveDots").onclick=()=>{pinMoveMode=!pinMoveMode;closeNote();applyPinMoveMode();};
+el("btnMoveDots").onclick=()=>{pinMoveMode=!pinMoveMode;closeNotes();applyPinMoveMode();};
 function applyScale(){
   document.documentElement.style.setProperty("--ui-scale",String(uiScale));
   el("scaleVal").textContent=Math.round(uiScale*100)+"%";
@@ -2941,8 +3188,7 @@ function applyScale(){
   try{localStorage.setItem("pucktable-ui-scale-"+uiMode,String(uiScale));}catch(e){}
   // Een open venster hangt aan een punt op de kaart; dat punt verschuift niet
   // mee, dus beide vensters gaan opnieuw langs hun anker liggen.
-  positionNoteX();
-  positionNote();
+  for(const v of openNotes()){ positionNoteX(v); positionNote(v); }
   positionKgInfo();
   refreshPanelOffsets();
 }
@@ -3087,6 +3333,9 @@ function makeDraggable(panel,headSel,loose){
 for(const {id,head,loose} of DRAG_PANELS){
   const panel=el(id);
   if(panel) makeDraggable(panel,head,loose);
+  // De klonen aan de overkant zijn dezelfde panelen en schuiven dus net zo.
+  const twin=el(id+"-b");
+  if(twin) makeDraggable(twin,head,loose);
 }
 
 /* ── Schermstand ─────────────────────────────────────────────────────
@@ -3228,7 +3477,6 @@ async function toggleRelations(){
   if(!kg.nodes.length) await loadKG(kgUrl());
   else el("kgStatus").textContent=kgStatusText();
 }
-el("noteAsk").onclick=askKnowledge;
 onKgChange(()=>{
   el("kgStatus").textContent=kgStatusText();
   el("btnKg").classList.toggle("on",kg.enabled);
@@ -3410,7 +3658,7 @@ function closeMenu(){
     el(id).setAttribute("aria-expanded","false");
   });
   // Getypt werd er in een veld dat nu weg is; het toetsenbord hoort mee.
-  if(keyboardTarget&&keyboardTarget.closest("#menu")) hideKeyboard(true);
+  hideKeyboardIn(el("menu"));
 }
 /* Een gekozen kaartbeeld sluit het hele menu: de keuze is gemaakt en de tafel
    hoort weer leeg te zijn. */
@@ -3461,19 +3709,19 @@ el("search").onkeydown=async e=>{
    op "Bewaren" drukt betekende dat de half getypte bijdrage van de eerste weg
    was zodra de tweede een markering aantikte. "Bewaren" sluit nu het venster;
    het bewaart niets meer wat er niet al stond. */
-function noteToPin(){
-  if(!selected) return;
-  selected.title=el("noteTitle").value.trim();
-  selected.description=el("noteText").value.trim();
-  selected.note=selected.description;  // keep older exports and saved sessions compatible
+function noteToPin(v){
+  const pin=v?.pin; if(!pin) return;
+  pin.title=notePart(v,"noteTitle").value.trim();
+  pin.description=notePart(v,"noteText").value.trim();
+  pin.note=pin.description;  // keep older exports and saved sessions compatible
 }
-["noteTitle","noteText"].forEach(id=>
-  el(id).addEventListener("input",()=>{ noteToPin(); saveSoon(); }));
-el("noteSave").onclick=()=>{ if(selected){ setTimeout(()=>{ if(selected) renderMatches(selected); },0);
-  noteToPin(); save();
-} closeNote(); };
-el("noteFlip").onclick=()=>flipNote();
-el("noteDel").onclick=()=>{ if(selected){const i=pins.indexOf(selected); if(i>=0)pins.splice(i,1); save();} closeNote(); };
+/* De knoppen in de vensters worden per venster aangesloten; zie `wireNote`. */
+function refreshNoteFlipLabels(){
+  for(const v of noteViews){
+    const fb=notePart(v,"noteFlip");
+    if(fb){ fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide")); }
+  }
+}
 /* `confirm()` verschijnt in de oriëntatie van de browser — dus op zijn kop
    voor de helft van het gezelschap — staat buiten de bedieningsschaal en legt
    de tekenlus stil zolang hij openstaat. Twee tikken op dezelfde knop doen
@@ -3726,7 +3974,8 @@ addEventListener("keydown",e=>{
   if(learn.open){ closeLearn(); return; }
   if(el("sheet").style.display==="block"){ closeSheet(); return; }
   if(menuSide){ closeMenu(); return; }
-  if(el("note").style.display==="block"){ closeNote(); return; }
+  // Escape sluit het bovenste venster: met twee open hoort er één tegelijk weg.
+  if(openNotes().length){ closeNote(openNotes().pop()); return; }
   closeKgInfo();
 });
 
@@ -3870,15 +4119,14 @@ function applyLang(){
   renderKeyboard();
   updateUI([]);
   refreshModeTexts();
-  const fb=el("noteFlip");
-  if(fb){ fb.title=tr("flipSide"); fb.setAttribute("aria-label",tr("flipSide")); }
+  refreshNoteFlipLabels();
   refreshOrientationControl();
   refreshFullscreenLabel();
-  // Een open venster hoort niet eerst dicht te moeten voordat het meegaat.
-  if(selected){
-    el("noteHead").textContent=vName(selected.verdict)+" \u00b7 "+selected.topic;
-    renderTalk(selected);
-    setTalkMsg(talkMsg.key,{warn:talkMsg.warn,args:talkMsg.args});
+  // Open vensters horen niet eerst dicht te moeten voordat ze meegaan.
+  for(const v of openNotes()){
+    notePart(v,"noteHead").textContent=vName(v.pin.verdict)+" \u00b7 "+v.pin.topic;
+    renderTalk(v);
+    setTalkMsg(v,v.talkMsg.key,{warn:v.talkMsg.warn,args:v.talkMsg.args});
   }
   if(el("kgInfo").style.display==="block" && kg.selected){
     openKgInfo(kg.selected,+el("kgInfo").dataset.anchorX,+el("kgInfo").dataset.anchorY);
