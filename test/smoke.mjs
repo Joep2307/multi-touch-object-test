@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "pucktable-smoke-"));
-for (const name of ["index.html", "app.js", "kg.js", "styles.css"])
+for (const name of ["index.html", "app.js", "kg.js", "speech.js", "styles.css"])
   fs.copyFileSync(path.join(root, name), path.join(work, name));
 fs.cpSync(path.join(root, "public"), path.join(work, "public"), { recursive: true });
 fs.cpSync(path.join(root, "public", "fixtures"), path.join(work, "fixtures"), { recursive: true });
@@ -346,6 +346,41 @@ async function newPage(uiMode){
   await page.waitForTimeout(600);
   ok('ingedrukt houden begint opnieuw', await page.evaluate(()=>window.__voor)===undefined);
   ok('geen JS-fouten (resetknop)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx.close();
+}
+
+// ── gesprek: het blok staat er, de tekst blijft bij de markering ──
+{
+  const {page, ctx, errs} = await newPage('laptop');
+  const tray = page.locator('#puckDock .traypuck').first();
+  const b = await tray.boundingBox();
+  const cx=W/2, cy=H/2;
+  await page.mouse.move(b.x+b.width/2,b.y+b.height/2); await page.mouse.down();
+  await page.mouse.move(cx,cy,{steps:12}); await page.mouse.up();
+  await page.waitForTimeout(400);
+  await page.mouse.click(cx,cy); await page.waitForTimeout(500);
+
+  ok('opnameknop staat in het venster', await page.locator('#talkBtn').isVisible());
+  ok('knop heet Gesprek opnemen', (await page.locator('#talkBtn').textContent()).includes('Gesprek opnemen'));
+
+  await page.locator('#talkText').fill('We staan hier elke ochtend in de file.');
+  await page.waitForTimeout(700);
+  const bewaard = await page.evaluate(()=>{
+    const k='pucktable-'+document.getElementById('sess').value;
+    return (JSON.parse(localStorage.getItem(k)||'[]')).some(p=>/elke ochtend in de file/.test(p.transcript||''));
+  });
+  ok('het gesprek wordt bij de markering bewaard', bewaard);
+
+  // Op opnemen drukken: zonder microfoon hoort er een uitleg te komen, geen
+  // stilte en geen fout. Lukt het wel, dan staat de knop op opnemen.
+  await page.click('#talkBtn'); await page.waitForTimeout(1500);
+  const gemeld = await page.evaluate(()=>({
+    status:(document.getElementById('talkStatus').textContent||'').trim(),
+    rec:document.getElementById('talkBtn').classList.contains('rec'),
+  }));
+  ok('opnemen zegt wat er gebeurt (of waarom het niet kan)',
+     gemeld.rec || gemeld.status.length>0 || (console.log('gesprek:',gemeld),false));
+  ok('geen JS-fouten (gesprek)', errs.length===0 || (console.log(errs.slice(0,3)),false));
   await ctx.close();
 }
 

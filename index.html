@@ -313,6 +313,24 @@
   <input id="noteTitle" placeholder="Geef deze bijdrage een titel" data-i18n-ph="titlePh" maxlength="80">
   <label class="field" for="noteText" data-i18n="fDescription">Beschrijving</label>
   <textarea id="noteText" placeholder="Wat is hier aan de hand?" data-i18n-ph="descPh" rows="4"></textarea>
+
+  <!-- Het gesprek zelf. De knop staat bewust onder de beschrijving: eerst
+       kiest de groep een plek en een thema, daarna gaan ze praten. -->
+  <div class="talk">
+    <div class="talk-head">
+      <p class="eyebrow" data-i18n="talkHead">Gesprek</p>
+      <span id="talkTime" class="mono"></span>
+    </div>
+    <div class="row">
+      <button id="talkBtn" data-i18n="talkStart">Gesprek opnemen</button>
+      <button id="talkClear" class="talk-clear" data-i18n="talkClear">Tekst wissen</button>
+      <button id="talkAudio" class="talk-clear" data-i18n="talkAudio" style="display:none">Opname bewaren</button>
+    </div>
+    <textarea id="talkText" placeholder="Wat er gezegd wordt komt hier te staan." data-i18n-ph="talkPh" rows="3"></textarea>
+    <p id="talkPartial" class="talk-partial"></p>
+    <p id="talkStatus" class="talk-status"></p>
+  </div>
+
   <div class="row">
     <button id="noteDel" class="danger" data-i18n="del">Verwijderen</button>
     <button id="noteSave" class="primary" data-i18n="saveBtn">Bewaren</button>

@@ -109,10 +109,18 @@ StandardOutput=journal
 StandardError=journal
 Environment=XDG_RUNTIME_DIR=/run/user/$USER_UID
 # -s laat Ctrl+Alt+F2 werken, zodat je er altijd nog uit kunt.
+# --use-fake-ui-for-media-stream: de vraag "mag deze pagina de microfoon
+# gebruiken?" komt als een balk met knoppen bovenin. Aan een tafel zonder muis
+# klikt niemand die weg, en dan blijft de opnameknop het doen alsof er niets
+# gebeurt. Deze vlag slaat de vraag over en geeft de échte microfoon door (de
+# nepmicrofoon is --use-fake-device-for-media-stream, die willen we juist niet).
+# De tafel opent zichzelf op http://localhost, en dat telt als veilige oorsprong;
+# vanaf een andere machine op http://<ip>:8080 bestaat de microfoon niet.
 ExecStart=/usr/bin/cage -s -- $browser \\
   --ozone-platform=wayland --kiosk --app=http://localhost:$PORT \\
   --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 \\
   --noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble \\
+  --use-fake-ui-for-media-stream \\
   --user-data-dir=/home/$USER_NAME/puck-kiosk-profiel
 Restart=always
 RestartSec=3

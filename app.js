@@ -1,6 +1,7 @@
 import { kg, loadKG, ensureKG, drawKG, drawGaps, kgAt, kgDescribe, onKgChange,
          nearby, formatDistance, buildQuestion, ask, setKgLang, kgStatusText,
          fileUrl, knowledgeOf, relevantDocs } from "./kg.js";
+import { stt, probeSTT, startTalk } from "./speech.js";
 
 /* ═══════════════════════════════════════════════════════════════
    0. FONTS — loaded from CSS, silently falls back to system faces
@@ -219,6 +220,23 @@ const L = {
        newNote:"Nieuwe bijdrage", fTitle:"Titel", titlePh:"Geef deze bijdrage een titel",
        fDescription:"Beschrijving", descPh:"Wat is hier aan de hand?",
        del:"Verwijderen", saveBtn:"Bewaren",
+       talkHead:"Gesprek", talkStart:"Gesprek opnemen", talkStop:"Opname stoppen",
+       talkClear:"Tekst wissen", talkAudio:"Opname bewaren",
+       talkPh:"Wat er gezegd wordt komt hier te staan.",
+       talkListening:"Luistert mee \u2014 praat gewoon door.",
+       talkWriting:"Luistert mee \u2014 de tekst loopt een paar tellen achter.",
+       talkRecording:"Neemt op. Uitschrijven kan hier niet, dus bewaar de opname als je klaar bent.",
+       talkStarting:"Microfoon aanzetten\u2026",
+       talkDone:(n)=>`Opname gestopt \u00b7 ${n} ${n===1?"woord":"woorden"} uitgeschreven.`,
+       talkOnlyAudio:"Uitschrijven kan hier niet \u2014 de tafel neemt het gesprek wel op, zodat je het later kunt uitschrijven.",
+       talkNoText:"Opname gestopt \u2014 er is niets herkend.",
+       talkAudioReady:"Opname klaar om te bewaren.",
+       talkDenied:"Geen toegang tot de microfoon. Sta hem toe in de browser en probeer opnieuw.",
+       talkInsecure:"Uitschrijven kan alleen op de tafel zelf (http://localhost) of via https.",
+       talkNoMic:"Deze browser geeft geen microfoon \u2014 uitschrijven kan hier niet.",
+       talkBackendGone:"De uitschrijfdienst antwoordt niet meer. De opname loopt door.",
+       talkBrowserGone:"De spraakherkenning van deze browser doet niets. Probeer het in Chrome, of zet de uitschrijfdienst aan.",
+       talkCheck:"Kijken wat deze tafel kan\u2026",
        alreadyKnown:"Wat is hier al bekend", aboutWhatYouSay:"Gaat over wat je zegt",
        askSolution:"Vraag om een oplossing",
        onscreenKeyboard:"Schermtoetsenbord", keyboardHead:"Toetsenbord",
@@ -368,6 +386,23 @@ const L = {
        newNote:"New contribution", fTitle:"Title", titlePh:"Give this contribution a title",
        fDescription:"Description", descPh:"What is going on here?",
        del:"Delete", saveBtn:"Save",
+       talkHead:"Conversation", talkStart:"Record conversation", talkStop:"Stop recording",
+       talkClear:"Clear text", talkAudio:"Save recording",
+       talkPh:"What is said appears here.",
+       talkListening:"Listening \u2014 just keep talking.",
+       talkWriting:"Listening \u2014 the text runs a few seconds behind.",
+       talkRecording:"Recording. This table cannot transcribe, so save the recording when you are done.",
+       talkStarting:"Turning on the microphone\u2026",
+       talkDone:(n)=>`Recording stopped \u00b7 ${n} ${n===1?"word":"words"} written out.`,
+       talkOnlyAudio:"Transcribing is not possible here \u2014 the table can record the conversation so you can write it out later.",
+       talkNoText:"Recording stopped \u2014 nothing was recognised.",
+       talkAudioReady:"Recording ready to save.",
+       talkDenied:"No access to the microphone. Allow it in the browser and try again.",
+       talkInsecure:"Transcribing only works on the table itself (http://localhost) or over https.",
+       talkNoMic:"This browser offers no microphone \u2014 transcribing is not possible here.",
+       talkBackendGone:"The transcription service stopped answering. The recording continues.",
+       talkBrowserGone:"This browser's speech recognition does nothing. Try Chrome, or start the transcription service.",
+       talkCheck:"Checking what this table can do\u2026",
        alreadyKnown:"What is already known here", aboutWhatYouSay:"Relates to what you say",
        askSolution:"Ask for a solution",
        onscreenKeyboard:"On-screen keyboard", keyboardHead:"Keyboard",
@@ -1620,7 +1655,7 @@ function dropPin(t){
   const pin={id:Date.now()+"-"+Math.random().toString(36).slice(2,6),
              lng:+ll.lng.toFixed(6), lat:+ll.lat.toFixed(6),
              verdict:t.tpl.verdict, topic:puckTopic(t),
-             title:"", description:"", note:"", t:new Date().toISOString()};
+             title:"", description:"", note:"", transcript:"", t:new Date().toISOString()};
   pins.push(pin);
   // Keep the mark linked to this puck while it remains on the table. Rotating
   // the puck can then correct its topic after confirming as well.
@@ -1792,6 +1827,7 @@ function cleanPin(p){
           id:String(p.id||Date.now()+"-"+Math.random().toString(36).slice(2,6)),
           topic:text(p.topic)||topics()[0],
           title:text(p.title), description:text(p.description)||text(p.note), note:text(p.note),
+          transcript:text(p.transcript),
           t:typeof p.t==="string"&&p.t.length>=16?p.t:new Date().toISOString()};
 }
 function restore(){
@@ -1958,6 +1994,9 @@ function reorientNote(){
 }
 
 function openNote(pin,x,y,fromPuck=false){
+  // Eén microfoon, één gesprek: een opname die bij een andere markering hoort
+  // stopt hier, zodat er nooit stilletjes wordt meegeluisterd.
+  if(talk&&talkPin!==pin) stopTalk();
   selected=pin; const n=el("note");
   // Een venster hangt aan een markering. Gaat het bij een andere markering
   // open, dan hoort het weer naast díe markering te beginnen — de vorige
@@ -1981,6 +2020,8 @@ function openNote(pin,x,y,fromPuck=false){
   el("noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
   el("noteTitle").value=pin.title||"";
   el("noteText").value=pin.description||pin.note||"";
+  renderTalk(pin);
+  if(!talkRunning(pin)) checkTalk();
   fillNoteKnowledge(pin);
   el("noteTitle").focus();
 }
@@ -2134,11 +2175,183 @@ async function askKnowledge(){
 function closeNote(){
   // Wat er in de velden stond staat al in de markering (zie noteToPin), maar
   // de opslag kan nog in de wacht staan; die trekken we hier recht.
+  if(talk) stopTalk(true);
   if(selected&&saveTimer){ clearTimeout(saveTimer); saveTimer=null; save(); }
   askAbort?.abort(); askAbort=null;
   const n=el("note"); n.style.display="none"; n.classList.remove("opening"); selected=null;
-  if(keyboardTarget===el("noteTitle")||keyboardTarget===el("noteText")) hideKeyboard(true);
+  if([el("noteTitle"),el("noteText"),el("talkText")].includes(keyboardTarget)) hideKeyboard(true);
 }
+
+
+/* ── Het gesprek uitschrijven ────────────────────────────────────────────
+   Wat er getypt wordt is een samenvatting; het gesprek eromheen is waar het
+   om begonnen was. Zodra er een plek en een thema liggen kan de groep hier
+   op opnemen drukken en gewoon doorpraten — de tekst loopt mee in het
+   venster en blijft bij die ene markering staan.
+
+   De bron van waarheid is `pin.transcript`, niet het tekstvak: er wordt aan
+   deze tafel met meerdere mensen tegelijk gewerkt, en wie halverwege een zin
+   verbetert mag dat niet kwijtraken aan de volgende brok spraak. speech.js
+   levert daarom afgeronde stukjes, die we achteraan plakken.
+
+   Eén opname tegelijk. Wie een tweede markering opent, stopt de eerste — een
+   microfoon die stilletjes bij een gesloten venster blijft luisteren is
+   precies wat je aan een tafel met publiek niet wilt. */
+let talk=null;                 // lopende opname (sessie uit speech.js)
+let talkPin=null;              // markering waar die opname bij hoort
+let talkStartedAt=0, talkTick=null;
+let talkAudioBlob=null;        // alleen in de opnamestand: het geluid zelf
+let talkMsg={key:"",args:[],warn:false};
+
+const talkTextOf=pin=>typeof pin?.transcript==="string"?pin.transcript:"";
+const talkRunning=pin=>!!talk&&talkPin===pin;
+
+/* De melding onder het tekstvak wordt door JS gezet, dus onthouden we welke
+   het is: bij een taalwissel moet dezelfde zin in de andere taal komen te
+   staan in plaats van te blijven hangen. */
+function setTalkMsg(key,{warn=false,args=[]}={}){
+  talkMsg={key,args,warn};
+  const p=el("talkStatus");
+  p.textContent=key?tr(key,...args):"";
+  p.classList.toggle("warn",!!key&&warn);
+}
+
+function talkClock(){
+  const s=Math.max(0,Math.round((performance.now()-talkStartedAt)/1000));
+  return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+}
+function startTalkClock(){
+  stopTalkClock();
+  el("talkTime").textContent=talkClock();
+  talkTick=setInterval(()=>{ if(talk) el("talkTime").textContent=talkClock(); },1000);
+}
+function stopTalkClock(){ clearInterval(talkTick); talkTick=null; el("talkTime").textContent=""; }
+
+function renderTalk(pin){
+  const box=el("talkText");
+  box.value=talkTextOf(pin);
+  el("talkPartial").textContent="";
+  el("talkClear").style.display=box.value?"":"none";
+  el("talkAudio").style.display=(talkAudioBlob&&talkPin===pin)?"":"none";
+  const rec=talkRunning(pin);
+  el("talkBtn").classList.toggle("rec",rec);
+  el("talkBtn").textContent=tr(rec?"talkStop":"talkStart");
+  if(!rec) el("talkTime").textContent="";
+}
+
+/* Wat kan deze tafel? Eén keer polsen, en het antwoord meteen laten zien:
+   dat "uitschrijven hier niet kan" hoort te blijken vóór iemand tien minuten
+   in een microfoon praat, niet erna. */
+function checkTalk(){
+  if(stt.checked){ talkReady(); return; }
+  setTalkMsg("talkCheck");
+  probeSTT(kgUrl()).then(()=>{ if(el("note").style.display==="block"&&!talk) talkReady(); });
+}
+function talkReady(){
+  if(talk) return;
+  if(stt.mode==="geen") setTalkMsg(stt.reason==="insecure"?"talkInsecure":"talkNoMic",{warn:true});
+  else if(stt.mode==="audio") setTalkMsg("talkOnlyAudio",{warn:true});
+  else setTalkMsg("");
+}
+
+function appendTalk(pin,text){
+  const t=String(text||"").trim();
+  if(!t) return;
+  const had=talkTextOf(pin).replace(/\s+$/,"");
+  pin.transcript=had?had+" "+t:t;
+  if(selected===pin){
+    const box=el("talkText");
+    box.value=pin.transcript;
+    box.scrollTop=box.scrollHeight;
+    el("talkClear").style.display="";
+  }
+  saveSoon();
+}
+
+let talkBusy=false;
+async function toggleTalk(){
+  if(talk){ stopTalk(); return; }
+  const pin=selected;
+  if(!pin||talkBusy) return;
+  talkBusy=true;
+  try{
+    setTalkMsg("talkStarting");
+    await probeSTT(kgUrl());
+    if(selected!==pin) return;
+    if(stt.mode==="geen"){ talkReady(); return; }
+    const session=await startTalk({
+      lang,
+      onSegment:text=>appendTalk(pin,text),
+      onPartial:text=>{ if(talkPin===pin) el("talkPartial").textContent=text; },
+      onError:key=>talkError(key),
+      onAudio:blob=>{
+        talkAudioBlob=blob;
+        if(selected===pin){ el("talkAudio").style.display=""; setTalkMsg("talkAudioReady"); }
+      },
+    });
+    if(!session) return;                       // speech.js heeft de reden al gemeld
+    if(selected!==pin){ session.stop(); return; }
+    talk=session; talkPin=pin;
+    talkAudioBlob=null; el("talkAudio").style.display="none";
+    talkStartedAt=performance.now(); startTalkClock();
+    renderTalk(pin);
+    setTalkMsg(session.mode==="browser"?"talkListening"
+              :session.mode==="backend"?"talkWriting":"talkRecording");
+  }finally{ talkBusy=false; }
+}
+
+function stopTalk(quiet=false){
+  const session=talk, pin=talkPin;
+  talk=null; talkPin=null;
+  stopTalkClock();
+  el("talkPartial").textContent="";
+  el("talkBtn").classList.remove("rec");
+  el("talkBtn").textContent=tr("talkStart");
+  const mode=session?.mode;
+  /* De uitschrijfstand heeft misschien nog een blokje onderweg; die laatste
+     woorden horen er nog bij voordat we zeggen hoeveel het er zijn. */
+  Promise.resolve(session?.stop()).then(()=>{
+    save();
+    if(quiet||selected!==pin) return;
+    if(mode==="audio") return;                 // onAudio zet zijn eigen melding
+    const words=talkTextOf(pin).split(/\s+/).filter(Boolean).length;
+    setTalkMsg(words?"talkDone":"talkNoText",{args:[words]});
+    renderTalk(pin);
+  });
+}
+
+function talkError(key){
+  // Wegvallende uitschrijfdienst: melden, maar door blijven opnemen.
+  if(key==="backend"){ setTalkMsg("talkBackendGone",{warn:true}); return; }
+  if(talk) stopTalk(true);
+  setTalkMsg(key==="denied"?"talkDenied"
+            :key==="insecure"?"talkInsecure"
+            :key==="browser"?"talkBrowserGone":"talkNoMic",{warn:true});
+}
+
+el("talkBtn").onclick=toggleTalk;
+el("talkClear").onclick=()=>{
+  if(!selected) return;
+  selected.transcript="";
+  el("talkText").value=""; el("talkClear").style.display="none";
+  save();
+};
+el("talkText").addEventListener("input",()=>{
+  if(!selected) return;
+  selected.transcript=el("talkText").value;
+  saveSoon();
+});
+/* Zonder uitschrijfdienst is het geluid het enige wat er is; dat mag niet
+   met het venster verdwijnen. Downloaden dus, met de sessienaam erin. */
+el("talkAudio").onclick=()=>{
+  if(!talkAudioBlob) return;
+  const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(talkAudioBlob);
+  a.download=(el("sess").value||"tafel")+"-gesprek-"+stamp+
+             (talkAudioBlob.type.includes("mp4")?".m4a":".webm");
+  a.click();
+};
 
 /* ═══════════════════════════════════════════════════════════════
    5. FRAME
@@ -3281,12 +3494,14 @@ function download(name,text,type){
 el("btnGeo").onclick=()=>download(el("sess").value+".geojson",JSON.stringify({
   type:"FeatureCollection",
   features:pins.map(p=>({type:"Feature",geometry:{type:"Point",coordinates:[p.lng,p.lat]},
-    properties:{verdict:p.verdict,topic:p.topic,title:p.title||"",description:p.description||p.note||"",time:p.t}}))
+    properties:{verdict:p.verdict,topic:p.topic,title:p.title||"",description:p.description||p.note||"",
+                transcript:p.transcript||"",time:p.t}}))
 },null,2),"application/geo+json");
 el("btnCsv").onclick=()=>download(el("sess").value+".csv",
-  "lat,lng,verdict,topic,title,description,time\n"+pins.map(p=>
+  "lat,lng,verdict,topic,title,description,gesprek,time\n"+pins.map(p=>
     [p.lat,p.lng,p.verdict,p.topic,'"'+(p.title||"").replace(/"/g,'""')+'"',
-     '"'+(p.description||p.note||"").replace(/"/g,'""')+'"',p.t].join(",")).join("\n"),"text/csv");
+     '"'+(p.description||p.note||"").replace(/"/g,'""')+'"',
+     '"'+(p.transcript||"").replace(/"/g,'""')+'"',p.t].join(",")).join("\n"),"text/csv");
 
 /* ── Puck herkennen ──────────────────────────────────────────────────────
    Drie stukjes koperfolie in een driehoek zijn een puck; welke puck dat is,
@@ -3650,7 +3865,11 @@ function applyLang(){
   refreshOrientationControl();
   refreshFullscreenLabel();
   // Een open venster hoort niet eerst dicht te moeten voordat het meegaat.
-  if(selected) el("noteHead").textContent=vName(selected.verdict)+" · "+selected.topic;
+  if(selected){
+    el("noteHead").textContent=vName(selected.verdict)+" \u00b7 "+selected.topic;
+    renderTalk(selected);
+    setTalkMsg(talkMsg.key,{warn:talkMsg.warn,args:talkMsg.args});
+  }
   if(el("kgInfo").style.display==="block" && kg.selected){
     openKgInfo(kg.selected,+el("kgInfo").dataset.anchorX,+el("kgInfo").dataset.anchorY);
   }
