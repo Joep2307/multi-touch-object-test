@@ -134,6 +134,8 @@ const L = {
        touchHint:"Sleep, tik Kiezen aan en tik dan het thema — daarmee ligt de markering vast.",
        laptopHint:"Sleep, klik Kiezen aan en klik dan het thema — daarmee ligt de markering vast.",
        puckBack:"Terug", puckPickTopic:"Kies een thema",
+       helpTitle:"Zo werkt de puck", helpTurn:"Draai · zoom",
+       helpMove:"Schuif · reis", helpTap:"Tik midden · kies",
        flipSide:"Naar de overkant", flipNote:"Naar de overkant",
        noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door.",
 
@@ -310,6 +312,8 @@ const L = {
        touchHint:"Drag, tap Select and then the theme — that places the mark.",
        laptopHint:"Drag, click Select and then the theme — that places the mark.",
        puckBack:"Back", puckPickTopic:"Pick a theme",
+       helpTitle:"How the puck works", helpTurn:"Turn · zoom",
+       helpMove:"Slide · travel", helpTap:"Tap centre · choose",
        flipSide:"To the other side", flipNote:"To the other side",
        noNet:"No map tiles — check the connection. Marking still works.",
 

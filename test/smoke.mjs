@@ -101,6 +101,15 @@ async function plaatsMarkering(page,x,y,i=0){
   const {page, ctx, errs} = await newPage('laptop');
   const tray = page.locator('#puckDock .traypuck').first();
   ok('puckbalk aanwezig', await tray.count()>0);
+  const help=page.locator('#puckHelp');
+  const helpState=await help.evaluate(el=>{
+    const r=el.getBoundingClientRect();
+    return {right:innerWidth-r.right,bottom:innerHeight-r.bottom,
+            anim:getComputedStyle(el.querySelector('.help-turn .help-puck')).animationName};
+  });
+  ok('korte puckuitleg staat rechtsonder', await help.isVisible()&&helpState.right<25&&helpState.bottom<25);
+  ok('de uitleg toont drie handelingen', await help.locator('.puck-help-step').count()===3);
+  ok('de puckuitleg beweegt', helpState.anim==='helpTurn');
   const box = await tray.boundingBox();
   const cx=W/2, cy=H/2;
   await page.mouse.move(box.x+box.width/2, box.y+box.height/2);

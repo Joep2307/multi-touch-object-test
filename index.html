@@ -11,6 +11,33 @@
 
 <canvas id="c"></canvas>
 
+<!-- Een korte gebruiksaanwijzing op het vrije stuk rechtsonder. De bewegingen
+     worden met CSS voorgedaan; er loopt dus geen extra tekenlus of video die
+     de kaart op de NUC zwaarder maakt. -->
+<aside id="puckHelp" aria-labelledby="puckHelpTitle">
+  <p id="puckHelpTitle" class="puck-help-title" data-i18n="helpTitle">Zo werkt de puck</p>
+  <div class="puck-help-steps">
+    <div class="puck-help-step">
+      <span class="puck-help-demo help-turn" aria-hidden="true">
+        <span class="help-puck"><i></i></span><span class="help-turn-arrow"></span>
+      </span>
+      <span data-i18n="helpTurn">Draai · zoom</span>
+    </div>
+    <div class="puck-help-step">
+      <span class="puck-help-demo help-move" aria-hidden="true">
+        <span class="help-map-lines"></span><span class="help-puck"><i></i></span>
+      </span>
+      <span data-i18n="helpMove">Schuif · reis</span>
+    </div>
+    <div class="puck-help-step">
+      <span class="puck-help-demo help-tap" aria-hidden="true">
+        <span class="help-puck"><i></i></span><span class="help-touch"></span>
+      </span>
+      <span data-i18n="helpTap">Tik midden · kies</span>
+    </div>
+  </div>
+</aside>
+
 <!-- Twee paar menuknoppen, diagonaal tegenover elkaar. Aan een tafel waar
      mensen omheen staan is elk paneel dat blijft staan in de weg: het ligt
      over de kaart en het staat voor de helft van het gezelschap op zijn kop.
