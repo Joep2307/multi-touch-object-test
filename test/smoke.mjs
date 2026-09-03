@@ -164,6 +164,8 @@ async function plaatsMarkering(page,x,y,i=0){
   const {page, ctx, errs} = await newPage('puck');
   const field = page.locator('#sess');
   ok('sessieveld bestaat', await field.count()>0);
+  ok('de muisaanwijzer is weg in de puckstand',
+     await page.locator('#btnSetA').evaluate(n=>getComputedStyle(n).cursor)==='none');
   await page.click('#btnSetA');
   await page.waitForTimeout(300);
   // De sessienaam zit in een uitklapbaar blok; dat moet eerst open.

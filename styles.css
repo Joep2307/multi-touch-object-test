@@ -52,6 +52,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 #c{position:fixed;inset:0;width:100vw;height:100vh;display:block}
 body.moving-dots #c{cursor:grab}
 body.dragging-dot #c{cursor:grabbing}
+/* Op de tafel blijft een aangesloten muis soms midden op de kaart staan. In
+   Touchscreen- en Puckstand is geen aanwijzer nodig; ook knoppen en sleepbare
+   onderdelen mogen hem daar niet opnieuw zichtbaar maken. */
+body.mode-touch,body.mode-touch *{cursor:none!important}
 /* ── Korte uitleg rechtsonder ────────────────────────────────────────
    Drie kleine CSS-animaties leggen de puck uit zonder video, afbeeldingen of
    een tweede tekenlus. Daardoor blijft de uitleg ook op de NUC licht. */
