@@ -372,9 +372,16 @@ body.keyboard-open .note{z-index:45}
    microfoon aan staat — aan een tafel met publiek is dat geen sier maar een
    fatsoenskwestie. ── */
 .talk{margin-top:14px;padding-top:12px;border-top:1px solid rgba(232,237,244,.12)}
-.talk-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.talk-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .talk-head .eyebrow{margin:0}
 .talk-time{font-size:var(--text-3xs);color:rgba(232,237,244,.5)}
+/* Dezelfde taalkiezer als boven in het menu, een maatje kleiner: hij hoort bij
+   dit ene gesprek, niet bij het hele scherm. Tijdens een opname ligt de taal
+   vast -- whisper krijgt hem per blokje mee en halverwege omschakelen zou de
+   ene helft van het gesprek in de andere taal zetten. */
+.talk-lang{margin-left:auto}
+.talk-lang button{padding:5px 10px;font-size:var(--text-3xs)}
+.talk-lang.locked{opacity:.45;pointer-events:none}
 .talk-btn::before{content:"";display:inline-block;width:9px;height:9px;margin-right:8px;
   border-radius:50%;background:currentColor;opacity:.5;vertical-align:baseline}
 .talk-btn.rec{background:rgba(255,95,86,.16);border-color:var(--bad);color:#ffd9d6}

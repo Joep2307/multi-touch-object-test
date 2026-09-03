@@ -319,6 +319,18 @@
   <div class="talk">
     <div class="talk-head">
       <p class="eyebrow" data-i18n="talkHead">Gesprek</p>
+      <!-- De taal van dit gesprek, los van de taal van de tafel: aan een tafel
+           in het Nederlands staat geregeld een groep die Engels praat. "Auto"
+           laat de uitschrijfdienst het per blokje zelf bepalen en verschijnt
+           alleen als die dienst er is -- de spraakherkenning van de browser
+           moet vooraf weten welke taal ze hoort. -->
+      <div class="lang-switch talk-lang" id="talkLang" role="group"
+           aria-label="Taal van het gesprek" data-i18n-aria="talkLangGroup">
+        <button id="talkLangNl" type="button" lang="nl" aria-pressed="true">NL</button>
+        <button id="talkLangEn" type="button" lang="en" aria-pressed="false">EN</button>
+        <button id="talkLangAuto" type="button" aria-pressed="false"
+                data-i18n="talkLangAuto" data-i18n-title="talkLangAutoTip">Auto</button>
+      </div>
       <span id="talkTime" class="mono talk-time"></span>
     </div>
     <div class="row">

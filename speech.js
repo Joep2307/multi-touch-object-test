@@ -126,6 +126,8 @@ export const sttWorks = () => stt.mode === "backend" || stt.mode === "browser";
    `startTalk` levert een sessie met één knop: stop(). Wat er onderweg
    gebeurt gaat via de meldingen:
 
+     lang              "nl" | "en" | "auto" — "auto" alleen naar de eigen
+                       dienst, die kan een blokje zonder taal aannemen
      onSegment(tekst)  een afgeronde brok spraak — dit hoort bewaard te worden
      onPartial(tekst)  wat er nú gezegd wordt, nog niet zeker; alleen tonen
      onError(sleutel)  "denied" | "nomic" | "backend" | "browser"
@@ -156,6 +158,9 @@ export async function startTalk({ lang = "nl", onSegment, onPartial, onError, on
 function browserSession(lang, say) {
   const R = Recognition();
   const rec = new R();
+  /* De Web Speech API wil een taal vooraf; "auto" kent ze niet. app.js biedt
+     die keuze hier dan ook niet aan, en mocht hij toch binnenkomen dan is de
+     tafeltaal beter dan een gok. */
   rec.lang = lang === "en" ? "en-US" : "nl-NL";
   rec.continuous = true;
   rec.interimResults = true;
