@@ -40,15 +40,27 @@ const CFG = {
      verwijderen. */
   stableFrames:2, dropoutMS:900, smoothing:4,
   jitterPX:22, rearmPX:70, ringPX:110,
-  /* De ring om de puck is een menu, en je kiest een optie door hem aan te
-     tikken. Eerst ging dat met draaien: naar een optie draaien en even stil
-     houden. Aan de tafel is dat blind mikken — je moet de puck laten staan
-     om te kiezen, en elke onbedoelde draai schuift de keuze mee. Aanwijzen
-     wat je wilt is directer, en de twee wachttijden die erbij hoorden zijn
-     eruit. `puckTapMS` is hoe lang een aangetikte optie oplicht, zodat je van
-     een meter afstand ziet dát je tik aankwam. `puckZoomPX` is hoeveel je de
-     puck vooruit moet duwen voor een zoomniveau. */
-  puckTapMS:280, puckZoomPX:150, puckZoomDeadPX:2,
+  /* De puck bedient de kaart met zijn eigen twee vrijheidsgraden: draaien
+     zoomt en schuiven pant. Er is geen stand meer om eerst te kiezen — wat je
+     met de puck doet, doet de kaart. `puckZoomRotDeg` is hoeveel je moet
+     draaien voor één zoomniveau (met de klok mee is inzoomen), om de plek
+     onder het kijkgat.
+     Schuiven werkt als een joystick: de puck onthoudt een ijkpunt, en hoe
+     verder hij daarvandaan ligt hoe sneller de kaart die kant op reist
+     (`puckPanGain` px/s per px scheefstand, tot `puckPanMaxPXS`).
+     `puckPanEaseMS` laat het ijkpunt de puck langzaam achterna komen: blijf
+     duwen en je blijft reizen, laat je hem los dan staat de kaart binnen twee
+     tellen weer stil. Samen met `puckPanGain` bepaalt het hoe hard de kaart
+     uitloopt: bij gelijkmatig duwen reist de kaart ongeveer `gain × ease`
+     keer zo snel als de puck, hier dus twee keer. Op 0 ligt het ijkpunt vast
+     — een echte joystick, die blijft schuiven tot iemand de puck terugtrekt,
+     en dat is aan een tafel met publiek te makkelijk te vergeten.
+     De twee dode zones houden de trilling van de contactpunten eruit.
+     `puckTapMS` is hoe lang een aangetikte optie oplicht, zodat je van een
+     meter afstand ziet dát je tik aankwam. */
+  puckTapMS:280,
+  puckZoomRotDeg:90, puckRotDeadRAD:0.02,
+  puckPanDeadPX:14, puckPanGain:2.8, puckPanMaxPXS:900, puckPanEaseMS:700,
   /* Hoe lang de stand van een puck bewaard blijft als hij van de tafel valt.
      Een slecht contact of een stoot tegen de tafel laat een puck korter dan
      dit wegvallen; die komt terug zoals hij was, niet als nieuwe puck. */
@@ -109,12 +121,11 @@ const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
        topics:["Veiligheid","Verkeer","Groen","Afval","Sociaal","Anders"],
        move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
-       confirmTouch:"Tik een thema", confirmMouse:"Klik een thema",
+       confirmTouch:"Tik het midden aan", confirmMouse:"Klik het midden aan",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
        touchHint:"Sleep, tik Kiezen aan en tik dan het thema — daarmee ligt de markering vast.",
        laptopHint:"Sleep, klik Kiezen aan en klik dan het thema — daarmee ligt de markering vast.",
-       puckMove:"Verplaatsen", puckSelect:"Kiezen", puckZoom:"Zoomen", puckBack:"Terug",
-       modeZoom:"vooruit = inzoomen",
+       puckBack:"Terug", puckPickTopic:"Kies een thema",
        flipSide:"Naar de overkant", flipNote:"Naar de overkant",
        noNet:"Geen kaartbeeld — controleer de verbinding. Markeren werkt gewoon door.",
 
@@ -256,6 +267,8 @@ const L = {
        fDescription:"Beschrijving", descPh:"Wat is hier aan de hand?",
        del:"Verwijderen", saveBtn:"Bewaren",
        talkHead:"Gesprek", talkStart:"Gesprek opnemen", talkStop:"Opname stoppen",
+       talkLangGroup:"Taal van het gesprek", talkLangAuto:"Auto",
+       talkLangAutoTip:"De tafel bepaalt per stukje zelf welke taal er gesproken wordt.",
        talkClear:"Tekst wissen", talkAudio:"Opname bewaren",
        talkPh:"Wat er gezegd wordt komt hier te staan.",
        talkListening:"Luistert mee \u2014 praat gewoon door.",
@@ -284,12 +297,11 @@ const L = {
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
        topics:["Safety","Traffic","Green","Waste","Social","Other"],
        move:"Freeze map", locked:"Map is frozen", placed:"Marked",
-       confirmTouch:"Tap a theme", confirmMouse:"Click a theme",
+       confirmTouch:"Tap the centre", confirmMouse:"Click the centre",
        moveDots:"Move dots", movingDots:"Finish moving",
        touchHint:"Drag, tap Select and then the theme — that places the mark.",
        laptopHint:"Drag, click Select and then the theme — that places the mark.",
-       puckMove:"Move", puckSelect:"Select", puckZoom:"Zoom", puckBack:"Back",
-       modeZoom:"forward = zoom in",
+       puckBack:"Back", puckPickTopic:"Pick a theme",
        flipSide:"To the other side", flipNote:"To the other side",
        noNet:"No map tiles — check the connection. Marking still works.",
 
@@ -431,6 +443,8 @@ const L = {
        fDescription:"Description", descPh:"What is going on here?",
        del:"Delete", saveBtn:"Save",
        talkHead:"Conversation", talkStart:"Record conversation", talkStop:"Stop recording",
+       talkLangGroup:"Language of the conversation", talkLangAuto:"Auto",
+       talkLangAutoTip:"The table works out which language is spoken, chunk by chunk.",
        talkClear:"Clear text", talkAudio:"Save recording",
        talkPh:"What is said appears here.",
        talkListening:"Listening \u2014 just keep talking.",
@@ -479,13 +493,12 @@ if(uiMode!=="touch"&&uiMode!=="laptop"&&uiMode!=="puck") uiMode=matchMedia("(poi
    hulpje voor "dit is een tafel" en een voor de puckstand zelf. */
 const tableUi=()=>uiMode!=="laptop";
 const puckMode=()=>uiMode==="puck";
-/* Kleurmodus is een bewuste tafelinstelling en volgt daarom na de eerste
-   keuze niet meer stilletjes het besturingssysteem. Zonder opgeslagen keuze
-   nemen we wel de voorkeur van het apparaat als prettig beginpunt. */
-let colorTheme=(()=>{
-  try{ const v=localStorage.getItem("pucktable-color-theme"); if(v==="light"||v==="dark") return v; }catch(e){}
-  return matchMedia("(prefers-color-scheme:light)").matches?"light":"dark";
-})();
+/* Kleurmodus begint altijd donker. De tafel staat in een zaal waar het licht
+   laag is en de kaart mag daar niet in het gezicht schijnen; een resetknop
+   levert dan ook weer een donker scherm op. Wat er tijdens de sessie gekozen
+   wordt geldt voor die sessie, en de voorkeur van het apparaat of een eerdere
+   keuze bepaalt het begin dus niet meer. */
+let colorTheme="dark";
 /* De bediening kan mee groeien met de tafel: op een 43"-scherm dat een meter
    verderop staat is 100% te klein, op een laptop is 150% belachelijk. Vaste
    trappen in plaats van een schuif, want dit wordt met een vinger bediend.
@@ -880,7 +893,12 @@ let bgImage=null;   // {img, west, east, north, south} — a map picture pinned 
    Ingedrukt houden, niet tikken. Iemand die tegen de tafelrand leunt of langs
    de knop strijkt gooit anders een half gesprek weg; nu loopt er eerst een
    ring vol en is loslaten genoeg om je te bedenken. */
-let resetKey=(()=>{ try{ return localStorage.getItem("pucktable-reset-key")||""; }catch(e){ return ""; } })();
+/* Standaard staat de knop op A: de knop die naast de tafel ligt stuurt die
+   toets, en zo doet hij het ook op een schoon apparaat zonder eerst
+   "Resetknop instellen" te doorlopen. Een uitgelezen toets gaat nog steeds
+   vóór, want die hoort bij dat ene apparaat. */
+const RESET_KEY_DEFAULT="KeyA";
+let resetKey=(()=>{ try{ return localStorage.getItem("pucktable-reset-key")||RESET_KEY_DEFAULT; }catch(e){ return RESET_KEY_DEFAULT; } })();
 let resetLearning=false, resetHeldAt=0;
 /* `e.code` is de plek van de toets, niet het teken: dat is precies wat je van
    een knop wilt weten, en het verandert niet mee met de toetsenbordindeling. */
@@ -1374,7 +1392,7 @@ function endPointer(e){
         puckTouches.splice(puckTouches.indexOf(pt),1);
         // Vasthouden en met een tweede vinger een optie aantikken mag ook:
         // die vinger doet mee met de greep, dus hij komt hier terecht.
-        if(wasTap(pt)&&!tryConfirmPuck(e.clientX,e.clientY)) tryPuckMenuTap(e.clientX,e.clientY);
+        if(wasTap(pt)&&!tryPuckHoleTap(e.clientX,e.clientY)) tryPuckMenuTap(e.clientX,e.clientY);
       } else basePuckTouch(pt);
       return;
     }
@@ -1504,10 +1522,10 @@ function syncSimPucksToMap(){
     const t=trackForSim(s);
     if(t){
       t.x+=dx; t.y+=dy; t.anchorX+=dx; t.anchorY+=dy;
-      // Ook het zoom-ijkpunt schuift mee: een puck die door de kaart onder
-      // zich wegschuift heeft niemand vooruit geduwd, en mag dus ook niet
-      // zoomen. Anders zoomt de ene puck de andere op hol.
-      if(t.zoomRefY!=null) t.zoomRefY+=dy;
+      // Ook het ijkpunt van het schuiven gaat mee: een sleepkopie die met de
+      // kaart onder zich mee reist heeft niemand verduwd, en mag de kaart dus
+      // ook niet verder wegduwen. Anders jaagt de ene puck de andere op hol.
+      if(t.panOX!=null){ t.panOX+=dx; t.panOY+=dy; }
       t.buf=t.buf.map(q=>({x:q.x+dx,y:q.y+dy}));
     }
   }
@@ -1547,7 +1565,7 @@ addEventListener("mouseup",e=>{
     movePinTo(pinDrag.pin,e.clientX,e.clientY); pinDrag=null;
     document.body.classList.remove("dragging-dot"); save();
   }
-  if(drag && wasTap(drag)) tryConfirmPuck(e.clientX,e.clientY);
+  if(drag && wasTap(drag)) tryPuckHoleTap(e.clientX,e.clientY);
   drag=null; mousePan=null;
 });
 addEventListener("wheel",e=>{
@@ -1820,6 +1838,11 @@ if(QS.has("test")) window.__puck={describeRing,matchRing,recognise,padsFor,gapsO
                                   // Voor de rooktest: waar een optie op de ring ligt.
                                   topics:()=>topics(),ringStart:n=>ringStart(n),
                                   ringPX:()=>CFG.ringPX,
+                                  // En of de themaring van een puck openstaat.
+                                  ringOpen:()=>[...tracks.values()].map(t=>!!t.ring),
+                                  // En waar de kaart staat, zodat de test kan
+                                  // nakijken dat draaien zoomt en duwen reist.
+                                  view:()=>({zoom:MV.zoom,lng:MV.lng,lat:MV.lat}),
                                   // En wat er nu op tafel ligt, zodat de test kan zien
                                   // of een puck blijft staan als er een pootje wegvalt.
                                   tracks:()=>[...tracks.values()].map(t=>({id:t.tpl.id,
@@ -1859,12 +1882,13 @@ function startTrack(d,now){
            angleOrigin:d.angle,rawOrigin:d.angle,
            frames:0,state:"candidate",buf:[],
            conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
-           // De puck begint in het hoofdmenu, in de rusttoestand Verplaatsen.
-           // Hoe hij op tafel landt zegt niets meer over zijn keuze: die maak
-           // je door een optie op de ring aan te tikken. `tapIdx`/`tapT0`
-           // houden alleen het oplichten van de laatst aangetikte optie bij.
-           menu:"root",mode:"move",topicIdx:0,
-           tapIdx:-1,tapT0:0,zoomRefY:d.y,zoomAnchor:null};
+           // Om een liggende puck staat niets: de thema's komen pas als je
+           // het kijkgat aantikt (`ring`). `tapIdx`/`tapT0` houden het
+           // oplichten van de laatst aangetikte optie bij.
+           ring:false,topicIdx:0,tapIdx:-1,tapT0:0,
+           // Waar hij ging liggen is het ijkpunt van het schuiven, en de hoek
+           // waaronder hij ging liggen is het nulpunt van het zoomen.
+           panOX:d.x,panOY:d.y,panT:0,zoomRot:d.angle};
   tracks.set(t.id,t);
   // Kwam dezelfde puck net van de tafel? Dan is dit geen nieuwe puck maar
   // dezelfde die even wegviel: hij pakt zijn stand weer op en kiest dus niet
@@ -1874,10 +1898,13 @@ function startTrack(d,now){
                                    Math.hypot(m.x-d.x,m.y-d.y)<puckSepPX()*1.6);
   if(mi>=0){
     const mem=puckMemory.splice(mi,1)[0];
-    t.menu=mem.menu; t.mode=mem.mode; t.topicIdx=mem.topicIdx;
+    t.ring=mem.ring; t.topicIdx=mem.topicIdx;
     t.pinId=mem.pinId; t.armed=mem.armed;
     t.angleOrigin=mem.angleOrigin; t.angle=mem.angleOrigin;
-    t.zoomAnchor=mem.zoomAnchor;
+    t.zoomRot=mem.angleOrigin;
+    // Het ijkpunt van het schuiven hoort bij de plek op tafel: een puck die
+    // even wegviel en terugkomt ligt er nog net zo scheef bij als daarvoor.
+    t.panOX=mem.panOX; t.panOY=mem.panOY;
   }
   return t;
 }
@@ -1936,12 +1963,9 @@ function track(dets,now){
     // Een puck die duidelijk verplaatst wordt, wordt een nieuwe bijdrage: opnieuw
     // een thema draaien en opnieuw bevestigen. De vorige markering blijft staan.
     if(moved>CFG.rearmPX && !t.armed){ t.armed=true; t.pinId=null; }
-    // Wie de puck echt oppakt en ergens anders neerlegt, wijst een nieuwe plek
-    // aan: het zoom-ijkpunt gaat mee.
-    if(moved>CFG.rearmPX) t.zoomAnchor=null;
-    // Kiezen gaat met een tik op de ring (zie `tryPuckMenuTap`); verschuiven
-    // bedient (in de zoomstand) de kaart.
-    applyPuckZoom(t);
+    // Draaien zoomt, schuiven pant. Kiezen gaat met een tik in het kijkgat en
+    // daarna op de ring (zie `tryPuckHoleTap` en `tryPuckMenuTap`).
+    applyPuckControls(t,now);
   }
   for(const [id,t] of [...tracks]){
     if(seen.has(t)) continue;
@@ -1953,9 +1977,9 @@ function track(dets,now){
       // neus toevallig op staat, en is hij zijn markering kwijt.
       while(puckMemory.length&&now-puckMemory[0].t>=CFG.puckMemoryMS) puckMemory.shift();
       puckMemory.push({tplId:t.tpl.id,x:t.x,y:t.y,t:now,
-                       menu:t.menu,mode:t.mode,topicIdx:t.topicIdx,
+                       ring:t.ring,topicIdx:t.topicIdx,
                        pinId:t.pinId,armed:t.armed,angleOrigin:t.angle,
-                       zoomAnchor:t.zoomAnchor});
+                       panOX:t.panOX,panOY:t.panOY});
       tracks.delete(id);
     }
     /* Een puck die al herkend wás blijft staan tot `dropoutMS` om is — daar
@@ -1973,25 +1997,25 @@ function track(dets,now){
 /* ═══════════════════════════════════════════════════════════════
    4. PINS
    ═══════════════════════════════════════════════════════════════ */
-/* ── Het menu om de puck ──────────────────────────────────────────────────
-   De ring om een puck was één lijst met thema's. Dat werkte zolang de puck
-   alleen markeringen plaatste, maar de kaart moet ook bediend worden en aan
-   een tafel is er geen tweede hand vrij voor een knop aan de rand. De ring
-   is daarom een menu met twee niveaus geworden:
+/* ── De puck bedient de kaart ─────────────────────────────────────────────
+   Een puck heeft op het glas twee vrijheidsgraden, en die zijn allebei
+   rechtstreeks de kaart geworden:
 
-     hoofdmenu   Verplaatsen · Zoomen · Kiezen · Terug  (vanaf boven, met de klok mee)
-     kiezen      de thema's · Terug
+     draaien    zoomen om de plek onder het kijkgat (met de klok mee is in)
+     schuiven   de kaart die kant op reizen
+     kijkgat    de thema's erbij halen
 
-   `Terug` staat in het hoofdmenu wel op de ring maar is uitgeschakeld: zo
-   blijft de verdeling van de ring hetzelfde en zie je meteen waar hij komt
-   te staan zodra je één niveau dieper zit.
+   Er is geen stand meer om eerst te kiezen. Dat scheelt een heel niveau: de
+   ring had Verplaatsen · Zoomen · Kiezen, je moest weten waar je puck in
+   stond, en zoomen deed je door de puck vooruit te duwen — dezelfde beweging
+   als verplaatsen, met een andere betekenis. Nu doet de kaart wat je met de
+   puck doet, zonder stand ertussen.
 
-   Kiezen doe je door de optie aan te tikken — op de boog of op zijn label,
-   allebei dezelfde taartpunt. Het ging eerst met draaien en stilhouden, maar
-   dat vraagt dat je de puck laat staan terwijl je kiest, en het maakt elke
-   onbedoelde draai een keuze. Een thema aantikken legt de markering meteen
-   vast; het kijkgat binnen de puck blijft als tweede weg bestaan, en de ring
-   ligt daar ruim buiten. */
+   Van de ring blijft de themalijst over, en die staat er alleen als je erom
+   vraagt: een tik in het kijkgat haalt hem tevoorschijn, een tik op een thema
+   legt de markering vast (of zet het thema van de markering die er al ligt om)
+   en laat hem weer verdwijnen. Zo ligt er om een liggende puck niets over de
+   kaart heen en kun je hem rustig verschuiven zonder een optie te raken. */
 /* De ring begint bovenaan. Het eerste segment ligt met zijn midden op twaalf
    uur, en de rest volgt met de klok mee. Zonder die draaiing begon segment 0
    linksboven, en dan wijst "de eerste optie" nergens naar — aan een tafel is
@@ -2006,22 +2030,14 @@ const ringIndexOf=(angle,n)=>{
   return Math.floor(a*n)%n;
 };
 
+/* Wat er op de ring staat: de thema's en `Terug`. Eén niveau, dus dit hangt
+   niet meer van een menustand af. */
 function ringItems(t){
-  if(t.menu==="topics")
-    return topics().map(name=>({key:"topic",label:name}))
-                   .concat([{key:"back",label:tr("puckBack")}]);
-  // Boven begint Verplaatsen, dan met de klok mee Zoomen, Kiezen en Terug.
-  return [{key:"move",  label:tr("puckMove")},
-          {key:"zoom",  label:tr("puckZoom")},
-          {key:"select",label:tr("puckSelect")},
-          {key:"back",  label:tr("puckBack"),disabled:true}];
+  return topics().map(name=>({key:"topic",label:name}))
+                 .concat([{key:"back",label:tr("puckBack")}]);
 }
-/* Welke optie op dit niveau als gekozen geldt: in het hoofdmenu de stand
-   waar de puck in staat, in het thema-menu het gekozen thema. */
-function ringChosen(t){
-  if(t.menu==="topics") return t.topicIdx;
-  return t.mode==="zoom"?1:0;
-}
+/* Welke optie als gekozen geldt: het thema van deze puck. */
+function ringChosen(t){ return t.topicIdx; }
 const puckTopic=t=>{ const list=topics(); return list[(t.topicIdx||0)%list.length]||list[0]; };
 
 /* Een keuze uit de ring uitvoeren. Alleen hier verandert de stand van een
@@ -2034,35 +2050,35 @@ function commitPuckChoice(t,idx){
     /* Het thema aantikken is meteen het vastleggen. Er was eerst nog een tik
        in het kijkgat voor nodig, maar dat is een tweede handeling voor een
        keuze die al gemaakt is: wie een thema aanwijst, wil die markering.
-       Staat de markering er al, dan verbetert dezelfde tik alleen het thema. */
+       Ligt de markering er al, dan zet dezelfde tik alleen het thema om en
+       komt zijn venster weer terug. */
     if(t.armed) dropPin(t);
-    else syncPlacedPinTopic(t);
-  }else if(item.key==="back"){
-    if(t.menu==="topics") t.menu="root";
-  }else if(item.key==="select"){
-    t.menu="topics";
-  }else if(item.key==="move"){
-    t.mode="move"; t.zoomAnchor=null;
-  }else if(item.key==="zoom"){
-    // Het ijkpunt wordt hier vastgelegd, op de plek die op dat moment onder
-    // het vizier ligt. Zie applyPuckZoom.
-    t.mode="zoom"; t.zoomRefY=t.y; t.zoomAnchor=MV.unproject(t.x,t.y);
+    else{
+      syncPlacedPinTopic(t);
+      const pin=t.pinId?pins.find(p=>p.id===t.pinId):null;
+      if(pin) openNote(pin,t.x,t.y,true);
+    }
   }
+  // Gekozen of niet ("Terug"): de ring heeft zijn werk gedaan en gaat dicht.
+  t.ring=false;
 }
 
 /* Waar de ring ophoudt: net voorbij de labelchip. Het venster van een puck
    wordt op dezelfde maat weggehouden (`puckReach`), zodat een open venster
-   nooit over een optie heen ligt die je moet kunnen raken. */
+   nooit over een optie heen ligt die je moet kunnen raken — ook als de ring
+   dicht staat, want hij kan elk moment opengaan en een venster dat dan opzij
+   moet springen is erger dan een venster dat wat verder weg staat. */
 const puckMenuOuterPX=()=>CFG.ringPX+chipHeight()*1.35+10;
 /* Welke optie ligt er onder deze tik? Het raakvlak is de hele taartpunt: van
    net buiten de schijf tot voorbij het label. Alleen de labelchip zou aan een
    tafel een te klein doel zijn — je tikt staand, van opzij, met een hele hand.
-   Binnen de schijf telt niet mee: daar zit het kijkgat. */
+   Binnen de schijf telt niet mee: daar zit het kijkgat. Een puck met een
+   dichte ring doet niet mee; om hem heen is de kaart gewoon kaart. */
 function puckMenuHit(x,y){
   const inner=CFG.puckRadiusMM*pxPerMM+4, outer=puckMenuOuterPX();
   let best=null,bd=Infinity;
   for(const t of tracks.values()){
-    if(t.state!=="recognised") continue;
+    if(t.state!=="recognised"||!t.ring) continue;
     const d=Math.hypot(x-t.x,y-t.y);
     if(d<inner||d>outer||d>=bd) continue;
     bd=d; best=t;
@@ -2075,7 +2091,7 @@ function puckMenuHit(x,y){
 }
 /* Een tik op de ring uitvoeren. Een uitgeschakelde optie doet niets, maar
    slikt de tik wel: hij hoort bij de puck en niet bij de kaart eronder, en een
-   tik die “doorvalt” zou de sleepkopieën wissen. */
+   tik die "doorvalt" zou de sleepkopieën wissen. */
 function tryPuckMenuTap(x,y){
   const hit=puckMenuHit(x,y);
   if(!hit) return false;
@@ -2093,39 +2109,58 @@ function puckTapGlow(t,now){
   return k>0?k:0;
 }
 
-/* Zoomen met de puck zelf: vooruit duwen (van je af, het scherm op) zoomt in,
-   naar je toe trekken zoomt uit.
+/* De kaart bedienen met de puck zelf.
 
-   Het ijkpunt ligt vast. Zodra je de zoomstand kiest wordt onthouden welke
-   plek op de kaart er onder het vizier lag, en om die plek wordt gezoomd —
-   niet om het hart van de puck zoals dat op dit moment ligt. Dat scheelde,
-   want de puck schuift tijdens het duwen zelf vooruit: zoomde je om zijn
-   hart, dan verschoof het ijkpunt met elke duw mee vooruit en dreef de plek
-   waar je op wees onder je handen weg. Vooruit duwen is nu puur een hendel;
-   waar hij op wijst staat al vast.
+   Draaien is zoomen: elke `CFG.puckZoomRotDeg` graden is één zoomniveau, met
+   de klok mee naar binnen, om de plek die op dát moment onder het kijkgat
+   ligt. Dat ijkpunt mag hier meebewegen — anders dan bij het oude vooruit
+   duwen verplaatst draaien de puck niet, dus de plek waar je op wijst blijft
+   vanzelf staan. Het vaste ijkpunt dat daarvoor nodig was is daarmee weg.
 
-   Het ijkpunt wordt als geografisch punt bewaard, niet als schermplek: zo
-   blijft het kloppen als de kaart ondertussen draait, schuift of zoomt.
-   Een kleine dode zone houdt de trilling van de gemiddelde puckpositie uit
-   het zoomniveau. */
-function applyPuckZoom(t){
-  if(t.mode!=="zoom"||t.state!=="recognised"){ t.zoomRefY=t.y; t.zoomAnchor=null; return; }
-  if(t.zoomRefY==null) t.zoomRefY=t.y;
-  if(!t.zoomAnchor) t.zoomAnchor=MV.unproject(t.x,t.y);
-  const dy=t.zoomRefY-t.y;
-  if(Math.abs(dy)<CFG.puckZoomDeadPX) return;
-  const a=MV.project(t.zoomAnchor.lng,t.zoomAnchor.lat);
-  MV.zoomBy(dy/CFG.puckZoomPX,a.x,a.y);
-  t.zoomRefY=t.y;
+   Schuiven is reizen. De puck onthoudt waar hij lag (`panOX/panOY`), en hoe
+   verder hij daarvandaan komt hoe sneller de kaart die kant op reist. Duw je
+   hem naar de bovenrand, dan reis je naar boven — de kaart schuift onder de
+   puck door in plaats van eraan vast te zitten, en zo kom je met een puck van
+   tien centimeter de hele provincie door zonder hem op te tillen.
+
+   Het ijkpunt komt langzaam achter de puck aan (`CFG.puckPanEaseMS`). Blijf
+   duwen en je blijft reizen; laat je hem los, dan haalt het ijkpunt hem in en
+   staat de kaart binnen een paar tellen stil. Zonder dat blijft een puck die
+   scheef ligt de kaart wegduwen tot iemand hem terugtrekt, en aan een tafel
+   met publiek ligt er altijd wel een puck scheef.
+
+   Een vastgezette kaart houdt ook de pucks buiten de deur; anders staat hij
+   niet vast. Dat was met een menustand nog te overzien — je moest zelf voor
+   Zoomen kiezen — maar nu bedient elke duw tegen een puck de kaart. */
+function applyPuckControls(t,now){
+  const dt=t.panT?Math.min(0.1,(now-t.panT)/1000):0;
+  t.panT=now;
+  // Niet (meer) herkend of de kaart staat vast: alleen bijhouden waar de puck
+  // is, zodat hij niet bij het hervatten een hele reis in één beeld inhaalt.
+  if(t.state!=="recognised"||mapLocked){
+    t.panOX=t.x; t.panOY=t.y; t.zoomRot=t.angle; return;
+  }
+  const dRot=t.angle-t.zoomRot;
+  if(Math.abs(dRot)>=CFG.puckRotDeadRAD){
+    t.zoomRot=t.angle;
+    MV.zoomBy(dRot/(CFG.puckZoomRotDeg*Math.PI/180),t.x,t.y);
+  }
+  const ox=t.x-t.panOX, oy=t.y-t.panOY, off=Math.hypot(ox,oy);
+  if(dt&&off>CFG.puckPanDeadPX){
+    const v=Math.min((off-CFG.puckPanDeadPX)*CFG.puckPanGain,CFG.puckPanMaxPXS)*dt;
+    // De kaart de andere kant op schuiven laat het beeld de kant van de puck
+    // op reizen: `panBy` verplaatst wat je ziet, niet waar je staat.
+    MV.panBy(-ox/off*v,-oy/off*v);
+  }
+  if(dt&&CFG.puckPanEaseMS>0){
+    const k=1-Math.exp(-dt*1000/CFG.puckPanEaseMS);
+    t.panOX+=ox*k; t.panOY+=oy*k;
+  }
 }
-/* Vastleggen doe je door het thema aan te tikken; een tik in het hart van de
-   puck doet het ook nog, met het thema dat op dat moment gekozen staat. Het
-   hart is het kijkgat, en dat is precies het punt dat als coördinaat wordt
-   bewaard: je wijst dus aan wat je vastlegt. De band eromheen blijft van
-   slepen en draaien en de ring eromheen van het menu, dus vastleggen botst
-   met geen van beide.
-   Wat een tik is: kort aangeraakt, nauwelijks verschoven en nauwelijks
-   gedraaid — zo blijft slepen en draaien gewoon slepen en draaien. */
+/* Wat een tik is: kort aangeraakt, nauwelijks verschoven en nauwelijks
+   gedraaid — zo blijft slepen slepen en draaien draaien. Die laatste grens
+   telt nu dubbel: draaien is zoomen, dus een greep waarin de puck een slag
+   maakt is geen tik maar een zoombeweging. */
 function wasTap(g){
   return performance.now()-g.t0<400
       && Math.hypot(g.puck.x-g.px,g.puck.y-g.py)<10
@@ -2153,17 +2188,18 @@ function puckHoleAt(x,y){
   }
   return best;
 }
-function tryConfirmPuck(x,y){
+/* Een tik in het kijkgat haalt de thema's tevoorschijn. Het gat is precies
+   het punt dat als coördinaat wordt bewaard: je wijst dus eerst aan wáár je
+   markering komt, en kiest daarna waar hij over gaat.
+   Openen, niet omschakelen. Dezelfde tik komt langs twee wegen binnen (de
+   aanwijzer, en de muis-nasleep van een sleepkopie); een schakelaar zou
+   zichzelf meteen weer dicht doen. Sluiten gaat met `Terug` op de ring of
+   door een thema te kiezen. Het venster van een markering die er al ligt komt
+   terug met een tik op de zwarte band eromheen. */
+function tryPuckHoleTap(x,y){
   const t=puckHoleAt(x,y);
   if(!t) return false;
-  if(t.armed){ dropPin(t); return true; }
-  /* Al vastgelegd? Dan is een tik in het kijkgat "laat zien wat hier staat":
-     het venster van deze puck komt terug. Zonder dat kon je een venster dat je
-     zelf had gesloten alleen nog terugkrijgen door de puck op te tillen en
-     opnieuw neer te leggen -- en dan was het een nieuwe bijdrage. */
-  const pin=t.pinId?pins.find(p=>p.id===t.pinId):null;
-  if(!pin) return false;
-  openNote(pin,t.x,t.y,true);
+  t.ring=true;
   return true;
 }
 function dropPin(t){
@@ -2400,27 +2436,30 @@ addEventListener("pointerup",e=>{
   const quick=performance.now()-tapStart.t<350 && Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y)<12;
   tapStart=null;
   if(!quick) return;
-  // Een tik in het kijkgat legt de markering vast; dat gaat voor op al het
-  // andere, want het is de enige handeling die iets nieuws op de kaart zet.
-  if(tryConfirmPuck(e.clientX,e.clientY)) return;
+  // Een tik in het kijkgat haalt de thema's erbij; dat gaat voor op al het
+  // andere, want het is het begin van alles wat er nieuw op de kaart komt.
+  if(tryPuckHoleTap(e.clientX,e.clientY)) return;
   // Daarna de ring eromheen: daar kiest een tik een optie. Dat gaat voor op
   // alles wat er verder onder de tik kan liggen, want de ring hoort bij de puck.
   if(tryPuckMenuTap(e.clientX,e.clientY)) return;
   // A tap that lands on a puck (simulated or detected) belongs to that puck.
   const R=CFG.puckRadiusMM*pxPerMM;
-  if(simPuckAt(e.clientX,e.clientY)) return;
   const onTrack=puckTrackAt(e.clientX,e.clientY);
   if(onTrack){
-    /* Een puck die al vast ligt: tikken opent zijn venster weer, dubbeltikken
-       zet het op de andere kant. Dat eerste ontbrak -- wie zijn venster had
-       gesloten kwam er niet meer bij zonder de puck op te tillen. */
+    /* Een puck die al vast ligt: een tik op de zwarte band opent zijn venster
+       weer, dubbeltikken zet het op de andere kant. Het kijkgat is van de
+       thema's, dus de band is de weg terug naar wat je geschreven hebt.
+       Dit staat vóór de sleepkopie, anders werkt het op een laptop niet: daar
+       ligt onder elke puck ook een sleepkopie, en die slikte de tik. */
     const own=onTrack.pinId?pins.find(p=>p.id===onTrack.pinId):null;
     if(own){
       if(doubleTap(own.id)) flipNote(own,onTrack.x,onTrack.y);
       else openNote(own,onTrack.x,onTrack.y,true);
+      return;
     }
-    return;
   }
+  if(simPuckAt(e.clientX,e.clientY)) return;
+  if(onTrack) return;
   const hit=[...pins].reverse().find(p=>{
     const s=MV.project(p.lng,p.lat);
     return Math.hypot(s.x-e.clientX,s.y-e.clientY)<24;
@@ -2478,7 +2517,7 @@ function buildNoteViews(){
     const root=side==="a"?el("note"):cloneWithSuffix(el("note"),suffix);
     if(side!=="a"){ root.style.display="none"; document.body.appendChild(root); }
     const v={side,suffix,el:root,pin:null,askAbort:null,flip:side==="b",
-             talkMsg:{key:"",args:[],warn:false}};
+             talkMsg:{key:"",args:[],warn:false},talkLang:null};
     noteViews.push(v);
     wireNote(v);
   }
@@ -2501,6 +2540,8 @@ function wireNote(v){
   for(const id of ["noteTitle","noteText"])
     q(id).addEventListener("input",()=>{ noteToPin(v); saveSoon(); });
   q("talkBtn").onclick=()=>toggleTalk(v);
+  for(const [id,keuze] of talkLangKnoppen())
+    q(id).onclick=()=>{ if(talkRunning(v.pin)) return; v.talkLang=keuze; renderTalkLang(v); };
   q("talkClear").onclick=()=>{
     if(!v.pin) return;
     v.pin.transcript=""; q("talkText").value=""; q("talkClear").style.display="none"; save();
@@ -2619,6 +2660,10 @@ function openNote(pin,x,y,fromPuck=false){
   notePart(v,"noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
   notePart(v,"noteTitle").value=pin.title||"";
   notePart(v,"noteText").value=pin.description||pin.note||"";
+  /* Een nieuw gesprek begint bij de taal van de tafel. De keuze hoort bij dit
+     venster zolang het openstaat en wordt niet bewaard: de volgende groep aan
+     tafel hoort niet ineens in het Engels te worden uitgeschreven. */
+  if(!talkRunning(pin)) v.talkLang=null;
   renderTalk(v);
   if(!talkRunning(pin)) checkTalk(v);
   fillNoteKnowledge(v,pin);
@@ -2858,6 +2903,40 @@ function renderTalk(v){
   notePart(v,"talkBtn").classList.toggle("rec",rec);
   notePart(v,"talkBtn").textContent=tr(rec?"talkStop":"talkStart");
   if(!rec) notePart(v,"talkTime").textContent="";
+  renderTalkLang(v);
+}
+
+/* -- De taal van het gesprek ---------------------------------------------
+   Standaard die van de tafel; wie iets anders kiest doet dat voor dit ene
+   gesprek. "auto" bestaat alleen met de eigen uitschrijfdienst erachter: die
+   kan een blokje zonder taal aannemen en hem zelf bepalen. De
+   spraakherkenning van de browser moet vooraf weten welke taal ze hoort, dus
+   daar staat de knop er niet -- een keuze die niets doet is erger dan geen
+   keuze. */
+/* Een functie en geen const: `wireNote` draait al bij het opbouwen van de
+   vensters, ruim voordat dit deel van het bestand aan de beurt is. */
+function talkLangKnoppen(){ return [["talkLangNl","nl"],["talkLangEn","en"],["talkLangAuto","auto"]]; }
+const talkAutoOk=()=>stt.mode==="backend";
+function talkLangOf(v){
+  const keuze=v.talkLang||lang;
+  return keuze==="auto"&&!talkAutoOk()?lang:keuze;
+}
+function renderTalkLang(v){
+  const box=notePart(v,"talkLang");
+  /* Zonder uitschrijven doet de taal niets: in de opnamestand gaat het geluid
+     zoals het is naar de schijf, en zonder microfoon gebeurt er niets. */
+  const zin=stt.mode==="browser"||stt.mode==="backend";
+  box.style.display=zin?"":"none";
+  if(!zin) return;
+  const rec=talkRunning(v.pin), nu=talkLangOf(v);
+  box.classList.toggle("locked",rec);
+  notePart(v,"talkLangAuto").style.display=talkAutoOk()?"":"none";
+  for(const [id,keuze] of talkLangKnoppen()){
+    const b=notePart(v,id), mine=nu===keuze;
+    b.classList.toggle("on",mine);
+    b.setAttribute("aria-pressed",String(mine));
+    b.disabled=rec;
+  }
 }
 
 /* Wat kan deze tafel? Eén keer polsen, en het antwoord meteen laten zien:
@@ -2869,6 +2948,7 @@ function checkTalk(v){
   probeSTT(sttUrl()).then(()=>{ if(v.pin) talkReady(v); });
 }
 function talkReady(v){
+  renderTalkLang(v);                           // nu pas is bekend wat er kan
   if(talk){
     // Eén microfoon: aan de overkant loopt er al een opname.
     if(talkPin!==v.pin) setTalkMsg(v,"talkBusy",{warn:true});
@@ -2910,7 +2990,7 @@ async function toggleTalk(v){
     if(v.pin!==pin) return;
     if(stt.mode==="geen"){ talkReady(v); return; }
     const session=await startTalk({
-      lang,
+      lang:talkLangOf(v),
       onSegment:text=>appendTalk(pin,text),
       onPartial:text=>{ const w=noteViewFor(pin);
         if(talkPin===pin&&w) notePart(w,"talkPartial").textContent=text; },
@@ -2940,6 +3020,7 @@ function stopTalk(quiet=false){
     notePart(v,"talkPartial").textContent="";
     notePart(v,"talkBtn").classList.remove("rec");
     notePart(v,"talkBtn").textContent=tr("talkStart");
+    renderTalkLang(v);                         // de taal mag weer om
   }
   const mode=session?.mode;
   /* De uitschrijfstand heeft misschien nog een blokje onderweg; die laatste
@@ -3076,7 +3157,11 @@ function frame(){
     const chosen=ringChosen(t), glow=puckTapGlow(t,now);
     syncPlacedPinTopic(t);
     ctx.save(); ctx.globalAlpha=t.state==="incomplete"?0.35:1;
-    for(let k=0;k<n;k++){
+    // De ring staat er alleen als iemand erom gevraagd heeft, met een tik in
+    // het kijkgat. Anders ligt er niets van de puck over de kaart heen: dat is
+    // de rusttoestand, waarin schuiven en draaien de kaart bedienen, en daar
+    // hoort geen menu bij dat je met een duw per ongeluk raakt.
+    for(let k=0;t.ring&&k<n;k++){
       const item=items[k], off=item.disabled;
       const a0=ringStart(n)+(k/n)*Math.PI*2+0.03, a1=ringStart(n)+((k+1)/n)*Math.PI*2-0.03;
       // Twee standen op de ring, en ze moeten van een meter afstand uit elkaar
@@ -3177,31 +3262,13 @@ function frame(){
     // Staat de puck in de zoomstand, dan staan er twee regels in die band en
     // schuiven ze om het midden uit elkaar; anders staat deze regel alleen.
     const bandH=R-hole;
-    ctx.fillText(t.armed?tr(tableUi()?"confirmTouch":"confirmMouse"):tr("placed"),
-                 t.x,t.y+band+bandH*(t.mode==="zoom"?0.28:0.12));
-    // Zoomen is een modale stand: wie niet ziet dat hij aan staat, duwt de
-    // kaart per ongeluk weg. Verplaatsen is de rusttoestand en zegt niets —
-    // dat staat al op de ring, en twee regels onder elkaar is te druk.
-    if(t.mode==="zoom"){
-      ctx.font="500 "+lineSize.toFixed(1)+"px "+CHIP_FAMILY; ctx.fillStyle=c;
-      ctx.fillText(tr("modeZoom"),t.x,t.y+band-bandH*0.22);
-      // Het ijkpunt staat stil terwijl de puck vooruit gaat. Zonder teken zou
-      // je niet zien waar de kaart om draait; een kruisje volstaat, en alleen
-      // zodra de puck er merkbaar vanaf ligt.
-      if(t.zoomAnchor){
-        const a=MV.project(t.zoomAnchor.lng,t.zoomAnchor.lat);
-        if(Math.hypot(a.x-t.x,a.y-t.y)>R*0.35){
-          ctx.strokeStyle=c; ctx.lineWidth=1.5; ctx.globalAlpha=0.7;
-          ctx.beginPath(); ctx.arc(a.x,a.y,7,0,Math.PI*2); ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(a.x-12,a.y); ctx.lineTo(a.x-9,a.y);
-          ctx.moveTo(a.x+9,a.y);  ctx.lineTo(a.x+12,a.y);
-          ctx.moveTo(a.x,a.y-12); ctx.lineTo(a.x,a.y-9);
-          ctx.moveTo(a.x,a.y+9);  ctx.lineTo(a.x,a.y+12);
-          ctx.stroke(); ctx.globalAlpha=1;
-        }
-      }
-    }
+    // Eén regel, en die zegt wat er nú te doen valt: staat de ring open, dan
+    // kies je een thema; staat hij dicht, dan wijst de regel naar het kijkgat
+    // (of meldt dat deze puck zijn markering al heeft). Twee regels onder
+    // elkaar is in die smalle band te druk.
+    ctx.fillText(t.ring?tr("puckPickTopic")
+                       :(t.armed?tr(tableUi()?"confirmTouch":"confirmMouse"):tr("placed")),
+                 t.x,t.y+band+bandH*0.12);
     ctx.restore();
   }
 
@@ -4696,6 +4763,8 @@ function applyLang(){
   // Open vensters horen niet eerst dicht te moeten voordat ze meegaan.
   for(const v of openNotes()){
     notePart(v,"noteHead").textContent=vName(v.pin.verdict)+" \u00b7 "+v.pin.topic;
+    // De tafel wisselt van taal: een gesprek dat nog niet loopt gaat mee.
+    if(!talkRunning(v.pin)) v.talkLang=null;
     renderTalk(v);
     setTalkMsg(v,v.talkMsg.key,{warn:v.talkMsg.warn,args:v.talkMsg.args});
   }

@@ -72,9 +72,28 @@ async function newPage(uiMode, {twoSided=false}={}){
   const errs=[];
   page.on('pageerror', e=>errs.push(String(e)));
   page.on('console', m=>{ if(m.type()==='error' && !/tile|tunnel|ERR_|favicon|Failed to load resource/i.test(m.text())) errs.push(m.text()); });
-  await page.goto(BASE+'/index.html');
+  // Overal `?test`: dan staan de maten van de ring en de themalijst op
+  // `window.__puck`, en hoeft geen enkel blok ze over te schrijven.
+  await page.goto(BASE+'/index.html?test');
   await page.waitForTimeout(900);
   return {page, ctx, errs};
+}
+
+/* Een markering plaatsen is sinds de omgooide bediening twee tikken: eerst in
+   het kijkgat (dat haalt de thema's tevoorschijn) en dan op een thema (dat
+   legt vast). Waar dat thema ligt rekent de test uit met de maten van de app
+   zelf, zodat een andere ringgrootte de test niet stilletjes laat missen. */
+async function themaPunt(page,x,y,i){
+  return page.evaluate(o=>{
+    const P=window.__puck, n=P.topics().length+1;
+    const a=P.ringStart(n)+(o.i+0.5)*Math.PI*2/n, r=P.ringPX();
+    return {x:o.x+Math.cos(a)*r, y:o.y+Math.sin(a)*r};
+  },{x,y,i});
+}
+async function plaatsMarkering(page,x,y,i=0){
+  await page.mouse.click(x,y); await page.waitForTimeout(250);
+  const q=await themaPunt(page,x,y,i);
+  await page.mouse.click(q.x,q.y); await page.waitForTimeout(400);
 }
 
 // ── 1. laptop: sleepkopie op de kaart, tik op de band vs. tik in het kijkgat ──
@@ -106,15 +125,25 @@ async function newPage(uiMode, {twoSided=false}={}){
   ok('tik op de band legt niets vast', await pinsNow()===base);
   ok('venster blijft dicht na tik op de band', !(await noteOpen()));
 
-  // klik in het kijkgat: legt vast en opent het venster
-  await page.mouse.click(cx, cy);
-  await page.waitForTimeout(400);
-  ok('tik in het kijkgat legt vast', await pinsNow()===base+1);
-  ok('notitievenster opent bij de puck', await noteOpen());
-
-  // tweede tik in het kijkgat mag niet dubbel vastleggen
+  // klik in het kijkgat: haalt de thema's tevoorschijn, meer niet
   await page.mouse.click(cx, cy);
   await page.waitForTimeout(300);
+  ok("tik in het kijkgat opent de thema's",
+     (await page.evaluate(()=>window.__puck.ringOpen())).some(Boolean));
+  ok('en legt zelf niets vast', await pinsNow()===base);
+
+  // en dan het thema: dat legt vast en opent het venster
+  const thema0 = await themaPunt(page,cx,cy,0);
+  await page.mouse.click(thema0.x, thema0.y);
+  await page.waitForTimeout(400);
+  ok('tik op een thema legt vast', await pinsNow()===base+1);
+  ok('notitievenster opent bij de puck', await noteOpen());
+  ok('de ring gaat daarna weer dicht',
+     !(await page.evaluate(()=>window.__puck.ringOpen())).some(Boolean));
+
+  // nog een ronde langs dezelfde weg mag niet dubbel vastleggen
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  await plaatsMarkering(page, cx, cy, 0);
   ok('geen dubbele markering', await pinsNow()===base+1);
 
   ok('geen JS-fouten (laptop)', errs.length===0 || (console.log(errs.slice(0,3)),false));
@@ -150,7 +179,7 @@ async function newPage(uiMode, {twoSided=false}={}){
   await page.mouse.move(b.x+b.width/2,b.y+b.height/2); await page.mouse.down();
   await page.mouse.move(cx,cy,{steps:12}); await page.mouse.up();
   await page.waitForTimeout(400);
-  await page.mouse.click(cx,cy); await page.waitForTimeout(500);
+  await plaatsMarkering(page,cx,cy,0);
   await page.locator('#noteTitle').fill('Kapotte stoeptegel');
   await page.waitForTimeout(700);
   const opgeslagen = await page.evaluate(()=>{
@@ -158,9 +187,11 @@ async function newPage(uiMode, {twoSided=false}={}){
     return (JSON.parse(localStorage.getItem(k)||'[]')).some(p=>p.title==='Kapotte stoeptegel');
   });
   ok('typen wordt bewaard zonder Bewaren', opgeslagen);
-  // venster sluiten met Escape en opnieuw openen: de tekst staat er nog
+  // Venster sluiten met Escape en opnieuw openen: de tekst staat er nog. Het
+  // venster terughalen doe je met een tik op de zwarte band — het kijkgat is
+  // van de thema's.
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  await page.mouse.click(cx,cy); await page.waitForTimeout(400);
+  await page.mouse.click(cx+(HOLE+R)/2,cy); await page.waitForTimeout(400);
   ok('tekst staat er nog na sluiten', (await page.locator('#noteTitle').inputValue())==='Kapotte stoeptegel');
   ok('geen JS-fouten (autosave)', errs.length===0 || (console.log(errs.slice(0,3)),false));
   await ctx.close();
@@ -182,7 +213,7 @@ async function newPage(uiMode, {twoSided=false}={}){
     ]));
   }catch(e){} });
   const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
-  await page.goto(BASE+'/index.html');
+  await page.goto(BASE+'/index.html?test');
   await page.waitForTimeout(1200);
   const n = await page.evaluate(()=>{
     const k='pucktable-'+document.getElementById('sess').value;
@@ -196,7 +227,7 @@ async function newPage(uiMode, {twoSided=false}={}){
   await page.mouse.move(b.x+b.width/2,b.y+b.height/2); await page.mouse.down();
   await page.mouse.move(W/2,H/2,{steps:10}); await page.mouse.up();
   await page.waitForTimeout(400);
-  await page.mouse.click(W/2,H/2); await page.waitForTimeout(400);
+  await plaatsMarkering(page,W/2,H/2,0);
   ok('puck werkt nog na een kapotte opslag',
      await page.evaluate(()=>getComputedStyle(document.getElementById('note')).display!=='none'));
   await ctx2.close();
@@ -221,7 +252,7 @@ async function newPage(uiMode, {twoSided=false}={}){
     await page.waitForTimeout(250);
   }
   for(const [x,y] of spots){
-    await page.mouse.click(x,y); await page.waitForTimeout(350);
+    await plaatsMarkering(page,x,y,0);
     await page.keyboard.press('Escape'); await page.waitForTimeout(150);
   }
   const n = await pinsNow();
@@ -362,10 +393,25 @@ async function newPage(uiMode, {twoSided=false}={}){
   await page.mouse.move(b.x+b.width/2,b.y+b.height/2); await page.mouse.down();
   await page.mouse.move(cx,cy,{steps:12}); await page.mouse.up();
   await page.waitForTimeout(400);
-  await page.mouse.click(cx,cy); await page.waitForTimeout(500);
+  await plaatsMarkering(page,cx,cy,0);
 
   ok('opnameknop staat in het venster', await page.locator('#talkBtn').isVisible());
   ok('knop heet Gesprek opnemen', (await page.locator('#talkBtn').textContent()).includes('Gesprek opnemen'));
+
+  // De taal hoort bij dit gesprek, niet bij de tafel. Kan deze browser niets
+  // uitschrijven, dan valt er niets te kiezen en hoort de kiezer weg te
+  // blijven; staat hij er wel, dan is precies één taal aan.
+  const taalkeuze = await page.evaluate(()=>{
+    const box=document.getElementById('talkLang');
+    if(!box) return null;
+    const aan=[...box.querySelectorAll('button')]
+      .filter(b=>b.getAttribute('aria-pressed')==='true'&&b.style.display!=='none');
+    return {zichtbaar:box.style.display!=='none', aan:aan.map(b=>b.id)};
+  });
+  ok('de taalkiezer staat in het venster', taalkeuze!==null);
+  ok('er staat precies één taal aan (of de kiezer blijft weg)',
+     !taalkeuze || !taalkeuze.zichtbaar || taalkeuze.aan.length===1
+     || (console.log('taalkeuze:',taalkeuze),false));
 
   await page.locator('#talkText').fill('We staan hier elke ochtend in de file.');
   await page.waitForTimeout(700);
@@ -415,23 +461,25 @@ async function newPage(uiMode, {twoSided=false}={}){
      terechtkomt schuift naar het midden (zie endTrayDrag) en ligt dan niet
      meer waar de test tikt. */
   await leg(0,260,700);
-  await page.mouse.click(260,700); await page.waitForTimeout(500);
+  await plaatsMarkering(page,260,700,0);
   await leg(0,260,300);
-  await page.mouse.click(260,300); await page.waitForTimeout(500);
+  await plaatsMarkering(page,260,300,0);
   ok('twee pucks van dezelfde soort, twee markeringen', await pinsNow()===base+2);
 
-  // een tik op een puck die al vastligt opent zijn venster opnieuw
+  /* Een tik op de zwarte band van een puck die al vastligt opent zijn venster
+     opnieuw. Op de band, niet in het kijkgat: dat is sinds de omgooide
+     bediening van de thema's. */
   await page.keyboard.press('Escape'); await page.waitForTimeout(250);
   ok('venster is dicht na Escape', !(await zichtbaar('note')));
-  await page.mouse.click(260,700); await page.waitForTimeout(500);
+  await page.mouse.click(260+(HOLE+R)/2,700); await page.waitForTimeout(500);
   ok('tikken op een vastgelegde puck opent zijn venster weer', await zichtbaar('note'));
   ok('en legt niets nieuws vast', await pinsNow()===base+2);
 
   // de derde puck aan de overkant krijgt het venster van díe kant
   await leg(1,1150,240);
-  await page.mouse.click(1150,240); await page.waitForTimeout(600);
+  await plaatsMarkering(page,1150,240,0);
   ok('de overkant heeft een eigen venster', await zichtbaar('note-b'));
-  await page.mouse.click(260,700); await page.waitForTimeout(600);
+  await page.mouse.click(260+(HOLE+R)/2,700); await page.waitForTimeout(600);
   ok('en dat van deze kant staat er nog naast', await zichtbaar('note'));
   ok('elk venster hangt aan zijn eigen puck', await page.evaluate(()=>
     document.getElementById('note').dataset.anchorY!==document.getElementById('note-b').dataset.anchorY));
@@ -619,32 +667,22 @@ async function newPage(uiMode, {twoSided=false}={}){
   await ctx6.close();
 }
 
-// ── kiezen doe je door een optie op de ring aan te tikken ──
+// ── de ring is de themalijst, en die komt uit het kijkgat ──
 {
-  /* Draaien koos vroeger: naar een optie draaien en stilhouden. Nu tik je hem
-     aan. Twee dingen mogen daarbij niet stuk: een tik op de ring mag nooit een
-     markering vastleggen (dat is het kijkgat), en een tik op een thema moet
-     het thema van de markering die er al ligt meteen omzetten. Met ?test staan
-     de maten van de ring op window, zodat de test rekent met wat de app
-     tekent in plaats van met overgeschreven getallen. */
-  const ctx6 = await browser.newContext({ viewport:{width:W,height:H} });
-  const page = await ctx6.newPage();
-  await page.addInitScript(()=>{ try{ localStorage.clear();
-    localStorage.setItem('pucktable-ui-mode','laptop'); }catch(e){} });
-  const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
-  page.on('console', m=>{ if(m.type()==='error' && !/tile|tunnel|ERR_|favicon|Failed to load resource/i.test(m.text())) errs.push(m.text()); });
-  await page.goto(BASE+'/index.html?test'); await page.waitForTimeout(900);
-
+  /* De bediening is omgegooid: draaien zoomt, schuiven pant, en het menu met
+     standen is weg. Wat overblijft moet kloppen: om een liggende puck staat
+     niets, een tik in het kijkgat haalt de thema's tevoorschijn, een tik op
+     een thema legt vast en laat de ring weer verdwijnen, en `Terug` sluit hem
+     zonder iets vast te leggen. Een tik op de ring mag nooit zelf een
+     markering plaatsen — dat is het kijkgat. Met ?test staan de maten van de
+     ring op window, zodat de test rekent met wat de app tekent. */
+  const {page, ctx, errs} = await newPage('laptop');
   const cx=W/2, cy=H/2;
   const pins = () => page.evaluate(()=>{
     const k='pucktable-'+document.getElementById('sess').value;
     try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; }
   });
-  // Waar het midden van optie `i` van `n` ligt, op de straal van de ring.
-  const optie = (i,n) => page.evaluate(o=>{
-    const P=window.__puck, a=P.ringStart(o.n)+(o.i+0.5)*Math.PI*2/o.n, r=P.ringPX();
-    return {x:o.cx+Math.cos(a)*r, y:o.cy+Math.sin(a)*r};
-  }, {i,n,cx,cy});
+  const ringOpen = () => page.evaluate(()=>window.__puck.ringOpen().some(Boolean));
 
   const tray = page.locator('#puckDock .traypuck').first();
   const box = await tray.boundingBox();
@@ -652,33 +690,100 @@ async function newPage(uiMode, {twoSided=false}={}){
   await page.mouse.down(); await page.mouse.move(cx,cy,{steps:12}); await page.mouse.up();
   await page.waitForTimeout(400);
 
+  ok('om een liggende puck staat geen ring', !(await ringOpen()));
+
   // Sessie-01 heeft voorbeeldmarkeringen; tellen doen we vanaf wat er al ligt.
   const basis = (await pins()).length;
-  await page.mouse.click(cx,cy); await page.waitForTimeout(400);
-  const na = await pins();
-  ok('tik in het kijkgat legt vast (ring)', na.length===basis+1);
-  const thema0 = na[na.length-1]?.topic;
-
-  // Het venster ligt bij de puck; weg ermee, anders vangt het paneel de tik.
-  await page.keyboard.press('Escape'); await page.waitForTimeout(250);
-
-  // Hoofdmenu: vier opties, "Kiezen" is de derde (vanaf boven met de klok mee).
-  const kiezen = await optie(2,4);
-  await page.mouse.click(kiezen.x,kiezen.y); await page.waitForTimeout(300);
-  ok('een tik op de ring legt niets vast', (await pins()).length===basis+1);
-
-  // Themamenu: alle thema's plus Terug. Het tweede thema is een ander thema
-  // dan waar de puck op begon, dus de markering moet meeveranderen.
   const lijst = await page.evaluate(()=>window.__puck.topics());
-  const thema = await optie(1,lijst.length+1);
-  await page.mouse.click(thema.x,thema.y); await page.waitForTimeout(300);
+
+  // Terug is de laatste optie: hij sluit de ring en legt niets vast.
+  await page.mouse.click(cx,cy); await page.waitForTimeout(250);
+  const terug = await themaPunt(page,cx,cy,lijst.length);
+  await page.mouse.click(terug.x,terug.y); await page.waitForTimeout(300);
+  ok('Terug sluit de ring', !(await ringOpen()));
+  ok('en legt niets vast', (await pins()).length===basis);
+
+  // Het tweede thema: de markering komt er en draagt dat thema.
+  await plaatsMarkering(page,cx,cy,1);
+  const eerste = (await pins()).pop();
+  ok('een tik op een thema legt de markering vast met dat thema',
+     (await pins()).length===basis+1 && eerste && eerste.topic===lijst[1]
+     || (console.log('thema:',eerste&&eerste.topic,'verwacht',lijst[1]),false));
+
+  // Dezelfde puck, een ander thema: de markering die er ligt verandert mee en
+  // er komt er geen tweede bij.
+  await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+  await plaatsMarkering(page,cx,cy,2);
   const daarna = (await pins()).pop();
-  ok('een tik op een thema zet het thema van de markering om',
-     daarna && daarna.topic===lijst[1] && daarna.topic!==thema0
-     || (console.log('thema:',thema0,'->',daarna&&daarna.topic,'verwacht',lijst[1]),false));
+  ok('een tweede thema zet de markering om in plaats van er een bij te leggen',
+     (await pins()).length===basis+1 && daarna && daarna.topic===lijst[2]
+     || (console.log('thema:',daarna&&daarna.topic,'verwacht',lijst[2]),false));
 
   ok('geen JS-fouten (ring aantikken)', errs.length===0 || (console.log(errs.slice(0,3)),false));
-  await ctx6.close();
+  await ctx.close();
+}
+
+// ── draaien zoomt, duwen reist ──
+{
+  /* De kern van de omgegooide bediening, en het enige stuk dat je aan een
+     tafel niet even naleest: er is geen stand meer waarin de puck de kaart
+     bedient, dus elke draai en elke duw komt meteen op de kaart terecht.
+     Met een sleepkopie is dat na te doen: het wiel over een puck draait hem
+     (zie de wheel-afhandeling), en slepen verschuift hem. */
+  const {page, ctx, errs} = await newPage('laptop');
+  const cx=W/2, cy=H/2;
+  const view = () => page.evaluate(()=>window.__puck.view());
+
+  const tray = page.locator('#puckDock .traypuck').first();
+  const box = await tray.boundingBox();
+  await page.mouse.move(box.x+box.width/2, box.y+box.height/2);
+  await page.mouse.down(); await page.mouse.move(cx,cy,{steps:12}); await page.mouse.up();
+  await page.waitForTimeout(500);
+
+  // Met de klok mee een kwartslag, in stapjes: een puck die in één beeld een
+  // kwartslag maakt is voor de herkenning geen draai maar een andere puck.
+  const voor = await view();
+  await page.mouse.move(cx,cy);
+  for(let k=0;k<8;k++){ await page.mouse.wheel(0,100); await page.waitForTimeout(80); }
+  await page.waitForTimeout(400);
+  const na = await view();
+  ok('een kwartslag draaien is één zoomniveau erbij',
+     Math.abs(na.zoom-voor.zoom-1)<0.3 || (console.log('zoom:',voor.zoom,'->',na.zoom),false));
+  // Er wordt om het kijkgat gezoomd, en dat ligt hier in het midden van het
+  // scherm: het middelpunt van de kaart hoort dus te blijven staan.
+  ok('en er wordt om de puck gezoomd, niet om iets anders',
+     Math.abs(na.lng-voor.lng)<0.002 && Math.abs(na.lat-voor.lat)<0.002
+     || (console.log('midden:',voor,'->',na),false));
+
+  // De andere kant op is uitzoomen.
+  for(let k=0;k<8;k++){ await page.mouse.wheel(0,-100); await page.waitForTimeout(80); }
+  await page.waitForTimeout(400);
+  ok('terugdraaien zoomt weer uit',
+     Math.abs((await view()).zoom-voor.zoom)<0.3);
+
+  // Duwen naar rechts is naar het oosten reizen.
+  const voorDuw = await view();
+  await page.mouse.move(cx,cy); await page.mouse.down();
+  await page.mouse.move(cx+220,cy,{steps:14}); await page.waitForTimeout(700);
+  await page.mouse.up();
+  const naDuw = await view();
+  ok('de puck naar rechts duwen reist naar het oosten',
+     naDuw.lng>voorDuw.lng+0.0005 || (console.log('lng:',voorDuw.lng,'->',naDuw.lng),false));
+  ok('en niet naar het noorden of zuiden',
+     Math.abs(naDuw.lat-voorDuw.lat)<0.002);
+
+  /* En hij komt vanzelf tot stilstand. Dit is de reden dat het ijkpunt de
+     puck achterna komt: zonder dat blijft een puck die scheef blijft liggen
+     de kaart wegduwen tot iemand hem terugtrekt. */
+  await page.waitForTimeout(3000);
+  const rust1 = await view(); await page.waitForTimeout(900);
+  const rust2 = await view();
+  ok('en de kaart komt vanzelf weer tot stilstand',
+     Math.abs(rust2.lng-rust1.lng)<0.0001
+     || (console.log('blijft lopen:',rust1.lng,'->',rust2.lng),false));
+
+  ok('geen JS-fouten (draaien en duwen)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx.close();
 }
 
 await browser.close();
