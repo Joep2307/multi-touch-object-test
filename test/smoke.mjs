@@ -662,6 +662,21 @@ async function plaatsMarkering(page,x,y,i=0){
      Math.hypot(daarna[0].x-eerst[0].x,daarna[0].y-eerst[0].y)<14
      || (console.log('verschoven:',daarna,eerst),false));
 
+  /* Eén foutieve herkenning op exact dezelfde plek mag niet naast de oude
+     track een tweede puck openen. Dit is wat op de fysieke tafel als twee
+     bijna overlappende schijven zichtbaar was. */
+  const anderePads = await page.evaluate(()=>{
+    const P=window.__puck, k=P.pxPerMM();
+    return P.padsFor(P.templates()[2],k)
+            .map((p,i)=>({x:Math.round(900+p.x), y:Math.round(500+p.y), id:i+1}));
+  });
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:anderePads});
+  await page.waitForTimeout(80);
+  const tijdensWissel = await staat();
+  ok('een korte soortwissel tekent geen tweede puck',
+     tijdensWissel.length===1 || (console.log('dubbel:',tijdensWissel),false));
+
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   ok('geen JS-fouten (pootje weg)', errs.length===0 || (console.log(errs.slice(0,3)),false));
   await ctx6.close();

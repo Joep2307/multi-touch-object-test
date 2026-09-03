@@ -1932,12 +1932,12 @@ function startTrack(d,now){
    van identiteit (en daarmee van thema en markering). */
 function track(dets,now){
   const forDet=new Map(), taken=new Set();
-  const koppel=reach=>{
+  const koppel=(reach,zelfdeSoort=true)=>{
     const pairs=[];
     for(const d of dets){
       if(forDet.has(d)) continue;
       for(const t of tracks.values()){
-        if(taken.has(t)||t.tpl.id!==d.tpl.id) continue;
+        if(taken.has(t)||(zelfdeSoort&&t.tpl.id!==d.tpl.id)) continue;
         const gap=Math.hypot(t.x-d.x,t.y-d.y);
         if(gap<=reach) pairs.push({d,t,gap});
       }
@@ -1949,24 +1949,51 @@ function track(dets,now){
     }
   };
   koppel(puckSepPX());
-  /* Tweede ronde, ruimer. Wie een puck met een zwaai over de tafel schuift
+  /* Een echte puck kan door één slecht contactbeeld kort als een ander
+     sjabloon worden gelezen. Alleen op soort koppelen maakte dan op vrijwel
+     dezelfde plek een tweede track, terwijl de oude nog 0,9 s zichtbaar
+     bleef. Twee fysieke schijven kunnen nooit met hun middelpunten zo dicht
+     bij elkaar liggen, dus deze zeer krappe ronde mag de soort negeren. Hij
+     komt vóór de ruime ronde, zodat een verkeerde soort niet naar een verder
+     weg liggende puck van toevallig diezelfde soort springt. */
+  koppel(puckSepPX()*0.55,false);
+  /* Laatste ronde, ruimer. Wie een puck met een zwaai over de tafel schuift
      legt in één beeldje meer af dan de eerste ronde toestaat; die zou dan als
      nieuwe puck binnenkomen en zijn markering en thema kwijt zijn. De krappe
-     ronde heeft de voor de hand liggende paren dan al vergeven, dus twee pucks
-     van dezelfde soort kunnen hier niet meer van identiteit wisselen. */
+     rondes hebben de voor de hand liggende paren dan al vergeven, dus twee
+     pucks van dezelfde soort kunnen hier niet meer van identiteit wisselen. */
   koppel(puckSepPX()*2.5);
   const seen=new Set();
   for(const d of dets){
     const t=forDet.get(d)||startTrack(d,now);
     seen.add(t);
+    const zelfdeSoort=t.tpl.id===d.tpl.id;
+    if(!zelfdeSoort){
+      if(t.tplMismatchId===d.tpl.id) t.tplMismatchFrames=(t.tplMismatchFrames||0)+1;
+      else{ t.tplMismatchId=d.tpl.id; t.tplMismatchFrames=1; }
+      /* Pas na zes opeenvolgende beelden is dit echt een andere puck die op
+         dezelfde plek is neergelegd. Tot die tijd houden we de bestaande
+         identiteit én hoek vast: een verkeerde hoek mag ook niet zoomen. */
+      if(t.tplMismatchFrames>=6){
+        t.tpl=d.tpl; t.tplMismatchId=null; t.tplMismatchFrames=0;
+        t.angleOrigin=d.angle; t.rawOrigin=d.angle;
+        t.measuredAngle=d.angle; t.filteredAngle=d.angle;
+        t.lastRawAngle=d.angle; t.angle=d.angle; t.zoomRot=d.angle; t.zoomCarry=0;
+        t.ring=false; t.topicIdx=0; t.pinId=null; t.armed=true;
+      }
+    }else{
+      t.tplMismatchId=null; t.tplMismatchFrames=0;
+    }
     t.frames++; t.lastSeen=now; t.conf=t.conf*.7+d.conf*.3;
     t.buf.push({x:d.x,y:d.y}); if(t.buf.length>CFG.smoothing) t.buf.shift();
     t.x=t.buf.reduce((s,p)=>s+p.x,0)/t.buf.length;
     t.y=t.buf.reduce((s,p)=>s+p.y,0)/t.buf.length;
-    let rawStep=d.angle-t.lastRawAngle;
+    /* Een eenmalige soortfout houdt ook de laatst betrouwbare hoek vast. */
+    const measured=t.tpl.id===d.tpl.id?d.angle:t.lastRawAngle;
+    let rawStep=measured-t.lastRawAngle;
     while(rawStep>Math.PI) rawStep-=Math.PI*2;
     while(rawStep<-Math.PI) rawStep+=Math.PI*2;
-    t.lastRawAngle=d.angle;
+    t.lastRawAngle=measured;
     t.measuredAngle+=rawStep;
     t.filteredAngle+=(t.measuredAngle-t.filteredAngle)*0.55;
     // De hoek stuurde de keuzering aan en stond daarom versterkt: één graad
