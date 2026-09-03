@@ -60,6 +60,14 @@ const CFG = {
      meter afstand ziet dát je tik aankwam. */
   puckTapMS:280,
   puckZoomRotDeg:90, puckRotDeadRAD:0.02,
+  /* En een bovengrens: hoe snel een puck ten hoogste kan draaien voor het
+     nog een draai is. Een hand haalt anderhalve slag per seconde niet;
+     alles daarboven is een meetsprong — een pootje dat wegvalt, een hand
+     die over het glas strijkt, een vijftal dat een beeldje lang anders
+     wordt toegewezen. Zonder deze grens komt zo'n sprong ongefilterd op
+     de kaart terecht: 360 graden is vier zoomniveaus, en dan staat er
+     ineens half Nederland in beeld. */
+  puckRotMaxDegS:540,
   puckPanDeadPX:14, puckPanGain:2.8, puckPanMaxPXS:900, puckPanEaseMS:700,
   /* Hoe lang de stand van een puck bewaard blijft als hij van de tafel valt.
      Een slecht contact of een stoot tegen de tafel laat een puck korter dan
@@ -1374,7 +1382,11 @@ addEventListener("pointermove",e=>{
     const a=realTouches.get(gesture.ids[0]), b=realTouches.get(gesture.ids[1]);
     const d=Math.hypot(a.x-b.x,a.y-b.y), mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
     MV.panBy(mx-gesture.mx,my-gesture.my);
-    if(gesture.d>16&&d>16) MV.zoomBy(Math.log2(d/gesture.d),mx,my);
+    // Ook hier: een verhouding die in één beeldje meer dan een halve
+    // zoomstap scheelt komt niet van twee vingers maar van een
+    // contactpunt dat verspringt.
+    if(gesture.d>16&&d>16)
+      MV.zoomBy(Math.max(-0.5,Math.min(0.5,Math.log2(d/gesture.d))),mx,my);
     gesture.d=d; gesture.mx=mx; gesture.my=my;
   }
 });
@@ -2142,8 +2154,14 @@ function applyPuckControls(t,now){
   }
   const dRot=t.angle-t.zoomRot;
   if(Math.abs(dRot)>=CFG.puckRotDeadRAD){
+    /* Eerst het ijkpunt bijzetten, ook als we deze stap niet gebruiken: anders
+       blijft de sprong staan en komt hij het volgende beeldje alsnog. */
     t.zoomRot=t.angle;
-    MV.zoomBy(dRot/(CFG.puckZoomRotDeg*Math.PI/180),t.x,t.y);
+    // Wat sneller ging dan een hand kan draaien is geen draai maar een
+    // meetsprong; die hoort niet op de kaart terecht te komen.
+    const grens=CFG.puckRotMaxDegS*Math.PI/180*(dt||0.1);
+    if(Math.abs(dRot)<=grens)
+      MV.zoomBy(dRot/(CFG.puckZoomRotDeg*Math.PI/180),t.x,t.y);
   }
   const ox=t.x-t.panOX, oy=t.y-t.panOY, off=Math.hypot(ox,oy);
   if(dt&&off>CFG.puckPanDeadPX){

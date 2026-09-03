@@ -775,7 +775,12 @@ async function plaatsMarkering(page,x,y,i=0){
   /* En hij komt vanzelf tot stilstand. Dit is de reden dat het ijkpunt de
      puck achterna komt: zonder dat blijft een puck die scheef blijft liggen
      de kaart wegduwen tot iemand hem terugtrekt. */
-  await page.waitForTimeout(3000);
+  /* Vijf seconden, niet drie. Het ijkpunt komt met een tijdconstante van
+     700 ms achter de puck aan, dus 220 px scheefstand is pas na ruim twee
+     seconden binnen de dode zone en dan loopt de kaart nog even uit. Op drie
+     seconden stond deze controle precies op het randje en sloeg hij om de
+     andere keer om. */
+  await page.waitForTimeout(5000);
   const rust1 = await view(); await page.waitForTimeout(900);
   const rust2 = await view();
   ok('en de kaart komt vanzelf weer tot stilstand',
@@ -784,6 +789,70 @@ async function plaatsMarkering(page,x,y,i=0){
 
   ok('geen JS-fouten (draaien en duwen)', errs.length===0 || (console.log(errs.slice(0,3)),false));
   await ctx.close();
+}
+
+// ── een sprong in de gemeten hoek zoomt de kaart niet weg ──
+{
+  /* Draaien zoomt, en 90 graden is één zoomniveau. Dat is prettig aan een
+     tafel, maar het betekent ook dat elke fout in de gemeten hoek meteen een
+     fout in het zoomniveau is: een pootje dat wegvalt of een hand op het glas
+     die een beeldje lang het verkeerde vijftal oplevert, en de kaart staat
+     ineens vijf niveaus verder uit. Een hand haalt anderhalve slag per
+     seconde niet, dus alles wat sneller gaat is meetruis en hoort de kaart
+     niet te bereiken. Hier wordt precies dat nagedaan: de puck springt in één
+     beeldje 144 graden. */
+  const ctx7 = await browser.newContext({ viewport:{width:W,height:H}, hasTouch:true });
+  const page = await ctx7.newPage();
+  await page.addInitScript(()=>{ try{ localStorage.clear(); localStorage.setItem('pucktable-ui-mode','touch'); }catch(e){} });
+  const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
+  await page.goto(BASE+'/index.html?test'); await page.waitForTimeout(900);
+
+  const cdp = await page.context().newCDPSession(page);
+  const view = () => page.evaluate(()=>window.__puck.view());
+  const pads = deg => page.evaluate(d=>{
+    const P=window.__puck, k=P.pxPerMM();
+    const r=d*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+    return P.padsFor(P.templates()[1],k)
+            .map((p,i)=>({x:Math.round(800+p.x*c-p.y*s), y:Math.round(500+p.x*s+p.y*c), id:i+1}));
+  }, deg);
+
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:await pads(0)});
+  await page.waitForTimeout(600);
+  const voor = await view();
+
+  // Rustig draaien mag: twaalf stapjes van 6 graden is samen 72 graden.
+  for(let i=1;i<=12;i++){
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:await pads(i*6)});
+    await page.waitForTimeout(60);
+  }
+  await page.waitForTimeout(300);
+  const gedraaid = await view();
+  ok('rustig draaien zoomt gewoon',
+     Math.abs(gedraaid.zoom-voor.zoom-72/90)<0.3
+     || (console.log('zoom:',voor.zoom,'->',gedraaid.zoom),false));
+
+  // En dan een sprong: 144 graden in één beeldje.
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:await pads(72+144)});
+  await page.waitForTimeout(400);
+  const gesprongen = await view();
+  ok('een sprong in de hoek verzet het zoomniveau niet',
+     Math.abs(gesprongen.zoom-gedraaid.zoom)<0.6
+     || (console.log('sprong:',gedraaid.zoom,'->',gesprongen.zoom),false));
+
+  // En daarna doet draaien het nog gewoon: het ijkpunt is meegesprongen, dus
+  // de puck bedient de kaart verder alsof er niets gebeurd is.
+  const na = await view();
+  for(let i=1;i<=12;i++){
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:await pads(216+i*6)});
+    await page.waitForTimeout(60);
+  }
+  await page.waitForTimeout(300);
+  ok('en daarna zoomt draaien nog gewoon',
+     Math.abs((await view()).zoom-na.zoom-72/90)<0.3);
+
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  ok('geen JS-fouten (hoeksprong)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx7.close();
 }
 
 await browser.close();
