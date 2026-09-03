@@ -992,18 +992,23 @@ function applyCalm(){
   mapRenderKey="";
   try{ localStorage.setItem("pucktable-calm",calmMap?"1":"0"); }catch(e){}
 }
-function drawMap(g){
-  g.fillStyle=colorTheme==="light"?"#e8edf3":"#0b0e13"; g.fillRect(0,0,W,H);
+function drawMap(g,pad=0){
+  /* De kaartlaag is rondom groter dan het zichtbare scherm. Daardoor kan het
+     laatst scherpe beeld tijdens een beweging meteen door de compositor
+     worden verschoven en geschaald, zonder dat aan de rand een leeg vlak
+     verschijnt. De dure tegelopbouw hoeft dan niet meer ieder beeldje. */
+  const RW=W+pad*2, RH=H+pad*2, CX=W/2+pad, CY=H/2+pad;
+  g.fillStyle=colorTheme==="light"?"#e8edf3":"#0b0e13"; g.fillRect(0,0,RW,RH);
   let drawn=0;
   const rotation=MV.north*Math.PI/180,c=Math.abs(Math.cos(rotation)),s=Math.abs(Math.sin(rotation));
-  const coverW=W*c+H*s,coverH=W*s+H*c;
+  const coverW=RW*c+RH*s,coverH=RW*s+RH*c;
   g.save();
-  g.translate(W/2,H/2); g.rotate(rotation); g.translate(-W/2,-H/2);
+  g.translate(CX,CY); g.rotate(rotation); g.translate(-CX,-CY);
   if(calmMap&&"filter" in g) g.filter=CALM_FILTER;
 
   if(bgImage){
     const nw=MV.projectRaw(bgImage.west,bgImage.north), se=MV.projectRaw(bgImage.east,bgImage.south);
-    g.drawImage(bgImage.img, nw.x, nw.y, se.x-nw.x, se.y-nw.y);
+    g.drawImage(bgImage.img, nw.x+pad, nw.y+pad, se.x-nw.x, se.y-nw.y);
     drawn=1;
   }
 
@@ -1015,8 +1020,8 @@ function drawMap(g){
   for(let ty=y0;ty<=y1;ty++) for(let tx=x0;tx<=x1;tx++){
     const wrapped=((tx%n)+n)%n;
     // snap every edge to a whole pixel so neighbouring tiles butt together with no seam and no half-pixel blur
-    const rx=Math.round(tx*ts-centerX+W/2), ry=Math.round(ty*ts-centerY+H/2);
-    const rw=Math.round((tx+1)*ts-centerX+W/2)-rx, rh=Math.round((ty+1)*ts-centerY+H/2)-ry;
+    const rx=Math.round(tx*ts-centerX+CX), ry=Math.round(ty*ts-centerY+CY);
+    const rw=Math.round((tx+1)*ts-centerX+CX)-rx, rh=Math.round((ty+1)*ts-centerY+CY)-ry;
     if(blitCovered(g,z,wrapped,ty,rx,ry,rw,rh)) drawn++;
     else if(!bgImage){ g.strokeStyle=colorTheme==="light"?"rgba(115,129,147,.42)":"rgba(28,35,45,.9)"; g.lineWidth=1; g.strokeRect(rx,ry,rw,rh); }
   }
@@ -1028,12 +1033,12 @@ function drawMap(g){
       ? tr("tileBlocked")
       : tr("tileLoading");
     g.textAlign="center";
-    g.fillStyle="rgba(14,18,24,.92)"; g.fillRect(W/2-320,22,640,52);
-    g.strokeStyle="rgba(255,209,102,.4)"; g.lineWidth=1; g.strokeRect(W/2-320,22,640,52);
+    g.fillStyle="rgba(14,18,24,.92)"; g.fillRect(CX-320,pad+22,640,52);
+    g.strokeStyle="rgba(255,209,102,.4)"; g.lineWidth=1; g.strokeRect(CX-320,pad+22,640,52);
     g.fillStyle="#ffd166"; g.font="13px 'Space Grotesk',system-ui,sans-serif";
-    g.fillText(msg,W/2,46);
+    g.fillText(msg,CX,pad+46);
     g.fillStyle="rgba(127,139,155,.9)"; g.font="12px "+CHIP_FAMILY;
-    g.fillText(tr("tilesFoot",tilesTried,tilesFailed),W/2,64);
+    g.fillText(tr("tilesFoot",tilesTried,tilesFailed),CX,pad+64);
   }
   // scale bar + attribution
   const mPerPx=156543.03392*Math.cos(MV.lat*Math.PI/180)/Math.pow(2,MV.zoom);
@@ -1041,13 +1046,13 @@ function drawMap(g){
   if(barM*2/mPerPx<160) barM*=2;
   const barPx=barM/mPerPx;
   g.strokeStyle=colorTheme==="light"?"rgba(23,32,45,.7)":"rgba(232,237,244,.6)"; g.lineWidth=2;
-  const barX=88;                               // rechts van de kaartlagen-knop
-  g.beginPath(); g.moveTo(barX,H-26); g.lineTo(barX+barPx,H-26);
-  g.moveTo(barX,H-31); g.lineTo(barX,H-21); g.moveTo(barX+barPx,H-31); g.lineTo(barX+barPx,H-21); g.stroke();
+  const barX=pad+88, barY=pad+H;               // rechts van de kaartlagen-knop
+  g.beginPath(); g.moveTo(barX,barY-26); g.lineTo(barX+barPx,barY-26);
+  g.moveTo(barX,barY-31); g.lineTo(barX,barY-21); g.moveTo(barX+barPx,barY-31); g.lineTo(barX+barPx,barY-21); g.stroke();
   g.fillStyle=colorTheme==="light"?"rgba(23,32,45,.72)":"rgba(232,237,244,.6)"; g.font="11px 'JetBrains Mono',ui-monospace,monospace"; g.textAlign="left";
-  g.fillText(barM>=1000?(barM/1000)+" km":barM+" m", barX, H-36);
+  g.fillText(barM>=1000?(barM/1000)+" km":barM+" m", barX, barY-36);
   g.textAlign="center"; g.fillStyle=colorTheme==="light"?"rgba(54,68,85,.76)":"rgba(127,139,155,.75)"; g.font="11px "+CHIP_FAMILY;
-  g.fillText(TILE_SETS[MV.set]?.credit || "", W/2, H-10);
+  g.fillText(TILE_SETS[MV.set]?.credit || "", CX, barY-10);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3080,23 +3085,70 @@ function saveTalkAudio(){
    ═══════════════════════════════════════════════════════════════ */
 const cv=el("c"), ctx=cv.getContext("2d");
 const mapLayer=document.createElement("canvas"), mapCtx=mapLayer.getContext("2d");
-let W=0,H=0,lastUI=0,mapRenderKey="";
+/* Een ruime rand laat het bestaande kaartbeeld een flink stuk reizen voordat
+   er nieuwe tegels opgebouwd hoeven te worden. 384 px blijft ook op de NUC
+   een redelijke hoeveelheid beeldgeheugen. */
+const MAP_PAD=384;
+let W=0,H=0,lastUI=0,mapRenderKey="",mapSnapshot=null;
+let mapLastViewKey="",mapLastMove=0,mapLastRender=0;
 function resize(){
   const dpr=Math.min(devicePixelRatio||1,3);
+  // De kaart is fotomateriaal en heeft weinig aan drie fysieke pixels per
+  // schermpixel. De bediening blijft op volle resolutie; alleen de zware
+  // kaartbuffer krijgt deze bovengrens.
+  const mapDpr=Math.min(devicePixelRatio||1,1.5);
   W=innerWidth;H=innerHeight; cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-  mapLayer.width=W*dpr; mapLayer.height=H*dpr; mapCtx.setTransform(dpr,0,0,dpr,0,0);
-  mapRenderKey="";
+  mapLayer.width=(W+MAP_PAD*2)*mapDpr; mapLayer.height=(H+MAP_PAD*2)*mapDpr;
+  mapCtx.setTransform(mapDpr,0,0,mapDpr,0,0);
+  mapRenderKey=""; mapSnapshot=null; mapLastViewKey="";
   ctx.imageSmoothingQuality="high";
   mapCtx.imageSmoothingQuality="high";
   pxPerMM=Math.hypot(W,H)/(CFG.screenDiagIn*25.4);
 }
 addEventListener("resize",resize);
 
-function paintMapLayer(){
+function paintMapLayer(now){
   const bgKey=bgImage?[bgImage.west,bgImage.east,bgImage.north,bgImage.south].join(","):"none";
-  const key=[W,H,MV.set,MV.lng.toFixed(7),MV.lat.toFixed(7),MV.zoom.toFixed(5),MV.north,tileRevision,bgKey,calmMap].join("|");
-  if(key!==mapRenderKey){drawMap(mapCtx);mapRenderKey=key;}
-  ctx.drawImage(mapLayer,0,0,mapLayer.width,mapLayer.height,0,0,W,H);
+  const baseKey=[W,H,MV.set,MV.north,bgKey,calmMap,colorTheme].join("|");
+  const viewKey=[MV.lng.toFixed(7),MV.lat.toFixed(7),MV.zoom.toFixed(5)].join("|");
+  const key=[baseKey,viewKey,tileRevision].join("|");
+  if(viewKey!==mapLastViewKey){ mapLastViewKey=viewKey; mapLastMove=now; }
+
+  let scale=1,anchor={x:W/2,y:H/2},drift=Infinity;
+  if(mapSnapshot){
+    scale=Math.pow(2,MV.zoom-mapSnapshot.zoom);
+    anchor=MV.project(mapSnapshot.lng,mapSnapshot.lat);
+    drift=Math.hypot(anchor.x-W/2,anchor.y-H/2);
+  }
+  const baseChanged=!mapSnapshot||mapSnapshot.baseKey!==baseKey||!mapRenderKey;
+  const room=Math.max(0,Math.min(((W+MAP_PAD*2)*scale-W)/2,
+                                 ((H+MAP_PAD*2)*scale-H)/2));
+  const beyondBuffer=mapSnapshot&&(
+    drift>room*0.75 ||
+    MV.zoom-mapSnapshot.zoom>0.35 || MV.zoom-mapSnapshot.zoom<-0.18);
+  const settled=now-mapLastMove>120;
+  /* Tijdens een beweging alleen opnieuw opbouwen als de reserve rondom het
+     scherm bijna op is. Anders wachten tot de hand 120 ms stil is. Nieuwe
+     tegels mogen tijdens een lange reis af en toe doorstromen, maar niet bij
+     ieder afzonderlijk onload-bericht. */
+  const tilesDue=mapSnapshot&&tileRevision!==mapSnapshot.tileRevision&&now-mapLastRender>350;
+  if(baseChanged||beyondBuffer||(key!==mapRenderKey&&(settled||tilesDue))){
+    drawMap(mapCtx,MAP_PAD);
+    mapSnapshot={lng:MV.lng,lat:MV.lat,zoom:MV.zoom,north:MV.north,
+                 baseKey,tileRevision};
+    mapRenderKey=key; mapLastRender=now;
+    scale=1; anchor={x:W/2,y:H/2};
+  }
+
+  // Eén grote kopie met een transformatie is goedkoop voor de compositor en
+  // blijft daardoor vloeiend, ook als de tegelopbouw maar enkele keren per
+  // seconde klaar kan zijn.
+  ctx.save();
+  ctx.imageSmoothingQuality=settled?"high":"low";
+  ctx.translate(anchor.x,anchor.y); ctx.scale(scale,scale);
+  ctx.drawImage(mapLayer,0,0,mapLayer.width,mapLayer.height,
+                -W/2-MAP_PAD,-H/2-MAP_PAD,W+MAP_PAD*2,H+MAP_PAD*2);
+  ctx.restore();
 }
 
 /* Het diagnosepaneel. Leesbaar vanaf een meter, want je staat bij de tafel met
@@ -3138,16 +3190,18 @@ function drawPuckDiag(ctx,points,pucks,now){
 function frame(){
   requestAnimationFrame(frame);
   const now=performance.now();
-  paintMapLayer();
-  if(bakePending){ bakePending=false; bakeMap(); }
-  drawGaps(ctx,MV,W,H);
-  drawKG(ctx,MV,W,H);
-
+  /* Eerst de invoer verwerken. Voorheen werd de kaart getekend en pas daarna
+     verplaatst; dat gaf bij iedere beweging een voelbaar beeld vertraging. */
   syncSimPucksToMap();
   const points=[...realTouches.values(),...(simMode?simPads():[])];
   const {pucks:dets,usedIdx}=recognise(points);
   const pucks=track(dets,now);
   if(learn.open) updateLearn(now);
+
+  paintMapLayer(now);
+  if(bakePending){ bakePending=false; bakeMap(); }
+  drawGaps(ctx,MV,W,H);
+  drawKG(ctx,MV,W,H);
 
   drawPuckKnowledgeRelations(ctx,pucks);
 
