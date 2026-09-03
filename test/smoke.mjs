@@ -455,6 +455,43 @@ async function newPage(uiMode, {twoSided=false}={}){
   await ctx.close();
 }
 
+// ── puck herkennen: "Volgende puck" mag niet dezelfde puck opnieuw pakken ──
+{
+  const ctx4 = await browser.newContext({ viewport:{width:W,height:H}, hasTouch:true });
+  const page = await ctx4.newPage();
+  await page.addInitScript(()=>{ try{ localStorage.clear(); localStorage.setItem('pucktable-ui-mode','touch'); }catch(e){} });
+  const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
+  await page.goto(BASE+'/index.html'); await page.waitForTimeout(900);
+  await page.click('#btnSetA'); await page.waitForTimeout(300);
+  await page.evaluate(()=>document.querySelectorAll('#menu .menu-sec').forEach(s=>s.classList.remove('collapsed')));
+  await page.waitForTimeout(200);
+  await page.click('#btnRecognise'); await page.waitForTimeout(300);
+
+  // Drie contactpunten: een puck die op tafel ligt en blijft liggen.
+  const cdp = await page.context().newCDPSession(page);
+  const puck = [{x:520,y:600,id:1},{x:640,y:620,id:2},{x:575,y:700,id:3}];
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:puck});
+  await page.waitForTimeout(1500);
+  ok('drie contactpunten worden gemeten', await page.locator('.learn-pick').count()>0);
+
+  await page.locator('.learn-pick').first().click(); await page.waitForTimeout(300);
+  ok('de meting wordt toegewezen', await page.locator('#btnLearnAgain').count()===1);
+
+  // De puck ligt er nog. "Volgende puck" hoort te wachten tot het glas leeg is,
+  // anders meet hij dezelfde puck nog een keer terwijl jij de tweede pakt.
+  await page.click('#btnLearnAgain'); await page.waitForTimeout(1500);
+  ok('volgende puck wacht tot het glas leeg is',
+     await page.locator('#btnLearnAnyway').count()===1 && await page.locator('.learn-pick').count()===0);
+  ok('en zegt hoeveel er nog ligt', /3/.test(await page.locator('#learnStatus').textContent()));
+
+  // Puck van tafel: nu mag de meting weer beginnen.
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForTimeout(400);
+  ok('zodra het glas leeg is telt de volgende puck', await page.locator('#btnLearnAnyway').count()===0);
+  ok('geen JS-fouten (puck herkennen)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx4.close();
+}
+
 await browser.close();
 server.close();
 fs.rmSync(work, { recursive: true, force: true });

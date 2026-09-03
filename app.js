@@ -208,6 +208,8 @@ const L = {
        recogClash:(name)=>` <b style="color:var(--warn)">Lijkt te veel op ${name}</b>: maak deze driehoek duidelijk anders, anders worden ze verwisseld.`,
        recogIso:"Deze driehoek is bijna gelijkbenig. De tafel ziet dan moeilijk welke kant voor is, en het draaimenu op de puck loopt vast. Verschuif één plakker een centimeter en meet opnieuw.",
        recogAgain:"Volgende puck", recogReset:"Metingen wissen",
+       recogLift:(n)=>`Haal de vorige puck van tafel \u2014 er ligt nog <b>${n}</b> contactpunt${n===1?"":"en"} op het glas. Zodra het glas leeg is begint de meting van de volgende.`,
+       recogAnyway:"Meet wat er nu ligt",
        recogExport:"Metingen exporteren",
        recogLearned:(t)=>`ingelezen ${t}`, recogFactory:"nog niet ingelezen",
        recogCleared:"Alle metingen gewist — de pucks staan weer op hun oorspronkelijke driehoek.",
@@ -375,6 +377,8 @@ const L = {
        recogClash:(name)=>` <b style="color:var(--warn)">Too much like ${name}</b>: make this triangle clearly different, or the two will be swapped.`,
        recogIso:"This triangle is nearly isosceles. The table then struggles to see which way is forward and the ring menu on the puck stalls. Move one pad a centimetre and measure again.",
        recogAgain:"Next puck", recogReset:"Clear measurements",
+       recogLift:(n)=>`Take the previous puck off the table \u2014 <b>${n}</b> contact point${n===1?"":"s"} still on the glass. Measuring the next one starts once the glass is clear.`,
+       recogAnyway:"Measure what is there now",
        recogExport:"Export measurements",
        recogLearned:(t)=>`read in ${t}`, recogFactory:"not read in yet",
        recogCleared:"All measurements cleared — the pucks are back on their original triangles.",
@@ -3783,8 +3787,13 @@ function openLearn(){
   restartLearn();
 }
 function closeLearn(){ learn.open=false; el("learn").style.display="none"; }
-function restartLearn(){
-  learn.phase="wait"; learn.samples=[]; learn.m=null;
+/* `clearFirst` hoort bij de knop "Volgende puck". De vorige puck ligt op dat
+   moment nog op het glas, en de meting begon meteen opnieuw op diezelfde drie
+   contactpunten: je kreeg dus de vorige puck nog een keer, zonder tijd om de
+   volgende neer te leggen. Daarom wacht hij nu tot het glas leeg is. */
+function restartLearn(clearFirst=false){
+  learn.phase=(clearFirst&&learnPoints().length)?"clear":"wait";
+  learn.samples=[]; learn.m=null;
   learn.tplId=null; learn.clash=null; learn.moved=false;
   setLearnBar(0); renderLearn();
 }
@@ -3798,6 +3807,13 @@ function updateLearn(now){
   drawLearnPoints(pts);
   const st=el("learnStatus");
   if(learn.phase==="done"||learn.phase==="saved") return;
+  if(learn.phase==="clear"){
+    // Wachten tot het glas leeg is; dan pas telt wat er daarna op komt.
+    st.innerHTML=tr("recogLift",pts.length);
+    learn.samples=[]; setLearnBar(0);
+    if(!pts.length){ learn.phase="wait"; renderLearn(); }
+    return;
+  }
   if(pts.length!==3){
     if(learn.phase!=="wait"){ learn.phase="wait"; renderLearn(); }
     learn.samples=[]; learn.moved=false; setLearnBar(0);
@@ -3868,7 +3884,7 @@ function renderLearn(){
                     tpl.ratios[1].toFixed(3),tplLongest(tpl).toFixed(1))
                 +(learn.clash?tr("recogClash",learn.clash):"");
     body.innerHTML=`<div class="row"><button class="primary" id="btnLearnAgain">${tr("recogAgain")}</button></div>`;
-    el("btnLearnAgain").onclick=restartLearn;
+    el("btnLearnAgain").onclick=()=>restartLearn(true);
     return;
   }
   if(learn.phase==="done"){
@@ -3892,6 +3908,13 @@ function renderLearn(){
          <span>${t.id} · ${t.ratios[0].toFixed(3)} / ${t.ratios[1].toFixed(3)} · ${tplLongest(t).toFixed(1)} mm · ${learnStamp(t)}</span>
        </button>`).join("");
     [...body.querySelectorAll(".learn-pick")].forEach(b=>b.onclick=()=>assignLearn(b.dataset.id));
+    return;
+  }
+  if(learn.phase==="clear"){
+    st.innerHTML=tr("recogLift",learnPoints().length);
+    // Wie tóch dezelfde puck nog eens wil meten, hoeft hem niet op te tillen.
+    body.innerHTML=`<div class="row"><button id="btnLearnAnyway">${tr("recogAnyway")}</button></div>`;
+    el("btnLearnAnyway").onclick=()=>{ learn.phase="wait"; renderLearn(); };
     return;
   }
   body.innerHTML=(learn.note?`<p class="hint">${learn.note}</p>`:"")+(puckMode()?ownPuckList():"");
