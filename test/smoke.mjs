@@ -455,7 +455,7 @@ async function newPage(uiMode, {twoSided=false}={}){
   await ctx.close();
 }
 
-// ── puck herkennen: "Volgende puck" mag niet dezelfde puck opnieuw pakken ──
+// ── puck herkennen: de tweede puck mag ernaast, zonder de eerste weg te halen ──
 {
   const ctx4 = await browser.newContext({ viewport:{width:W,height:H}, hasTouch:true });
   const page = await ctx4.newPage();
@@ -467,28 +467,42 @@ async function newPage(uiMode, {twoSided=false}={}){
   await page.waitForTimeout(200);
   await page.click('#btnRecognise'); await page.waitForTimeout(300);
 
-  // Drie contactpunten: een puck die op tafel ligt en blijft liggen.
   const cdp = await page.context().newCDPSession(page);
-  const puck = [{x:520,y:600,id:1},{x:640,y:620,id:2},{x:575,y:700,id:3}];
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:puck});
+  // Twee duidelijk verschillende driehoeken, ver genoeg uit elkaar om nooit
+  // samen als één puck gelezen te worden.
+  const puckA = [{x:520,y:600,id:1},{x:640,y:620,id:2},{x:575,y:700,id:3}];
+  const puckB = [{x:1000,y:300,id:4},{x:1220,y:310,id:5},{x:1080,y:420,id:6}];
+  const status = () => page.locator('#learnStatus').textContent();
+
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:puckA});
   await page.waitForTimeout(1500);
   ok('drie contactpunten worden gemeten', await page.locator('.learn-pick').count()>0);
-
   await page.locator('.learn-pick').first().click(); await page.waitForTimeout(300);
   ok('de meting wordt toegewezen', await page.locator('#btnLearnAgain').count()===1);
 
-  // De puck ligt er nog. "Volgende puck" hoort te wachten tot het glas leeg is,
-  // anders meet hij dezelfde puck nog een keer terwijl jij de tweede pakt.
-  await page.click('#btnLearnAgain'); await page.waitForTimeout(1500);
-  ok('volgende puck wacht tot het glas leeg is',
-     await page.locator('#btnLearnAnyway').count()===1 && await page.locator('.learn-pick').count()===0);
-  ok('en zegt hoeveel er nog ligt', /3/.test(await page.locator('#learnStatus').textContent()));
+  // De eerste puck blijft liggen. De tafel kent hem nu, dus hij hoort niet meer
+  // mee te tellen -- en er hoeft niets opgetild te worden.
+  await page.click('#btnLearnAgain'); await page.waitForTimeout(600);
+  ok('de ingelezen puck mag blijven liggen',
+     await page.locator('#btnLearnAnyway').count()===0);
+  ok('en de tafel zegt dat hij hem al kent', /ingelezen puck/.test(await status()));
 
-  // Puck van tafel: nu mag de meting weer beginnen.
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  await page.waitForTimeout(400);
-  ok('zodra het glas leeg is telt de volgende puck', await page.locator('#btnLearnAnyway').count()===0);
+  // Tweede puck ernaast, zonder de eerste eraf te halen.
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:puckA.concat(puckB)});
+  await page.waitForTimeout(1600);
+  ok('de tweede puck wordt gemeten terwijl de eerste blijft liggen',
+     await page.locator('.learn-pick').count()>0);
+  const gemeten = await status();
+  ok('en het is een andere driehoek dan de eerste',
+     !/0\.84[0-9]? \/ 0\.93/.test(gemeten) || (console.log('meting:',gemeten),false));
+
+  await page.locator('.learn-pick').nth(1).click(); await page.waitForTimeout(300);
+  ok('twee pucks ingelezen zonder het glas leeg te maken', await page.evaluate(()=>{
+    const t=JSON.parse(localStorage.getItem('pucktable-templates')||'[]');
+    return t.filter(x=>x.learnedAt).length===2;
+  }));
   ok('geen JS-fouten (puck herkennen)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await ctx4.close();
 }
 

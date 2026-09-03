@@ -210,6 +210,7 @@ const L = {
        recogAgain:"Volgende puck", recogReset:"Metingen wissen",
        recogLift:(n)=>`Haal de vorige puck van tafel \u2014 er ligt nog <b>${n}</b> contactpunt${n===1?"":"en"} op het glas. Zodra het glas leeg is begint de meting van de volgende.`,
        recogAnyway:"Meet wat er nu ligt",
+       recogKnownOnTable:(n)=>` Er ${n===1?"ligt":"liggen"} al <b>${n}</b> ingelezen puck${n===1?"":"s"} op tafel; ${n===1?"die telt":"die tellen"} niet mee.`,
        recogExport:"Metingen exporteren",
        recogLearned:(t)=>`ingelezen ${t}`, recogFactory:"nog niet ingelezen",
        recogCleared:"Alle metingen gewist — de pucks staan weer op hun oorspronkelijke driehoek.",
@@ -379,6 +380,7 @@ const L = {
        recogAgain:"Next puck", recogReset:"Clear measurements",
        recogLift:(n)=>`Take the previous puck off the table \u2014 <b>${n}</b> contact point${n===1?"":"s"} still on the glass. Measuring the next one starts once the glass is clear.`,
        recogAnyway:"Measure what is there now",
+       recogKnownOnTable:(n)=>` <b>${n}</b> known puck${n===1?"":"s"} already on the table; ${n===1?"it does":"they do"} not count.`,
        recogExport:"Export measurements",
        recogLearned:(t)=>`read in ${t}`, recogFactory:"not read in yet",
        recogCleared:"All measurements cleared — the pucks are back on their original triangles.",
@@ -959,17 +961,26 @@ const realTouches=new Map();
    korte vingertik zelf om in één click. De drie puckcontacten blijven intussen
    ongemoeid, zodat herkennen en ijken gewoon doorlopen. */
 const controlTaps=new Map();
+/* Het meetvenster telt aanrakingen, ook op zijn eigen knoppen; zie hieronder. */
+const inLearnCard=t=>!!t?.closest?.("#learn");
 addEventListener("pointerdown",e=>{
   if(e.pointerType==="mouse"||realTouches.size<3) return;
   const button=e.target.closest?.("button");
   if(!button||button.disabled) return;
   controlTaps.set(e.pointerId,{button,x:e.clientX,y:e.clientY,t:performance.now()});
-  e.preventDefault(); e.stopPropagation();
+  e.preventDefault();
+  /* In het meetvenster blijft élke aanraking óók een contactpunt. Een voetje
+     van de puck die je erbij legt landt zo maar op een knop van het kaartje, en
+     die werd dan als kníkje afgevangen: de tafel zag die puck nooit compleet.
+     De tik zelf werkt gewoon door (die synthetiseren we bij pointerup); hij
+     wordt alleen niet meer bij de rest weggehouden. */
+  if(!inLearnCard(e.target)) e.stopPropagation();
 },true);
 addEventListener("pointerup",e=>{
   const tap=controlTaps.get(e.pointerId); if(!tap) return;
   controlTaps.delete(e.pointerId);
-  e.preventDefault(); e.stopPropagation();
+  e.preventDefault();
+  if(!inLearnCard(e.target)) e.stopPropagation();
   const same=e.target.closest?.("button")===tap.button;
   const short=performance.now()-tap.t<700;
   const still=Math.hypot(e.clientX-tap.x,e.clientY-tap.y)<18;
@@ -1377,7 +1388,11 @@ addEventListener("wheel",e=>{
    langste puckzijde. Drie punten die verder dan één cel uit elkaar liggen
    kunnen nooit één puck zijn, dus alleen de eigen cel en zijn acht buren
    hoeven bekeken te worden. De uitkomst is dezelfde; alleen het werk niet. */
-function recognise(points){
+/* `tpls` is normaal de hele lijst. Het meetvenster geeft er een kortere mee:
+   alleen de pucks die de tafel al gemeten heeft, om die van het glas te kunnen
+   aftrekken (zie `learnPoints`). */
+function recognise(points,tpls){
+  const list=tpls||activeTemplates();
   const cands=[],maxSpan=maxTplLongest()*pxPerMM*1.45;
   // Welke soorten er al liggen: die krijgen wat meer speelruimte (zie hieronder).
   const onTable=new Set([...tracks.values()].map(t=>t.tpl.id));
@@ -1407,7 +1422,7 @@ function recognise(points){
       const uid=points[i].uid??points[j].uid??points[k].uid;
       if(uid!==undefined&&(points[i].uid!==uid||points[j].uid!==uid||points[k].uid!==uid)) continue;
       const d=describe(points[i],points[j],points[k]); if(!d) continue;
-      for(const tpl of activeTemplates()){
+      for(const tpl of list){
         const err=Math.hypot(d.ratios[0]-tpl.ratios[0],d.ratios[1]-tpl.ratios[1]);
         /* Tijdens draaien vervormen de gemeten contactpunten enkele pixels.
            Een puck die al gevolgd wordt krijgt daarom wat extra speelruimte;
@@ -3780,7 +3795,24 @@ el("btnCsv").onclick=()=>download(el("sess").value+".csv",
 const LEARN_HOLD_MS=900, LEARN_STILL_PX=9, LEARN_MIN_SAMPLES=12;
 const learn={open:false,phase:"wait",samples:[],t0:0,m:null,tplId:null,clash:null,note:"",moved:false};
 
-function learnPoints(){ return [...realTouches.values()]; }
+/* Alleen wat de tafel écht gemeten heeft telt als "bekend". Een fabrieks-
+   driehoek die toevallig lijkt op de puck die je nu neerlegt mag je meting niet
+   opeten -- die puck is immers nog nooit ingelezen. */
+const learnedTemplates=()=>activeTemplates().filter(t=>t.learnedAt);
+/* De contactpunten die nog van niemand zijn. Een puck die al ingelezen is en
+   gewoon op tafel blijft liggen wordt herkend, en zijn drie punten vallen hier
+   af: je kunt de volgende puck er dus naast leggen zonder de vorige weg te
+   halen. `learnKnown` houdt bij hoeveel pucks er zo herkend liggen, alleen om
+   het te kunnen zeggen. */
+let learnKnown=0;
+function learnPoints(){
+  const pts=[...realTouches.values()];
+  const known=learnedTemplates();
+  if(!known.length){ learnKnown=0; return pts; }
+  const {pucks,usedIdx}=recognise(pts,known);
+  learnKnown=pucks.length;
+  return pts.filter((p,i)=>!usedIdx.has(i));
+}
 function openLearn(){
   closeMenu();
   learn.open=true; el("learn").style.display="block";
@@ -3797,6 +3829,9 @@ function restartLearn(clearFirst=false){
   learn.tplId=null; learn.clash=null; learn.moved=false;
   setLearnBar(0); renderLearn();
 }
+/* "Er ligt er al een die ik ken" -- zonder dat lijkt het alsof de tafel de
+   eerste puck vergeten is zodra hij niet meer meetelt. */
+const learnKnownNote=()=>learnKnown?tr("recogKnownOnTable",learnKnown):"";
 function setLearnBar(f){ el("learnBar").style.width=(Math.max(0,Math.min(1,f))*100).toFixed(1)+"%"; }
 
 /* Elk beeldje: de punten natekenen, en zolang er nog niets gemeten is de reeks
@@ -3817,7 +3852,7 @@ function updateLearn(now){
   if(pts.length!==3){
     if(learn.phase!=="wait"){ learn.phase="wait"; renderLearn(); }
     learn.samples=[]; learn.moved=false; setLearnBar(0);
-    st.innerHTML=tr("recogWait",pts.length);
+    st.innerHTML=tr("recogWait",pts.length)+learnKnownNote();
     return;
   }
   const d=describe(pts[0],pts[1],pts[2]);
@@ -3920,7 +3955,7 @@ function renderLearn(){
   body.innerHTML=(learn.note?`<p class="hint">${learn.note}</p>`:"")+(puckMode()?ownPuckList():"");
   [...body.querySelectorAll(".own-del")].forEach(b=>b.onclick=()=>{
     removeOwnPuck(b.dataset.id); learn.note=tr("recogRemoved"); renderLearn(); });
-  if(learn.phase==="wait") st.innerHTML=tr("recogWait",learnPoints().length);
+  if(learn.phase==="wait") st.innerHTML=tr("recogWait",learnPoints().length)+learnKnownNote();
 }
 /* Hier gebeurt het onthouden. De driehoek van die ene puck wordt vervangen —
    ook zijn maat, want geknipte tape is nooit precies 60 mm — en meteen
