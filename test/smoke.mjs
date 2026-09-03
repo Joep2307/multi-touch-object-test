@@ -201,6 +201,50 @@ async function plaatsMarkering(page,x,y,i=0){
 }
 
 
+// ── 3. invoer blijft werken met een fysieke puck op het glas ──
+// Een fysieke puck houdt meerdere aanrakingen op het glas. Invoervelden en het
+// schermtoetsenbord moeten dan nog steeds op een extra vingertik reageren.
+{
+  const ctx = await browser.newContext({ viewport:{width:W,height:H}, hasTouch:true });
+  const page = await ctx.newPage();
+  await page.addInitScript(()=>{ try{ localStorage.clear(); localStorage.setItem('pucktable-ui-mode','touch'); }catch(e){} });
+  const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
+  await page.goto(BASE+'/index.html?test'); await page.waitForTimeout(900);
+
+  const tray=page.locator('#puckDock .traypuck').first(), b=await tray.boundingBox();
+  await page.mouse.move(b.x+b.width/2,b.y+b.height/2); await page.mouse.down();
+  await page.mouse.move(W/2,H/2,{steps:10}); await page.mouse.up();
+  await page.waitForTimeout(350); await plaatsMarkering(page,W/2,H/2,0);
+  await page.evaluate(()=>document.getElementById('noteSave').click());
+  await page.waitForTimeout(250);
+
+  const cdp=await page.context().newCDPSession(page);
+  const puck=[{x:70,y:430,id:1},{x:135,y:480,id:2},{x:205,y:425,id:3},
+              {x:270,y:490,id:4},{x:335,y:430,id:5}];
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:puck});
+  const tik=async selector=>{
+    const r=await page.locator(selector).boundingBox();
+    const finger={x:r.x+r.width/2,y:r.y+r.height/2,id:20};
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:puck.concat(finger)});
+    await page.waitForTimeout(70);
+    // Bij touchEnd zijn dit de punten die eindigen, niet de punten die blijven.
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[finger]});
+    await page.waitForTimeout(120);
+  };
+  await tik('#contactEmail');
+  ok('contactveld blijft te kiezen terwijl de puck ligt',
+     await page.evaluate(()=>document.activeElement?.id)==='contactEmail');
+  await tik('#keyboard button[data-key="a"]');
+  ok('schermtoetsenbord typt terwijl de puck ligt',
+     await page.locator('#contactEmail').inputValue()==='a');
+  await tik('#contactConsent');
+  ok('toestemming is aan te vinken terwijl de puck ligt',
+     await page.locator('#contactConsent').isChecked());
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:puck});
+  ok('geen JS-fouten (typen met puck)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx.close();
+}
+
 // ── 3. typen wordt meteen bewaard, ook zonder op Bewaren te drukken ──
 {
   const {page, ctx, errs} = await newPage('laptop');

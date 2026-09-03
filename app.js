@@ -1196,18 +1196,19 @@ const realTouches=new Map();
 
 /* Sommige touchscreens maken geen gewone `click` als er al drie contacten op
    het glas liggen. Dat is precies de normale situatie met een fysieke puck:
-   een vierde aanraking op "welke puck is dit?" of op Instellingen leek daardoor
-   niets te doen. Voor knoppen zetten we alleen in die multitouchsituatie de
-   korte vingertik zelf om in één click. De drie puckcontacten blijven intussen
-   ongemoeid, zodat herkennen en ijken gewoon doorlopen. */
+   een extra aanraking op een knop of invoerveld leek daardoor niets te doen.
+   Voor bediening zetten we alleen in die multitouchsituatie de korte vingertik
+   zelf om in een click of focus. De puckcontacten blijven intussen ongemoeid,
+   zodat herkennen en ijken gewoon doorlopen. */
 const controlTaps=new Map();
+const tapControl=t=>t?.closest?.("button,input,textarea,select,label")||null;
 /* Het meetvenster telt aanrakingen, ook op zijn eigen knoppen; zie hieronder. */
 const inLearnCard=t=>!!t?.closest?.("#learn");
 addEventListener("pointerdown",e=>{
   if(e.pointerType==="mouse"||realTouches.size<3) return;
-  const button=e.target.closest?.("button");
-  if(!button||button.disabled) return;
-  controlTaps.set(e.pointerId,{button,x:e.clientX,y:e.clientY,t:performance.now()});
+  const control=tapControl(e.target);
+  if(!control||control.disabled) return;
+  controlTaps.set(e.pointerId,{control,x:e.clientX,y:e.clientY,t:performance.now()});
   e.preventDefault();
   /* In het meetvenster blijft élke aanraking óók een contactpunt. Een voetje
      van de puck die je erbij legt landt zo maar op een knop van het kaartje, en
@@ -1221,10 +1222,13 @@ addEventListener("pointerup",e=>{
   controlTaps.delete(e.pointerId);
   e.preventDefault();
   if(!inLearnCard(e.target)) e.stopPropagation();
-  const same=e.target.closest?.("button")===tap.button;
+  const same=tapControl(e.target)===tap.control;
   const short=performance.now()-tap.t<700;
   const still=Math.hypot(e.clientX-tap.x,e.clientY-tap.y)<18;
-  if(same&&short&&still&&!tap.button.disabled) tap.button.click();
+  if(!same||!short||!still||tap.control.disabled) return;
+  if(tap.control.matches('input:not([type="checkbox"]):not([type="radio"]),textarea,select'))
+    tap.control.focus({preventScroll:true});
+  else tap.control.click();
 },true);
 addEventListener("pointercancel",e=>controlTaps.delete(e.pointerId),true);
 
