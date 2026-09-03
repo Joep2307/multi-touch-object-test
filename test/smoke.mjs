@@ -485,7 +485,7 @@ async function newPage(uiMode, {twoSided=false}={}){
   await page.click('#btnLearnAgain'); await page.waitForTimeout(600);
   ok('de ingelezen puck mag blijven liggen',
      await page.locator('#btnLearnAnyway').count()===0);
-  ok('en de tafel zegt dat hij hem al kent', /ingelezen puck/.test(await status()));
+  ok('en de tafel zegt dat hij hem al kent', /telt niet mee/.test(await status()));
 
   // Tweede puck ernaast, zonder de eerste eraf te halen.
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:puckA.concat(puckB)});

@@ -211,6 +211,7 @@ const L = {
        recogLift:(n)=>`Haal de vorige puck van tafel \u2014 er ligt nog <b>${n}</b> contactpunt${n===1?"":"en"} op het glas. Zodra het glas leeg is begint de meting van de volgende.`,
        recogAnyway:"Meet wat er nu ligt",
        recogKnownOnTable:(n)=>` Er ${n===1?"ligt":"liggen"} al <b>${n}</b> ingelezen puck${n===1?"":"s"} op tafel; ${n===1?"die telt":"die tellen"} niet mee.`,
+       recogNoneKnownSeen:(n)=>` Van de <b>${n}</b> ingelezen puck${n===1?"":"s"} wordt er nu geen herkend, dus alle punten tellen mee.`,
        recogExport:"Metingen exporteren",
        recogLearned:(t)=>`ingelezen ${t}`, recogFactory:"nog niet ingelezen",
        recogCleared:"Alle metingen gewist — de pucks staan weer op hun oorspronkelijke driehoek.",
@@ -381,6 +382,7 @@ const L = {
        recogLift:(n)=>`Take the previous puck off the table \u2014 <b>${n}</b> contact point${n===1?"":"s"} still on the glass. Measuring the next one starts once the glass is clear.`,
        recogAnyway:"Measure what is there now",
        recogKnownOnTable:(n)=>` <b>${n}</b> known puck${n===1?"":"s"} already on the table; ${n===1?"it does":"they do"} not count.`,
+       recogNoneKnownSeen:(n)=>` None of the <b>${n}</b> known puck${n===1?"":"s"} is being recognised right now, so every point counts.`,
        recogExport:"Export measurements",
        recogLearned:(t)=>`read in ${t}`, recogFactory:"not read in yet",
        recogCleared:"All measurements cleared — the pucks are back on their original triangles.",
@@ -3831,7 +3833,14 @@ function restartLearn(clearFirst=false){
 }
 /* "Er ligt er al een die ik ken" -- zonder dat lijkt het alsof de tafel de
    eerste puck vergeten is zodra hij niet meer meetelt. */
-const learnKnownNote=()=>learnKnown?tr("recogKnownOnTable",learnKnown):"";
+function learnKnownNote(){
+  if(learnKnown) return tr("recogKnownOnTable",learnKnown);
+  /* Ligt er wel een ingelezen puck maar wordt hij niet herkend, dan tellen zijn
+     punten gewoon mee en sta je naar "zes contactpunten" te kijken zonder te
+     weten waarom. Dan zegt de kaart het maar zelf. */
+  const n=learnedTemplates().length;
+  return n?tr("recogNoneKnownSeen",n):"";
+}
 function setLearnBar(f){ el("learnBar").style.width=(Math.max(0,Math.min(1,f))*100).toFixed(1)+"%"; }
 
 /* Elk beeldje: de punten natekenen, en zolang er nog niets gemeten is de reeks
