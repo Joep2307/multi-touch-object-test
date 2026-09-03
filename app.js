@@ -23,7 +23,17 @@ const CFG = {
      dus het midden van de rand ligt op 34 mm. `ringToleranceDeg` is hoeveel elk
      gat tussen twee pootjes gemiddeld mag afwijken; met vijf punten meet de
      tafel de hoek uit vijf metingen tegelijk, dus dit mag strak staan. */
-  ringRadiusMM:34, ringToleranceDeg:9,
+  ringRadiusMM:34, ringToleranceDeg:12,
+  /* Twee getallen die het verschil maken tussen "de tafel twijfelt" en "de
+     tafel kiest de verkeerde puck". De vier sjablonen liggen 14,4 graden uit
+     elkaar (gemiddeld gatverschil). Een enkele grens van 9 graden liet daar
+     5 graden speling in; aan een echte tafel trilt een pootje makkelijk 2 mm
+     en dan is dat te streng, want de puck valt steeds weg. De grens staat nu
+     op 12, en daarnaast moet de beste puck `ringMarginDeg` beter passen dan de
+     op een na beste: is dat verschil kleiner, dan is de meting dubbelzinnig en
+     kiest de tafel liever niets dan de verkeerde puck. `ringHoldDeg` hoort bij
+     het vasthouden op vier pootjes, zie het slot van `recognise`. */
+  ringMarginDeg:3, ringHoldDeg:14,
   /* Een draaiende fysieke puck onderbreekt soms heel kort één voetje. Twee
      goede beelden zijn genoeg om hem vast te pakken; daarna houden we de
      laatst bekende positie en hoek 0,9 s vast in plaats van hem na 0,18 s te
@@ -114,7 +124,7 @@ const L = {
        menu:"Menu", language:"Taal / Language", close:"Sluiten", open:"Openen", document:"Document",
        show:"TOON", hide:"VERBERG",
        touchscreen:"Touchscreen", exportGeo:"GeoJSON exporteren", exportCsv:"CSV exporteren",
-       touchDebug:"Touch-debug",
+       touchDebug:"Puck-diagnose",
        appearanceHead:"Weergave", chooseTheme:"Kleurmodus kiezen", lightMode:"☀ Licht", darkMode:"☾ Donker",
        fullscreen:"Volledig scherm", fullscreenOff:"Uit volledig scherm",
 
@@ -289,7 +299,7 @@ const L = {
        menu:"Menu", language:"Language / Taal", close:"Close", open:"Open", document:"Document",
        show:"SHOW", hide:"HIDE",
        touchscreen:"Touchscreen", exportGeo:"Export GeoJSON", exportCsv:"Export CSV",
-       touchDebug:"Touch debug",
+       touchDebug:"Puck diagnostics",
        appearanceHead:"Appearance", chooseTheme:"Choose colour mode", lightMode:"☀ Light", darkMode:"☾ Dark",
        fullscreen:"Full screen", fullscreenOff:"Leave full screen",
 
@@ -529,7 +539,14 @@ const topics=()=>(kg.useThemes&&kg.themes.length?kg.themes:L[lang].topics);
    worden alleen met elkaar vergeleken — spiegelen valt zo nergens tussenuit. */
 const isRing=t=>Array.isArray(t?.angles)&&t.angles.length===5;
 const cloneTpl=t=>({...t,...(isRing(t)?{angles:[...t.angles]}:{ratios:[...t.ratios]})});
-const norm360=a=>((a%360)+360)%360;
+/* Rond de nul moet dit twee keer hetzelfde antwoord geven. Een pootje vlak
+   rechts van het midden komt uit op 359,999… graden; die waarde nog een keer
+   door dezelfde som halen levert in drijvende komma 0 op. En `gapsOf`
+   normaliseert en sorteert zíjn hoeken nog eens, dus zo’n pootje stond daar
+   vooraan en in `describeRing` achteraan: de gaten hoorden dan bij de
+   verkeerde pootjes en de puck sprong één pootje verder — 72 graden, zomaar,
+   bij precies één stand. Vandaar dat bijna-0 en bijna-360 allebei 0 worden. */
+const norm360=a=>{ const v=((a%360)+360)%360; return (v<1e-9||v>360-1e-9)?0:v; };
 /* De gaten tussen de pootjes, met de klok mee. Dit is wat een ringpuck
    herkenbaar maakt: draai de puck en de vijf hoeken lopen allemaal mee, maar de
    gaten ertussen blijven staan. */
@@ -1085,20 +1102,32 @@ const shift=(a,s)=>a.map((_,i)=>a[(i+s)%a.length]);
    verschillen. Dat is veel rustiger dan één hoekpunt van een driehoek, want
    ruis op één pootje weegt nog maar voor een vijfde mee. */
 function matchRing(d,tpl){
-  const ta=[...tpl.angles].map(norm360).sort((a,b)=>a-b), tg=gapsOf(ta);
-  let best=0,bestErr=Infinity;
-  for(let s=0;s<5;s++){
-    const err=gapErr(d.gaps,shift(tg,s));
-    if(err<bestErr){ bestErr=err; best=s; }
+  const ta=[...tpl.angles].map(norm360).sort((a,b)=>a-b);
+  const k=d.angles.length;
+  /* Vier gemeten punten mag ook. Een pootje dat een beeldje lang geen contact
+     maakt is aan deze tafel eerder regel dan uitzondering — een contactvlak
+     van 2 mm is klein. Dan wordt van het sjabloon telkens één pootje weggelaten
+     en gekeken welk weglaten past; de gaten van de vier die overblijven rekenen
+     zichzelf uit. Bij vijf punten valt er niets weg te laten en is dit precies
+     de oude som. */
+  const weg = k===5 ? [-1] : ta.map((_,i)=>i);
+  let best=null;
+  for(const w of weg){
+    const sub = w<0 ? ta : ta.filter((_,i)=>i!==w);
+    const sg=gapsOf(sub);
+    for(let s=0;s<k;s++){
+      const err=gapErr(d.gaps,shift(sg,s));
+      if(!best||err<best.err) best={err,sub,s};
+    }
   }
   let cs=0,sn=0;
-  for(let i=0;i<5;i++){
-    const off=(d.angles[i]-ta[(i+best)%5])*Math.PI/180;
+  for(let i=0;i<k;i++){
+    const off=(d.angles[i]-best.sub[(i+best.s)%k])*Math.PI/180;
     cs+=Math.cos(off); sn+=Math.sin(off);
   }
   // Hoek 0 van een sjabloon is de richtingspijl, dus dit ís de kant die de
   // puck op wijst.
-  return {err:bestErr,angle:Math.atan2(sn,cs)};
+  return {err:best.err,angle:Math.atan2(sn,cs),legs:k};
 }
 /* Het ringequivalent van een bijna gelijkbenige driehoek: lijkt het patroon op
    zichzelf als je het een pootje verder draait, dan wisselt de voorkant per
@@ -1562,7 +1591,25 @@ function pick5(idx){
   })(0);
   return out;
 }
+// De vijf viertallen uit een vijftal: welk pootje ontbreekt.
+function pick4(a){ return a.map((_,i)=>a.filter((_,j)=>j!==i)); }
+/* ── Wat de tafel van een puck ziet ────────────────────────────
+   "De pucks worden slecht herkend" kan van alles zijn: de tafel ziet de
+   pootjes niet, hij ziet ze wel maar op de verkeerde maat, of hij twijfelt
+   tussen twee pucks. Dat verschil is aan de tafel niet te zien en op afstand
+   niet te raden — vandaar dat de herkenning haar eigen tussenstand bewaart en
+   `drawPuckDiag` die naast de puck zet. Alleen als de touch-debug aan staat;
+   anders wordt er niets bijgehouden. */
+let ringDiag=null;
+function noteRingDiag(d,gemeten){
+  if(!debugMode||!gemeten.length) return;
+  if(ringDiag&&ringDiag.err<=gemeten[0].m.err) return;
+  ringDiag={err:gemeten[0].m.err, legs:d.angles.length,
+            mm:d.radius/pxPerMM, spread:d.spread,
+            lijst:gemeten.map(g=>({naam:g.tpl.name||g.tpl.id, err:g.m.err}))};
+}
 function recognise(points,tpls){
+  if(debugMode) ringDiag=null;
   const list=tpls||activeTemplates();
   /* Twee soorten pucks, twee zoektochten over dezelfde punten: driehoeken uit
      drietallen, ringen uit vijftallen op één cirkel. Ze komen daarna in dezelfde
@@ -1664,10 +1711,24 @@ function recognise(points,tpls){
           const key=groep.join(","); if(seen.has(key)) continue; seen.add(key);
           const d=describeRing(groep.map(k=>points[k]));
           if(!d||d.spread>0.16) continue;
-          for(const tpl of rings){
-            const tracked=onTable.has(tpl.id);
-            const limit=CFG.ringToleranceDeg*(tracked?1.5:1);
-            const m=matchRing(d,tpl);
+          /* Één vijftal is één puck, geen vier kandidaten. Eerder mocht elk
+             sjabloon dat binnen de grens viel meedoen, en bij ruis op de
+             pootjes kwam de verkeerde er dan soms als eerste uit. Dat is niet
+             alleen een verkeerd label: een detectie met een ander sjabloon
+             hoort nooit bij de bestaande track (zie `track`), dus de puck
+             knipperde weg en kwam als een andere puck terug. Nu wordt alleen
+             de best passende voorgedragen, en alleen als hij `ringMarginDeg`
+             beter past dan de nummer twee. Zit het dichter op elkaar, dan is
+             het een dubbelzinnige meting en zegt de tafel liever niets. */
+          const gemeten=rings.map(tpl=>({tpl,m:matchRing(d,tpl)}))
+                             .sort((a,b)=>a.m.err-b.m.err);
+          noteRingDiag(d,gemeten);
+          const win=gemeten[0], tweede=gemeten[1];
+          if(!win) continue;
+          if(tweede&&tweede.m.err-win.m.err<CFG.ringMarginDeg) continue;
+          {
+            const tpl=win.tpl, m=win.m, tracked=onTable.has(tpl.id);
+            const limit=CFG.ringToleranceDeg*(tracked?1.25:1);
             if(m.err>limit) continue;
             const want=tplRing(tpl)*pxPerMM;
             const sizeErr=Math.abs(d.radius-want)/want;
@@ -1710,6 +1771,43 @@ function recognise(points,tpls){
               angle:c.d.ring?c.d.angle
                              :Math.atan2(c.d.anchor.y-c.d.cy,c.d.anchor.x-c.d.cx)});
   }
+  /* ── Vasthouden op vier pootjes ───────────────────────────────
+     Een puck die al op tafel ligt hoeft niet elk beeldje opnieuw bewezen te
+     worden. Verliest één pootje even contact, dan liggen de vier andere nog
+     keurig op zijn cirkel; die worden hier tegen zijn éigen sjabloon gelegd,
+     op zijn eigen plek. Zo blijft de puck staan in plaats van te knipperen, en
+     omdat er maar één sjabloon meedoet kan hij daarbij niet van identiteit
+     wisselen. Voor een puck die er nog niet lag gebeurt dit niet: vier punten
+     zeggen te weinig om een nieuwe puck mee te openen. */
+  // Niet tijdens het meten: dat venster geeft een eigen, korter lijstje
+  // sjablonen mee en wil alleen ingelezen pucks van het glas aftrekken.
+  for(const t of (tpls?[]:tracks.values())){
+    if(!isRing(t.tpl)) continue;
+    if(out.some(o=>Math.hypot(o.x-t.x,o.y-t.y)<sep)) continue;
+    const want=tplRing(t.tpl)*pxPerMM, bij=[];
+    for(let i=0;i<points.length;i++){
+      if(used.has(i)) continue;
+      const r=Math.hypot(points[i].x-t.x,points[i].y-t.y);
+      if(r>=want*0.55&&r<=want*1.45) bij.push(i);
+    }
+    if(bij.length<4) continue;
+    // De punten die het dichtst bij zijn cirkel liggen gaan voor.
+    const afw=i=>Math.abs(Math.hypot(points[i].x-t.x,points[i].y-t.y)-want);
+    bij.sort((a,b)=>afw(a)-afw(b));
+    const groep=bij.slice(0,5);
+    const proberen=groep.length===5?[groep,...pick4(groep)]:[groep];
+    for(const g of proberen){
+      const d=describeRing(g.map(k=>points[k]));
+      if(!d||d.spread>0.20) continue;
+      if(Math.abs(d.radius-want)/want>0.30) continue;
+      if(Math.hypot(d.cx-t.x,d.cy-t.y)>sep) continue;
+      const m=matchRing(d,t.tpl);
+      if(m.err>CFG.ringHoldDeg) continue;
+      g.forEach(i=>used.add(i));
+      out.push({tpl:t.tpl,conf:0.4,x:d.cx,y:d.cy,angle:m.angle,held:true});
+      break;
+    }
+  }
   return {pucks:out,usedIdx:used};
 }
 /* Een luikje voor de rooktest. Met `?test` in de URL staan de rekenstukjes van
@@ -1721,7 +1819,11 @@ if(QS.has("test")) window.__puck={describeRing,matchRing,recognise,padsFor,gapsO
                                   templates:()=>templates,pxPerMM:()=>pxPerMM,
                                   // Voor de rooktest: waar een optie op de ring ligt.
                                   topics:()=>topics(),ringStart:n=>ringStart(n),
-                                  ringPX:()=>CFG.ringPX};
+                                  ringPX:()=>CFG.ringPX,
+                                  // En wat er nu op tafel ligt, zodat de test kan zien
+                                  // of een puck blijft staan als er een pootje wegvalt.
+                                  tracks:()=>[...tracks.values()].map(t=>({id:t.tpl.id,
+                                    x:t.x,y:t.y,state:t.state,angle:t.angle}))};
 
 /* Hoe dicht twee pucks bij elkaar kunnen liggen. Een puck is een schijf, dus
    twee middelpunten liggen nooit dichter bij elkaar dan zijn breedte; deze maat
@@ -1856,7 +1958,13 @@ function track(dets,now){
                        zoomAnchor:t.zoomAnchor});
       tracks.delete(id);
     }
-    else if(t.state==="recognised") t.state="incomplete";
+    /* Een puck die al herkend wás blijft staan tot `dropoutMS` om is — daar
+       is die wachttijd voor. Dit stond er als één stap: het eerste gemiste
+       beeldje zette hem op "incomplete", en het tweede kwam hier langs, zag
+       geen "recognised" meer en gooide hem weg. Een puck overleefde dus één
+       beeldje in plaats van 0,9 seconde, en van de hele dropout-regeling bleef
+       niets over. Alleen een kandidaat die nooit bevestigd is mag meteen weg. */
+    else if(t.state==="recognised"||t.state==="incomplete") t.state="incomplete";
     else tracks.delete(id);
   }
   return [...tracks.values()].filter(t=>t.state!=="candidate");
@@ -2892,6 +3000,42 @@ function paintMapLayer(){
   ctx.drawImage(mapLayer,0,0,mapLayer.width,mapLayer.height,0,0,W,H);
 }
 
+/* Het diagnosepaneel. Leesbaar vanaf een meter, want je staat bij de tafel met
+   een puck in je hand: hoeveel punten het glas meldt, hoe vaak er de laatste
+   vijf seconden een puck stond, en van de laatste ringmeting de maat, de
+   spreiding en hoe goed elk van de vier sjablonen paste. Daarmee is te zien
+   wat er misgaat: geen punten (het glas ziet de pootjes niet), een straal die
+   niet klopt (schermdiagonaal verkeerd ingesteld), of twee sjablonen die te
+   dicht bij elkaar liggen (dubbelzinnig). */
+const diagHist=[];
+function drawPuckDiag(ctx,points,pucks,now){
+  diagHist.push({t:now,n:points.length,p:pucks.length});
+  while(diagHist.length&&now-diagHist[0].t>5000) diagHist.shift();
+  const gezien=diagHist.filter(h=>h.p>0).length/Math.max(1,diagHist.length);
+  const rij=[];
+  rij.push(`punten ${points.length} \u00b7 pucks ${pucks.length}`);
+  rij.push(`puck in beeld: ${(gezien*100).toFixed(0)}% van de laatste 5 s`);
+  if(ringDiag){
+    rij.push(`ring: ${ringDiag.legs} punten \u00b7 straal ${ringDiag.mm.toFixed(1)} mm`);
+    rij.push(`spreiding ${ringDiag.spread.toFixed(3)} (max 0,16)`);
+    for(const b of ringDiag.lijst) rij.push(`   ${b.naam}: ${b.err.toFixed(1)}\u00b0`);
+    rij.push(`grens ${CFG.ringToleranceDeg}\u00b0 \u00b7 marge ${CFG.ringMarginDeg}\u00b0`);
+  } else rij.push("geen vijftal op \u00e9\u00e9n cirkel gevonden");
+  const F=14, LH=20, pad=12;
+  ctx.save();
+  ctx.font=`${F}px 'JetBrains Mono',ui-monospace,monospace`;
+  ctx.textAlign="left"; ctx.textBaseline="top";
+  const w=Math.max(...rij.map(r=>ctx.measureText(r).width))+pad*2;
+  const h=rij.length*LH+pad*2;
+  ctx.fillStyle="rgba(7,9,12,.82)";
+  ctx.strokeStyle="rgba(232,237,244,.25)"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(16,16,w,h,10); ctx.fill(); ctx.stroke();
+  rij.forEach((r,i)=>{
+    ctx.fillStyle=i<2?"#e8edf4":"#9aa7b8";
+    ctx.fillText(r,16+pad,16+pad+i*LH);
+  });
+  ctx.restore();
+}
 function frame(){
   requestAnimationFrame(frame);
   const now=performance.now();
@@ -3065,12 +3209,15 @@ function frame(){
   drawLockBadge(ctx);
   drawResetProgress(ctx,now);
 
-  if(debugMode) points.forEach((pt,i)=>{
-    ctx.strokeStyle=usedIdx.has(i)?"#39d8a4":"#ff5f56"; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(pt.x,pt.y,16,0,Math.PI*2); ctx.stroke();
-    ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.textAlign="left"; ctx.fillStyle=ctx.strokeStyle;
-    ctx.fillText((pt.sim?"sim ":"id ")+i,pt.x+20,pt.y+3);
-  });
+  if(debugMode){
+    points.forEach((pt,i)=>{
+      ctx.strokeStyle=usedIdx.has(i)?"#39d8a4":"#ff5f56"; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,16,0,Math.PI*2); ctx.stroke();
+      ctx.font="10px 'JetBrains Mono',ui-monospace,monospace"; ctx.textAlign="left"; ctx.fillStyle=ctx.strokeStyle;
+      ctx.fillText((pt.sim?"sim ":"id ")+i,pt.x+20,pt.y+3);
+    });
+    drawPuckDiag(ctx,points,pucks,now);
+  }
 
   if(now-lastUI>150){ lastUI=now; updateUI(pucks); }
 }

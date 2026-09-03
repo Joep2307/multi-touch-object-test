@@ -560,6 +560,65 @@ async function newPage(uiMode, {twoSided=false}={}){
   await ctx5.close();
 }
 
+// ── een pootje dat wegvalt: de puck blijft staan, en de hoek springt niet ──
+{
+  /* De twee dingen waar de tafel in de praktijk op stukging. Een: bij precies
+     één stand sprong de gemeten hoek 72°, omdat een pootje dat op 0° uitkwam in
+     de ene som vooraan en in de andere achteraan stond. Twee: een pootje dat
+     even geen contact maakt — een contactvlak van 2 mm is klein — liet de hele
+     puck knipperen. Vier punten op zijn eigen cirkel zijn genoeg om hem vast
+     te houden. */
+  const ctx6 = await browser.newContext({ viewport:{width:W,height:H}, hasTouch:true });
+  const page = await ctx6.newPage();
+  await page.addInitScript(()=>{ try{ localStorage.clear(); localStorage.setItem('pucktable-ui-mode','touch'); }catch(e){} });
+  const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
+  await page.goto(BASE+'/index.html?test'); await page.waitForTimeout(900);
+
+  const sprongen = await page.evaluate(()=>{
+    const P=window.__puck, k=P.pxPerMM(), uit=[];
+    const graden=a=>((a*180/Math.PI)%360+360)%360;
+    for(const tpl of P.templates()) for(let deg=0;deg<360;deg+=15){
+      const r=deg*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+      const pts=P.padsFor(tpl,k).map(p=>({x:900+p.x*c-p.y*s, y:500+p.x*s+p.y*c}));
+      const p0=P.recognise(pts).pucks[0];
+      const mis=p0?Math.min(Math.abs(graden(p0.angle)-deg),360-Math.abs(graden(p0.angle)-deg)):999;
+      if(mis>2) uit.push({id:tpl.id,deg,mis:+mis.toFixed(1)});
+    }
+    return uit;
+  });
+  ok('de hoek klopt bij elke stand van de puck',
+     sprongen.length===0 || (console.log('sprongen:',sprongen.slice(0,4)),false));
+
+  const cdp = await page.context().newCDPSession(page);
+  const pads = await page.evaluate(()=>{
+    const P=window.__puck, k=P.pxPerMM();
+    return P.padsFor(P.templates()[1],k)
+            .map((p,i)=>({x:Math.round(900+p.x), y:Math.round(500+p.y), id:i+1}));
+  });
+  const staat = () => page.evaluate(()=>window.__puck.tracks());
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:pads});
+  await page.waitForTimeout(400);
+  const eerst = await staat();
+  ok('vijf pootjes geven één puck',
+     eerst.length===1 && eerst[0].id==='puck-02' || (console.log('eerst:',eerst),false));
+
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:pads.slice(1)});
+  await page.waitForTimeout(400);
+  const daarna = await staat();
+  ok('met vier pootjes blijft dezelfde puck staan',
+     daarna.length===1 && daarna[0].id==='puck-02' && daarna[0].state==='recognised'
+     || (console.log('na uitval:',daarna),false));
+  ok('en hij verschuift daarbij nauwelijks',
+     daarna.length===1 && eerst.length===1 &&
+     Math.hypot(daarna[0].x-eerst[0].x,daarna[0].y-eerst[0].y)<14
+     || (console.log('verschoven:',daarna,eerst),false));
+
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  ok('geen JS-fouten (pootje weg)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx6.close();
+}
+
 // ── kiezen doe je door een optie op de ring aan te tikken ──
 {
   /* Draaien koos vroeger: naar een optie draaien en stilhouden. Nu tik je hem
