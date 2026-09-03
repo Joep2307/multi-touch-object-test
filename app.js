@@ -99,10 +99,10 @@ const L = {
   nl:{ good:"Goed", bad:"Probleem", talk:"Discussie", idea:"Idee",
        topics:["Veiligheid","Verkeer","Groen","Afval","Sociaal","Anders"],
        move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
-       confirmTouch:"Tik in het midden", confirmMouse:"Klik in het midden",
+       confirmTouch:"Tik een thema", confirmMouse:"Klik een thema",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
-       touchHint:"Sleep, tik een optie op de ring aan, tik in het midden om vast te leggen.",
-       laptopHint:"Sleep, klik een optie op de ring aan, klik in het midden om vast te leggen.",
+       touchHint:"Sleep, tik Kiezen aan en tik dan het thema — daarmee ligt de markering vast.",
+       laptopHint:"Sleep, klik Kiezen aan en klik dan het thema — daarmee ligt de markering vast.",
        puckMove:"Verplaatsen", puckSelect:"Kiezen", puckZoom:"Zoomen", puckBack:"Terug",
        modeZoom:"vooruit = inzoomen",
        flipSide:"Naar de overkant", flipNote:"Naar de overkant",
@@ -274,10 +274,10 @@ const L = {
   en:{ good:"Good", bad:"Problem", talk:"Discussion", idea:"Idea",
        topics:["Safety","Traffic","Green","Waste","Social","Other"],
        move:"Freeze map", locked:"Map is frozen", placed:"Marked",
-       confirmTouch:"Tap the centre", confirmMouse:"Click the centre",
+       confirmTouch:"Tap a theme", confirmMouse:"Click a theme",
        moveDots:"Move dots", movingDots:"Finish moving",
-       touchHint:"Drag, tap an option on the ring, tap the centre to confirm.",
-       laptopHint:"Drag, click an option on the ring, click the centre to confirm.",
+       touchHint:"Drag, tap Select and then the theme — that places the mark.",
+       laptopHint:"Drag, click Select and then the theme — that places the mark.",
        puckMove:"Move", puckSelect:"Select", puckZoom:"Zoom", puckBack:"Back",
        modeZoom:"forward = zoom in",
        flipSide:"To the other side", flipNote:"To the other side",
@@ -1881,9 +1881,9 @@ function track(dets,now){
    Kiezen doe je door de optie aan te tikken — op de boog of op zijn label,
    allebei dezelfde taartpunt. Het ging eerst met draaien en stilhouden, maar
    dat vraagt dat je de puck laat staan terwijl je kiest, en het maakt elke
-   onbedoelde draai een keuze. Tikken botst niet met het vastleggen van een
-   markering: dat gebeurt in het kijkgat, binnen de puck, en de ring ligt daar
-   ruim buiten. */
+   onbedoelde draai een keuze. Een thema aantikken legt de markering meteen
+   vast; het kijkgat binnen de puck blijft als tweede weg bestaan, en de ring
+   ligt daar ruim buiten. */
 /* De ring begint bovenaan. Het eerste segment ligt met zijn midden op twaalf
    uur, en de rest volgt met de klok mee. Zonder die draaiing begon segment 0
    linksboven, en dan wijst "de eerste optie" nergens naar — aan een tafel is
@@ -1923,7 +1923,12 @@ function commitPuckChoice(t,idx){
   if(!item||item.disabled) return;
   if(item.key==="topic"){
     t.topicIdx=idx;
-    syncPlacedPinTopic(t);
+    /* Het thema aantikken is meteen het vastleggen. Er was eerst nog een tik
+       in het kijkgat voor nodig, maar dat is een tweede handeling voor een
+       keuze die al gemaakt is: wie een thema aanwijst, wil die markering.
+       Staat de markering er al, dan verbetert dezelfde tik alleen het thema. */
+    if(t.armed) dropPin(t);
+    else syncPlacedPinTopic(t);
   }else if(item.key==="back"){
     if(t.menu==="topics") t.menu="root";
   }else if(item.key==="select"){
@@ -1944,7 +1949,7 @@ const puckMenuOuterPX=()=>CFG.ringPX+chipHeight()*1.35+10;
 /* Welke optie ligt er onder deze tik? Het raakvlak is de hele taartpunt: van
    net buiten de schijf tot voorbij het label. Alleen de labelchip zou aan een
    tafel een te klein doel zijn — je tikt staand, van opzij, met een hele hand.
-   Binnen de schijf telt niet mee: daar zit het kijkgat, en dat legt vast. */
+   Binnen de schijf telt niet mee: daar zit het kijkgat. */
 function puckMenuHit(x,y){
   const inner=CFG.puckRadiusMM*pxPerMM+4, outer=puckMenuOuterPX();
   let best=null,bd=Infinity;
@@ -2005,10 +2010,12 @@ function applyPuckZoom(t){
   MV.zoomBy(dy/CFG.puckZoomPX,a.x,a.y);
   t.zoomRefY=t.y;
 }
-/* Een tik of klik in het hart van de puck legt de markering vast. Het hart is
-   het kijkgat, en dat is precies het punt dat als coördinaat wordt bewaard: je
-   wijst dus aan wat je vastlegt. De band eromheen blijft van slepen en draaien
-   en de ring eromheen van het menu, dus vastleggen botst met geen van beide.
+/* Vastleggen doe je door het thema aan te tikken; een tik in het hart van de
+   puck doet het ook nog, met het thema dat op dat moment gekozen staat. Het
+   hart is het kijkgat, en dat is precies het punt dat als coördinaat wordt
+   bewaard: je wijst dus aan wat je vastlegt. De band eromheen blijft van
+   slepen en draaien en de ring eromheen van het menu, dus vastleggen botst
+   met geen van beide.
    Wat een tik is: kort aangeraakt, nauwelijks verschoven en nauwelijks
    gedraaid — zo blijft slepen en draaien gewoon slepen en draaien. */
 function wasTap(g){
