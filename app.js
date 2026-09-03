@@ -18,20 +18,27 @@ import { stt, probeSTT, startTalk } from "./speech.js";
    ═══════════════════════════════════════════════════════════════ */
 const CFG = {
   longestSideMM:60, puckRadiusMM:45,
+  /* De nieuwe puck is geen driehoek maar een ring: vijf pootjes op één cirkel.
+     `ringRadiusMM` is de straal van die cirkel — buitenmaat Ø80 en kijkgat Ø56,
+     dus het midden van de rand ligt op 34 mm. `ringToleranceDeg` is hoeveel elk
+     gat tussen twee pootjes gemiddeld mag afwijken; met vijf punten meet de
+     tafel de hoek uit vijf metingen tegelijk, dus dit mag strak staan. */
+  ringRadiusMM:34, ringToleranceDeg:9,
   /* Een draaiende fysieke puck onderbreekt soms heel kort één voetje. Twee
      goede beelden zijn genoeg om hem vast te pakken; daarna houden we de
      laatst bekende positie en hoek 0,9 s vast in plaats van hem na 0,18 s te
      verwijderen. */
   stableFrames:2, dropoutMS:900, smoothing:4,
-  jitterPX:22, rearmPX:70, ringPX:110, rotationGain:2,
-  /* De ring om de puck is een menu geworden. Kiezen gaat door naar een optie
-     te draaien en even stil te houden: tikken blijft zo gereserveerd voor het
-     vastleggen van een markering. `puckDwellMS` is die stilstand in het
-     hoofdmenu; `puckTopicDwellMS` geldt in het thema-menu en is veel langer,
-     want daar draai je langs alle thema's om ze te lezen en mag onderweg
-     stilstaan nog geen keuze zijn. `puckZoomPX` is hoeveel je de puck vooruit
-     moet duwen voor een zoomniveau. */
-  puckDwellMS:600, puckTopicDwellMS:2000, puckZoomPX:150, puckZoomDeadPX:2,
+  jitterPX:22, rearmPX:70, ringPX:110,
+  /* De ring om de puck is een menu, en je kiest een optie door hem aan te
+     tikken. Eerst ging dat met draaien: naar een optie draaien en even stil
+     houden. Aan de tafel is dat blind mikken — je moet de puck laten staan
+     om te kiezen, en elke onbedoelde draai schuift de keuze mee. Aanwijzen
+     wat je wilt is directer, en de twee wachttijden die erbij hoorden zijn
+     eruit. `puckTapMS` is hoe lang een aangetikte optie oplicht, zodat je van
+     een meter afstand ziet dát je tik aankwam. `puckZoomPX` is hoeveel je de
+     puck vooruit moet duwen voor een zoomniveau. */
+  puckTapMS:280, puckZoomPX:150, puckZoomDeadPX:2,
   /* Hoe lang de stand van een puck bewaard blijft als hij van de tafel valt.
      Een slecht contact of een stoot tegen de tafel laat een puck korter dan
      dit wegvallen; die komt terug zoals hij was, niet als nieuwe puck. */
@@ -94,8 +101,8 @@ const L = {
        move:"Kaart vastzetten", locked:"Kaart staat vast", placed:"Vastgelegd",
        confirmTouch:"Tik in het midden", confirmMouse:"Klik in het midden",
        moveDots:"Dots verplaatsen", movingDots:"Klaar met verplaatsen",
-       touchHint:"Sleep, draai naar een keuze en houd even stil, tik in het midden om vast te leggen.",
-       laptopHint:"Sleep, draai met Shift of het wiel en houd stil, klik in het midden om vast te leggen.",
+       touchHint:"Sleep, tik een optie op de ring aan, tik in het midden om vast te leggen.",
+       laptopHint:"Sleep, klik een optie op de ring aan, klik in het midden om vast te leggen.",
        puckMove:"Verplaatsen", puckSelect:"Kiezen", puckZoom:"Zoomen", puckBack:"Terug",
        modeZoom:"vooruit = inzoomen",
        flipSide:"Naar de overkant", flipNote:"Naar de overkant",
@@ -196,17 +203,20 @@ const L = {
        physicalPucks:"Fysieke pucks", recog:"Puck herkennen",
        buildTools:"Bouwgereedschap", sheetBtn:"Bouwtekening",
        exportCfg:"Config exporteren",
-       recogHint:"Plak drie stukjes tape in een driehoek, leg de puck op het scherm en druk op <b>Puck herkennen</b>.",
+       recogHint:"Leg de puck op het scherm met de pijl naar boven en druk op <b>Puck herkennen</b>. Een gedrukte puck heeft vijf pootjes; drie stukjes tape in een driehoek werken ook nog.",
        recogTitle:"Puck herkennen",
-       recogIntro:"Leg de puck op het vrije vlak hieronder en houd hem stil. Zodra de drie plakkers gelezen zijn, kies je welke puck dit is.",
-       recogWait:(n)=>`Wachten op drie contactpunten — nu <b>${n}</b>. Ligt de puck er al? Dan koppelen de plakkers niet: raak de tape even aan.`,
-       recogHold:"Drie punten gevonden — stil houden…",
+       recogIntro:"Leg de puck op het vrije vlak hieronder, met de <b>pijl naar boven</b>, en houd hem stil. Zodra de pootjes gelezen zijn, kies je welke puck dit is.",
+       recogWait:(n)=>`Wachten op de contactpunten van één puck — nu <b>${n}</b>. Vijf voor een gedrukte puck, drie voor een driehoek van tape. Ligt de puck er al? Dan koppelen de pootjes niet: raak ze even aan.`,
+       recogHold:(n)=>`${n===5?"Vijf":"Drie"} punten gevonden — stil houden…`,
        recogMoved:"De puck bewoog — stil houden…",
        recogWhich:"Welke puck is dit?",
        recogMeasured:(a,b,mm)=>`Gemeten: ratio's ${a} / ${b}, langste zijde ${mm} mm.`,
+       recogMeasuredRing:(g,mm)=>`Gemeten: vijf pootjes, gaten ${g}°, straal ${mm} mm.`,
        recogSaved:(name,a,b,mm)=>`<b>${name}</b> onthouden — ratio's ${a} / ${b}, langste zijde ${mm} mm. Dit scherm weet het ook na herladen.`,
+       recogSavedRing:(name,g,mm)=>`<b>${name}</b> onthouden — gaten ${g}°, straal ${mm} mm. Dit scherm weet het ook na herladen.`,
        recogClash:(name)=>` <b style="color:var(--warn)">Lijkt te veel op ${name}</b>: maak deze driehoek duidelijk anders, anders worden ze verwisseld.`,
-       recogIso:"Deze driehoek is bijna gelijkbenig. De tafel ziet dan moeilijk welke kant voor is, en het draaimenu op de puck loopt vast. Verschuif één plakker een centimeter en meet opnieuw.",
+       recogRingSym:"Deze vijf pootjes lijken op zichzelf als je de puck een slag draait. De tafel ziet dan moeilijk welke kant voor is, en de puck klapt van beeld tot beeld om. Verschuif één pootje en meet opnieuw.",
+       recogIso:"Deze driehoek is bijna gelijkbenig. De tafel ziet dan moeilijk welke kant voor is, en de puck klapt van beeld tot beeld om. Verschuif één plakker een centimeter en meet opnieuw.",
        recogAgain:"Volgende puck", recogReset:"Metingen wissen",
        recogLift:(n)=>`Haal de vorige puck van tafel \u2014 er ligt nog <b>${n}</b> contactpunt${n===1?"":"en"} op het glas. Zodra het glas leeg is begint de meting van de volgende.`,
        recogAnyway:"Meet wat er nu ligt",
@@ -214,11 +224,11 @@ const L = {
        recogNoneKnownSeen:(n)=>` Van de <b>${n}</b> ingelezen puck${n===1?"":"s"} wordt er nu geen herkend, dus alle punten tellen mee.`,
        recogExport:"Metingen exporteren",
        recogLearned:(t)=>`ingelezen ${t}`, recogFactory:"nog niet ingelezen",
-       recogCleared:"Alle metingen gewist — de pucks staan weer op hun oorspronkelijke driehoek.",
+       recogCleared:"Alle metingen gewist — de pucks staan weer op de maten van de bouwtekening.",
        modePuck:"Puck", puckAdd:"+ Puck",
        modePuckHint:"De balk onderaan is weg. De tafel herkent alleen pucks die je zelf hebt ingelezen.",
        sidesHintPuck:"De toevoegknop aan beide kanten; vensters draaien naar wie ze opent.",
-       recogIntroOwn:"Leg de puck op het vrije vlak hieronder en houd hem stil. Zodra de drie plakkers gelezen zijn, zeg je wat voor puck dit is; hij komt er dan bij.",
+       recogIntroOwn:"Leg de puck op het vrije vlak hieronder, met de <b>pijl naar boven</b>, en houd hem stil. Zodra de pootjes gelezen zijn, zeg je wat voor puck dit is; hij komt er dan bij.",
        recogWhichKind:"Wat voor puck is dit?",
        recogKindCount:(n)=>n===0?"nog geen puck van deze soort":n===1?"1 puck van deze soort":`${n} pucks van deze soort`,
        recogKnown:(n)=>n===1?"1 puck ingelezen":`${n} pucks ingelezen`,
@@ -227,8 +237,9 @@ const L = {
        recogResetOwn:"Alle pucks wissen",
        recogClearedOwn:"Alle eigen pucks weggegooid. Lees er een in om weer iets te laten herkennen.",
        sheetTitle:"Bouwtekening pucks",
-       sheetIntro:"Padposities per puck, in millimeters vanaf het midden. Elke driehoek is ongelijkzijdig en de zijdeverhoudingen liggen ver genoeg uit elkaar om ze met een paar millimeter meetfout nog te onderscheiden.",
+       sheetIntro:"Padposities per puck, in millimeters vanaf het midden. Bij de gedrukte pucks liggen vijf pootjes op één cirkel; de gaten ertussen liggen ver genoeg uit elkaar om de vier pucks met een paar graden meetfout nog te onderscheiden.",
        sheetPad:"Pad", sheetRatios:"Ratio's", sheetLongest:"Langste",
+       sheetGaps:"Gaten", sheetRing:"Straal",
 
        deselect:"Deselecteren",
        newNote:"Nieuwe bijdrage", fTitle:"Titel", titlePh:"Geef deze bijdrage een titel",
@@ -265,8 +276,8 @@ const L = {
        move:"Freeze map", locked:"Map is frozen", placed:"Marked",
        confirmTouch:"Tap the centre", confirmMouse:"Click the centre",
        moveDots:"Move dots", movingDots:"Finish moving",
-       touchHint:"Drag, rotate to an option and hold still, tap the centre to confirm.",
-       laptopHint:"Drag, rotate with Shift or the wheel and hold still, click the centre to confirm.",
+       touchHint:"Drag, tap an option on the ring, tap the centre to confirm.",
+       laptopHint:"Drag, click an option on the ring, click the centre to confirm.",
        puckMove:"Move", puckSelect:"Select", puckZoom:"Zoom", puckBack:"Back",
        modeZoom:"forward = zoom in",
        flipSide:"To the other side", flipNote:"To the other side",
@@ -367,17 +378,20 @@ const L = {
        physicalPucks:"Physical pucks", recog:"Recognise puck",
        buildTools:"Build tools", sheetBtn:"Build drawing",
        exportCfg:"Export config",
-       recogHint:"Stick three pieces of tape in a triangle, put the puck on the screen and press <b>Recognise puck</b>.",
+       recogHint:"Put the puck on the screen with its arrow pointing up and press <b>Recognise puck</b>. A printed puck has five feet; three pieces of tape in a triangle still work too.",
        recogTitle:"Recognise puck",
-       recogIntro:"Put the puck on the open area below and hold it still. As soon as the three pads are read, you pick which puck this is.",
-       recogWait:(n)=>`Waiting for three contact points — now <b>${n}</b>. Is the puck already there? Then the pads are not coupling: touch the tape briefly.`,
-       recogHold:"Three points found — hold still…",
+       recogIntro:"Put the puck on the open area below with its <b>arrow pointing up</b> and hold it still. As soon as the feet are read, you pick which puck this is.",
+       recogWait:(n)=>`Waiting for the contact points of one puck — now <b>${n}</b>. Five for a printed puck, three for a tape triangle. Is the puck already there? Then the feet are not coupling: touch them briefly.`,
+       recogHold:(n)=>`${n===5?"Five":"Three"} points found — hold still…`,
        recogMoved:"The puck moved — hold still…",
        recogWhich:"Which puck is this?",
        recogMeasured:(a,b,mm)=>`Measured: ratios ${a} / ${b}, longest side ${mm} mm.`,
+       recogMeasuredRing:(g,mm)=>`Measured: five feet, gaps ${g}°, radius ${mm} mm.`,
        recogSaved:(name,a,b,mm)=>`<b>${name}</b> remembered — ratios ${a} / ${b}, longest side ${mm} mm. This screen keeps it after a reload.`,
+       recogSavedRing:(name,g,mm)=>`<b>${name}</b> remembered — gaps ${g}°, radius ${mm} mm. This screen keeps it after a reload.`,
        recogClash:(name)=>` <b style="color:var(--warn)">Too much like ${name}</b>: make this triangle clearly different, or the two will be swapped.`,
-       recogIso:"This triangle is nearly isosceles. The table then struggles to see which way is forward and the ring menu on the puck stalls. Move one pad a centimetre and measure again.",
+       recogRingSym:"These five feet look like themselves when the puck is turned one step. The table then struggles to see which way is forward, and the puck flips from frame to frame. Move one foot and measure again.",
+       recogIso:"This triangle is nearly isosceles. The table then struggles to see which way is forward, and the puck flips from frame to frame. Move one pad a centimetre and measure again.",
        recogAgain:"Next puck", recogReset:"Clear measurements",
        recogLift:(n)=>`Take the previous puck off the table \u2014 <b>${n}</b> contact point${n===1?"":"s"} still on the glass. Measuring the next one starts once the glass is clear.`,
        recogAnyway:"Measure what is there now",
@@ -385,11 +399,11 @@ const L = {
        recogNoneKnownSeen:(n)=>` None of the <b>${n}</b> known puck${n===1?"":"s"} is being recognised right now, so every point counts.`,
        recogExport:"Export measurements",
        recogLearned:(t)=>`read in ${t}`, recogFactory:"not read in yet",
-       recogCleared:"All measurements cleared — the pucks are back on their original triangles.",
+       recogCleared:"All measurements cleared — the pucks are back on the sizes from the build drawing.",
        modePuck:"Puck", puckAdd:"+ Puck",
        modePuckHint:"The bar at the bottom is gone. The table only recognises pucks you have read in yourself.",
        sidesHintPuck:"The add button on both sides; windows turn to whoever opens them.",
-       recogIntroOwn:"Put the puck on the open area below and hold it still. As soon as the three pads are read, you say what kind of puck this is and it is added.",
+       recogIntroOwn:"Put the puck on the open area below with its <b>arrow pointing up</b> and hold it still. As soon as the feet are read, you say what kind of puck this is and it is added.",
        recogWhichKind:"What kind of puck is this?",
        recogKindCount:(n)=>n===0?"no puck of this kind yet":n===1?"1 puck of this kind":`${n} pucks of this kind`,
        recogKnown:(n)=>n===1?"1 puck read in":`${n} pucks read in`,
@@ -398,8 +412,9 @@ const L = {
        recogResetOwn:"Clear all pucks",
        recogClearedOwn:"All your own pucks are gone. Read one in to have the table recognise something again.",
        sheetTitle:"Puck build drawing",
-       sheetIntro:"Pad positions per puck, in millimetres from the centre. Every triangle is scalene and the side ratios lie far enough apart to tell them apart with a few millimetres of measurement error.",
+       sheetIntro:"Pad positions per puck, in millimetres from the centre. On the printed pucks five feet lie on one circle; the gaps between them lie far enough apart to tell the four pucks apart with a few degrees of measurement error.",
        sheetPad:"Pad", sheetRatios:"Ratios", sheetLongest:"Longest",
+       sheetGaps:"Gaps", sheetRing:"Radius",
 
        deselect:"Deselect",
        newNote:"New contribution", fTitle:"Title", titlePh:"Give this contribution a title",
@@ -500,27 +515,85 @@ const VERDICTS=[{key:"good",color:"#39d8a4"},{key:"bad",color:"#ff5f56"},
                 {key:"talk",color:"#c48cff"},{key:"idea",color:"#ffd166"}];
 const vName=k=>L[lang][k], vColor=k=>VERDICTS.find(v=>v.key===k).color;
 const topics=()=>(kg.useThemes&&kg.themes.length?kg.themes:L[lang].topics);
+/* ── Twee soorten pucks ──────────────────────────────────────────
+   De oude puck is een driehoek van drie stukjes koperfolie: `ratios` (de twee
+   kortste zijden gedeeld door de langste) en `longestMM`. De nieuwe puck is een
+   ring: vijf pootjes op één cirkel, dus `angles` — vijf hoeken in graden, met de
+   klok mee gerekend vanaf de richtingspijl — en `ringMM`, de straal van die
+   cirkel. Beide soorten staan door elkaar in dezelfde lijst, want een tafel
+   waar de nieuwe pucks al liggen mag de oude tape-pucks niet ineens vergeten.
+   Alles wat een sjabloon aanraakt vraagt daarom eerst `isRing()`.
+
+   Met de klok mee: op het scherm loopt y naar beneden, dus een groeiende hoek
+   draait rechtsom. Dat geldt voor de sjablonen én voor de meting, en die twee
+   worden alleen met elkaar vergeleken — spiegelen valt zo nergens tussenuit. */
+const isRing=t=>Array.isArray(t?.angles)&&t.angles.length===5;
+const cloneTpl=t=>({...t,...(isRing(t)?{angles:[...t.angles]}:{ratios:[...t.ratios]})});
+const norm360=a=>((a%360)+360)%360;
+/* De gaten tussen de pootjes, met de klok mee. Dit is wat een ringpuck
+   herkenbaar maakt: draai de puck en de vijf hoeken lopen allemaal mee, maar de
+   gaten ertussen blijven staan. */
+function gapsOf(angles){
+  const a=[...angles].map(norm360).sort((x,y)=>x-y);
+  return a.map((v,i)=>norm360((i===a.length-1?a[0]+360:a[i+1])-v));
+}
+/* De vier pucks van de bouwtekening. De hoeken zijn zo gekozen dat geen enkele
+   puck op zichzelf lijkt als je hem een slag draait (anders wisselt de voorkant
+   per beeldje en loopt het ringmenu vast) en dat de vier onderling minstens
+   14° per gat uit elkaar liggen — ruim boven de ruis van een pootje van 2 mm.
+   De pijl wijst in het midden van het grootste gat, zodat er geen pootje voor
+   staat; hoek 0 is die pijl. */
 let templates=[
-  {id:"puck-01",ratios:[0.62,0.81],verdict:"good"},
-  {id:"puck-02",ratios:[0.48,0.76],verdict:"bad"},
-  {id:"puck-03",ratios:[0.70,0.93],verdict:"talk"},
-  {id:"puck-04",ratios:[0.85,0.90],verdict:"idea"}
+  {id:"puck-01",angles:[54,124,206,250,306],ringMM:34,verdict:"good"},
+  {id:"puck-02",angles:[56,100,168,218,304],ringMM:34,verdict:"bad"},
+  {id:"puck-03",angles:[52,120,166,210,308],ringMM:34,verdict:"talk"},
+  {id:"puck-04",angles:[53,99,195,263,307],ringMM:34,verdict:"idea"}
 ];
 /* Wat hierboven staat is de fabriekswaarde: de vier pucks van de bouwtekening.
    Een puck die je aan de tafel inleest overschrijft de driehoek van één van
    deze vier — het aantal pucks verandert dus nooit door te meten. `TPL_FACTORY`
    bewaart het origineel, zodat "Metingen wissen" iets heeft om naar terug te
    keren. */
-const TPL_FACTORY=templates.map(t=>({...t,ratios:[...t.ratios]}));
+const TPL_FACTORY=templates.map(cloneTpl);
 const TPL_KEY="pucktable-templates";
 /* De langste zijde hoort bij de púck, niet bij de tafel: geknipte tape is nooit
    precies 60 mm en twee pucks mogen best verschillen. `CFG.longestSideMM` is de
    terugval voor een puck die nog nooit is ingelezen. */
 const tplLongest=t=>(t&&Number.isFinite(t.longestMM)&&t.longestMM>0)?t.longestMM:CFG.longestSideMM;
-const maxTplLongest=()=>activeTemplates().reduce((m,t)=>Math.max(m,tplLongest(t)),CFG.longestSideMM);
+/* Hetzelfde verhaal voor de ring: de straal hoort bij de púck. Een gedrukte
+   puck is nauwkeuriger dan geknipte tape, maar de tafel meet hem toch. */
+const tplRing=t=>(t&&Number.isFinite(t.ringMM)&&t.ringMM>0)?t.ringMM:CFG.ringRadiusMM;
+/* Hoe breed een puck op het glas ligt: bij een driehoek de langste zijde, bij
+   een ring de diameter. Deze maat bepaalt het zoekraster in `recognise`. */
+const tplSpanMM=t=>isRing(t)?2*tplRing(t):tplLongest(t);
+const maxTplSpan=()=>activeTemplates().reduce((m,t)=>Math.max(m,tplSpanMM(t)),CFG.longestSideMM);
+/* Wat er van een sjabloon op schijf gaat, welke vorm het ook heeft. De velden
+   van de andere vorm staan er als null bij: zo is aan het bestand te zien dat
+   ze bewust leeg zijn en niet per ongeluk zijn weggevallen. */
+const tplWire=t=>({id:t.id,verdict:t.verdict,
+                   ratios:t.ratios||null,longestMM:t.longestMM??null,
+                   angles:t.angles||null,ringMM:t.ringMM??null,
+                   learnedAt:t.learnedAt||null});
+/* Een meting mag de vorm van een puck omzetten: lees je een oude driehoek in op
+   een puck die af fabriek een ring is, dan is die puck vanaf dat moment een
+   driehoek. De velden van de vorige vorm gaan weg, anders staan er twee
+   beschrijvingen van dezelfde puck en raadt de herkenning welke telt. */
+function applyShape(tpl,sv){
+  if(Array.isArray(sv?.angles)&&sv.angles.length===5&&sv.angles.every(n=>Number.isFinite(n))){
+    tpl.angles=sv.angles.map(norm360); delete tpl.ratios; delete tpl.longestMM;
+    if(Number.isFinite(sv.ringMM)&&sv.ringMM>0) tpl.ringMM=sv.ringMM; else delete tpl.ringMM;
+    return true;
+  }
+  if(Array.isArray(sv?.ratios)&&sv.ratios.length===2&&
+     sv.ratios.every(n=>Number.isFinite(n)&&n>0&&n<=1.001)){
+    tpl.ratios=[sv.ratios[0],sv.ratios[1]]; delete tpl.angles; delete tpl.ringMM;
+    if(Number.isFinite(sv.longestMM)&&sv.longestMM>0) tpl.longestMM=sv.longestMM; else delete tpl.longestMM;
+    return true;
+  }
+  return false;
+}
 function saveTemplates(){
-  try{ localStorage.setItem(TPL_KEY,JSON.stringify(templates.map(t=>
-    ({id:t.id,ratios:t.ratios,longestMM:t.longestMM??null,learnedAt:t.learnedAt||null})))); }catch(e){}
+  try{ localStorage.setItem(TPL_KEY,JSON.stringify(templates.map(tplWire))); }catch(e){}
 }
 /* Alleen de vier bekende pucks worden bijgewerkt. Wat er in localStorage staat
    is een meting, geen nieuwe puck: een oud of vreemd bestand kan er dus nooit
@@ -531,16 +604,17 @@ function restoreTemplates(){
   if(!Array.isArray(saved)) return;
   for(const sv of saved){
     const tpl=templates.find(t=>t.id===sv?.id); if(!tpl) continue;
-    if(Array.isArray(sv.ratios)&&sv.ratios.length===2&&
-       sv.ratios.every(n=>Number.isFinite(n)&&n>0&&n<=1.001)) tpl.ratios=[sv.ratios[0],sv.ratios[1]];
-    if(Number.isFinite(sv.longestMM)&&sv.longestMM>0) tpl.longestMM=sv.longestMM;
+    if(!applyShape(tpl,sv)) continue;
     if(typeof sv.learnedAt==="string") tpl.learnedAt=sv.learnedAt;
   }
 }
 function resetTemplates(){
   for(const t of templates){
     const f=TPL_FACTORY.find(x=>x.id===t.id); if(!f) continue;
-    t.ratios=[...f.ratios]; delete t.longestMM; delete t.learnedAt;
+    /* Eerst alle vormvelden weg: een puck die als driehoek is ingelezen moet
+       weer de ring van de bouwtekening worden, niet allebei tegelijk. */
+    delete t.ratios; delete t.longestMM; delete t.angles; delete t.ringMM; delete t.learnedAt;
+    Object.assign(t,cloneTpl(f));
   }
   try{ localStorage.removeItem(TPL_KEY); }catch(e){}
 }
@@ -555,9 +629,7 @@ function resetTemplates(){
 const OWN_KEY="pucktable-own-pucks";
 let ownPucks=[], ownSeq=0;
 function saveOwnPucks(){
-  try{ localStorage.setItem(OWN_KEY,JSON.stringify(ownPucks.map(t=>
-    ({id:t.id,verdict:t.verdict,ratios:t.ratios,longestMM:t.longestMM??null,
-      learnedAt:t.learnedAt||null})))); }catch(e){}
+  try{ localStorage.setItem(OWN_KEY,JSON.stringify(ownPucks.map(tplWire))); }catch(e){}
 }
 /* Alleen wat er echt uitziet als een meting komt binnen: een onbekende soort of
    een onmogelijke ratio zou de herkenning stilletjes van slag brengen. */
@@ -568,20 +640,22 @@ function restoreOwnPucks(){
   for(const sv of saved){
     if(!sv||typeof sv.id!=="string") continue;
     if(!VERDICTS.some(v=>v.key===sv.verdict)) continue;
-    if(!Array.isArray(sv.ratios)||sv.ratios.length!==2||
-       !sv.ratios.every(n=>Number.isFinite(n)&&n>0&&n<=1.001)) continue;
     if(ownPucks.some(t=>t.id===sv.id)) continue;
-    const p={id:sv.id,verdict:sv.verdict,ratios:[sv.ratios[0],sv.ratios[1]],
+    const p={id:sv.id,verdict:sv.verdict,
              learnedAt:typeof sv.learnedAt==="string"?sv.learnedAt:null,own:true};
-    if(Number.isFinite(sv.longestMM)&&sv.longestMM>0) p.longestMM=sv.longestMM;
+    if(!applyShape(p,sv)) continue;
     ownPucks.push(p);
     const n=parseInt(String(sv.id).replace(/^\D+/,""),10);
     if(Number.isFinite(n)) ownSeq=Math.max(ownSeq,n);
   }
 }
-function addOwnPuck(verdict,ratios,longestMM){
-  const p={id:"eigen-"+String(++ownSeq).padStart(2,"0"),verdict,ratios,longestMM,
+/* `shape` is één meting: {ratios,longestMM} van een driehoek of {angles,ringMM}
+   van een ring. Welke van de twee het is, bepaalt wat er straks op tafel wordt
+   gezocht. */
+function addOwnPuck(verdict,shape){
+  const p={id:"eigen-"+String(++ownSeq).padStart(2,"0"),verdict,
            learnedAt:new Date().toISOString(),own:true};
+  if(!applyShape(p,shape)) return null;
   ownPucks.push(p); saveOwnPucks(); return p;
 }
 /* Weggooien haalt ook de puck die op dat moment herkend wordt van tafel: anders
@@ -937,7 +1011,17 @@ function drawMap(g){
    3. PUCK ENGINE
    ═══════════════════════════════════════════════════════════════ */
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-function padsFor(tpl,Lm){
+/* De contactpunten van een sjabloon, in millimeters maal `k`: geef `pxPerMM`
+   mee voor het scherm, of laat `k` weg voor millimeters op papier. Bij een ring
+   liggen ze op de cirkel om het middelpunt; bij een driehoek wordt hij eerst om
+   zijn zwaartepunt gelegd, want dát is bij een driehoek het hart van de puck. */
+function padsFor(tpl,k=1){
+  if(isRing(tpl)){
+    const R=tplRing(tpl)*k;
+    return [...tpl.angles].map(norm360).sort((a,b)=>a-b)
+      .map(a=>({x:R*Math.cos(a*Math.PI/180),y:R*Math.sin(a*Math.PI/180)}));
+  }
+  const Lm=tplLongest(tpl)*k;
   const [r1,r2]=tpl.ratios,a=r1*Lm,b=r2*Lm,c=Lm;
   const rx=(c*c+b*b-a*a)/(2*c), ry=Math.sqrt(Math.max(0,b*b-rx*rx));
   const pts=[{x:0,y:0},{x:c,y:0},{x:rx,y:ry}];
@@ -953,6 +1037,76 @@ function describe(p1,p2,p3){
   const cross=(Q.x-P.x)*(anchor.y-P.y)-(Q.y-P.y)*(anchor.x-P.x);
   return {ratios:[e[0].d/long.d,e[1].d/long.d],longest:long.d,anchor,
           chir:cross>=0?1:-1,cx:(p1.x+p2.x+p3.x)/3,cy:(p1.y+p2.y+p3.y)/3};
+}
+/* ── De ringpuck ───────────────────────────────────────────────
+   Vijf pootjes op één cirkel. Het middelpunt is níet het zwaartepunt van de
+   vijf punten: de pootjes staan met opzet ongelijk verdeeld, dus het zwaarte-
+   punt schuift naar de dichtstbezette kant. En het middelpunt is precies waar
+   het vizier van de puck ligt, dus dat moet kloppen. Vandaar een echte cirkel-
+   passing (Kåsa): een paar sommen en een stelsel van twee onbekenden. */
+function fitCircle(pts){
+  const n=pts.length; let sx=0,sy=0;
+  for(const p of pts){ sx+=p.x; sy+=p.y; }
+  const mx=sx/n,my=sy/n;
+  let Suu=0,Svv=0,Suv=0,Suuu=0,Svvv=0,Suvv=0,Svuu=0;
+  for(const p of pts){
+    const u=p.x-mx,v=p.y-my;
+    Suu+=u*u; Svv+=v*v; Suv+=u*v;
+    Suuu+=u*u*u; Svvv+=v*v*v; Suvv+=u*v*v; Svuu+=v*u*u;
+  }
+  const det=Suu*Svv-Suv*Suv;
+  if(!(Math.abs(det)>1e-6)) return null;            // punten op één lijn
+  const b1=(Suuu+Suvv)/2, b2=(Svvv+Svuu)/2;
+  const cx=mx+(b1*Svv-b2*Suv)/det, cy=my+(b2*Suu-b1*Suv)/det;
+  let sum=0,rmin=Infinity,rmax=0;
+  for(const p of pts){
+    const d=Math.hypot(p.x-cx,p.y-cy);
+    sum+=d; if(d<rmin) rmin=d; if(d>rmax) rmax=d;
+  }
+  const r=sum/n;
+  return r>0?{cx,cy,r,spread:(rmax-rmin)/r}:null;
+}
+/* Wat de tafel van vijf punten opmaakt: middelpunt, straal, de vijf hoeken met
+   de klok mee en de gaten daartussen. `spread` zegt hoe zuiver ze op één cirkel
+   liggen — vijf losse vingers halen dat niet. */
+function describeRing(pts){
+  const fit=fitCircle(pts); if(!fit||fit.r<1) return null;
+  const angles=pts.map(p=>norm360(Math.atan2(p.y-fit.cy,p.x-fit.cx)*180/Math.PI))
+                  .sort((a,b)=>a-b);
+  return {ring:true,cx:fit.cx,cy:fit.cy,radius:fit.r,spread:fit.spread,
+          angles,gaps:gapsOf(angles)};
+}
+const gapErr=(a,b)=>{ let s=0; for(let i=0;i<a.length;i++) s+=Math.abs(a[i]-b[i]); return s/a.length; };
+const shift=(a,s)=>a.map((_,i)=>a[(i+s)%a.length]);
+/* Past deze meting bij dit sjabloon? De gaten liggen in een kring, dus welk
+   pootje "het eerste" is hangt er maar aan hoe de puck ligt: alle vijf de
+   verschuivingen worden geprobeerd. De beste geeft meteen welk gemeten punt bij
+   welk pootje hoort — en daarmee de hoek van de puck, als gemiddelde van vijf
+   verschillen. Dat is veel rustiger dan één hoekpunt van een driehoek, want
+   ruis op één pootje weegt nog maar voor een vijfde mee. */
+function matchRing(d,tpl){
+  const ta=[...tpl.angles].map(norm360).sort((a,b)=>a-b), tg=gapsOf(ta);
+  let best=0,bestErr=Infinity;
+  for(let s=0;s<5;s++){
+    const err=gapErr(d.gaps,shift(tg,s));
+    if(err<bestErr){ bestErr=err; best=s; }
+  }
+  let cs=0,sn=0;
+  for(let i=0;i<5;i++){
+    const off=(d.angles[i]-ta[(i+best)%5])*Math.PI/180;
+    cs+=Math.cos(off); sn+=Math.sin(off);
+  }
+  // Hoek 0 van een sjabloon is de richtingspijl, dus dit ís de kant die de
+  // puck op wijst.
+  return {err:bestErr,angle:Math.atan2(sn,cs)};
+}
+/* Het ringequivalent van een bijna gelijkbenige driehoek: lijkt het patroon op
+   zichzelf als je het een pootje verder draait, dan wisselt de voorkant per
+   beeldje en loopt het ringmenu vast. Hoe kleiner het getal, hoe erger. */
+function ringSelfSym(gaps){
+  let m=Infinity;
+  for(let s=1;s<gaps.length;s++) m=Math.min(m,gapErr(gaps,shift(gaps,s)));
+  return m;
 }
 const realTouches=new Map();
 
@@ -1189,7 +1343,9 @@ function endPointer(e){
       pt.ptrs.delete(e.pointerId);
       if(pt.ptrs.size===0){
         puckTouches.splice(puckTouches.indexOf(pt),1);
-        if(wasTap(pt)) tryConfirmPuck(e.clientX,e.clientY);
+        // Vasthouden en met een tweede vinger een optie aantikken mag ook:
+        // die vinger doet mee met de greep, dus hij komt hier terecht.
+        if(wasTap(pt)&&!tryConfirmPuck(e.clientX,e.clientY)) tryPuckMenuTap(e.clientX,e.clientY);
       } else basePuckTouch(pt);
       return;
     }
@@ -1297,7 +1453,7 @@ addEventListener("pointercancel",endTrayDrag);
 
 function simPads(){
   const out=[];
-  for(const s of simPucks) for(const p of padsFor(s.tpl,tplLongest(s.tpl)*pxPerMM)){
+  for(const s of simPucks) for(const p of padsFor(s.tpl,pxPerMM)){
     const c=Math.cos(s.rot),si=Math.sin(s.rot);
     out.push({x:s.x+p.x*c-p.y*si,y:s.y+p.x*si+p.y*c,sim:true,uid:s.uid});
   }
@@ -1393,9 +1549,26 @@ addEventListener("wheel",e=>{
 /* `tpls` is normaal de hele lijst. Het meetvenster geeft er een kortere mee:
    alleen de pucks die de tafel al gemeten heeft, om die van het glas te kunnen
    aftrekken (zie `learnPoints`). */
+/* Alle vijftallen uit een handjevol punten, oplopend gesorteerd zodat de
+   sleutel in `recognise` altijd dezelfde is. Bij vijf punten is dat er één, bij
+   zeven eenentwintig — meer worden het er nooit. */
+function pick5(idx){
+  const a=[...idx].sort((x,y)=>x-y);
+  if(a.length===5) return [a];
+  const out=[],cur=[];
+  (function walk(start){
+    if(cur.length===5){ out.push([...cur]); return; }
+    for(let i=start;i<a.length;i++){ cur.push(a[i]); walk(i+1); cur.pop(); }
+  })(0);
+  return out;
+}
 function recognise(points,tpls){
   const list=tpls||activeTemplates();
-  const cands=[],maxSpan=maxTplLongest()*pxPerMM*1.45;
+  /* Twee soorten pucks, twee zoektochten over dezelfde punten: driehoeken uit
+     drietallen, ringen uit vijftallen op één cirkel. Ze komen daarna in dezelfde
+     bak kandidaten en strijden om dezelfde contactpunten. */
+  const tris=list.filter(t=>!isRing(t)), rings=list.filter(isRing);
+  const cands=[],maxSpan=maxTplSpan()*pxPerMM*1.45;
   // Welke soorten er al liggen: die krijgen wat meer speelruimte (zie hieronder).
   const onTable=new Set([...tracks.values()].map(t=>t.tpl.id));
   const cell=Math.max(24,maxSpan), grid=new Map();
@@ -1424,7 +1597,7 @@ function recognise(points,tpls){
       const uid=points[i].uid??points[j].uid??points[k].uid;
       if(uid!==undefined&&(points[i].uid!==uid||points[j].uid!==uid||points[k].uid!==uid)) continue;
       const d=describe(points[i],points[j],points[k]); if(!d) continue;
-      for(const tpl of list){
+      for(const tpl of tris){
         const err=Math.hypot(d.ratios[0]-tpl.ratios[0],d.ratios[1]-tpl.ratios[1]);
         /* Tijdens draaien vervormen de gemeten contactpunten enkele pixels.
            Een puck die al gevolgd wordt krijgt daarom wat extra speelruimte;
@@ -1435,9 +1608,75 @@ function recognise(points,tpls){
         const want=tplLongest(tpl)*pxPerMM;
         const sizeErr=Math.abs(d.longest-want)/want;
         if(sizeErr>(tracked?0.50:0.42)) continue;
-        cands.push({tpl,err,idx:[i,j,k],d,conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
+        cands.push({tpl,errN:err/errLimit,idx:[i,j,k],d,conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
       }
     }
+    }
+  }
+  /* De ringen. Drie punten leggen precies één cirkel vast, dus voor elk drietal
+     rond een punt wordt die cirkel gepast; ligt de straal in het bereik van de
+     sjablonen, dan worden de punten opgehaald die óók op die cirkel liggen.
+     Zijn dat er vijf, dan is dat een kandidaat.
+
+     Alle vijftallen langsgaan zou aan een tafel met twintig vingers ondoenlijk
+     zijn (bij 24 punten ruim 40.000 per beeldje); via de cirkel blijft het bij
+     een handvol per punt. Het zoekpunt zelf zit altijd in het drietal: elke ring
+     bevat zijn eigen laagste punt, en de andere vier liggen binnen één diameter
+     daarvan, dus er gaat niets verloren. */
+  if(rings.length){
+    const rMin=Math.min(...rings.map(tplRing))*pxPerMM*0.72;
+    const rMax=Math.max(...rings.map(tplRing))*pxPerMM*1.30;
+    const seen=new Set(), reach=2*rMax*1.12;
+    for(let i=0;i<points.length;i++){
+      const cx=Math.floor(points[i].x/cell), cy=Math.floor(points[i].y/cell);
+      const nb=[];
+      for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
+        const bucket=grid.get((cx+dx)+":"+(cy+dy)); if(!bucket) continue;
+        for(const j of bucket) if(j!==i&&dist(points[i],points[j])<=reach) nb.push(j);
+      }
+      if(nb.length<4) continue;
+      /* Bij veel vingers op het glas kijken we alleen naar de elf dichtstbij-
+         zijnde punten: de pootjes van dezelfde puck liggen altijd dichterbij
+         dan de rest van de tafel. */
+      nb.sort((a,b)=>dist(points[i],points[a])-dist(points[i],points[b]));
+      const near=nb.slice(0,11);
+      for(let a=0;a<near.length;a++) for(let b=a+1;b<near.length;b++){
+        const fit=fitCircle([points[i],points[near[a]],points[near[b]]]);
+        if(!fit||fit.r<rMin||fit.r>rMax) continue;
+        let on=[i,...near].filter(k=>
+          Math.abs(Math.hypot(points[k].x-fit.cx,points[k].y-fit.cy)-fit.r)<fit.r*0.16);
+        if(on.length<5) continue;
+        /* Er kan een losse vinger op dezelfde cirkel liggen — een hand die naast
+           de puck rust doet dat zo. Dan zijn het er zes of zeven, en wordt elk
+           vijftal daaruit geprobeerd; de puck raakt dus niet zoek doordat er
+           iemand naast hem op het glas leunt. Meer dan zeven punten op één
+           cirkel is geen puck meer, dan blijven de zeven zuiverste over. */
+        if(on.length>7) on=on.sort((a,b)=>
+          Math.abs(Math.hypot(points[a].x-fit.cx,points[a].y-fit.cy)-fit.r)-
+          Math.abs(Math.hypot(points[b].x-fit.cx,points[b].y-fit.cy)-fit.r)).slice(0,7);
+        for(const groep of pick5(on)){
+          /* Dezelfde regel als bij de driehoeken: punten van twee sleepkopieën
+             vormen samen nooit één puck. */
+          const uid=groep.map(k=>points[k].uid).find(u=>u!==undefined);
+          if(uid!==undefined&&groep.some(k=>points[k].uid!==uid)) continue;
+          // Hetzelfde vijftal wordt vanuit elk van zijn punten gevonden; de
+          // sleutel moet dus niet aan de volgorde hangen.
+          const key=groep.join(","); if(seen.has(key)) continue; seen.add(key);
+          const d=describeRing(groep.map(k=>points[k]));
+          if(!d||d.spread>0.16) continue;
+          for(const tpl of rings){
+            const tracked=onTable.has(tpl.id);
+            const limit=CFG.ringToleranceDeg*(tracked?1.5:1);
+            const m=matchRing(d,tpl);
+            if(m.err>limit) continue;
+            const want=tplRing(tpl)*pxPerMM;
+            const sizeErr=Math.abs(d.radius-want)/want;
+            if(sizeErr>(tracked?0.30:0.22)) continue;
+            cands.push({tpl,errN:m.err/limit,idx:groep.slice(),d:{...d,angle:m.angle},
+                        conf:Math.max(0,1-m.err/limit*0.7-sizeErr*0.6)});
+          }
+        }
+      }
     }
   }
   /* Hetzelfde sjabloon mag meerdere keren gekozen worden: twee mensen met
@@ -1456,7 +1695,11 @@ function recognise(points,tpls){
   const sep=puckSepPX();
   const continues=c=>[...tracks.values()].some(t=>t.tpl.id===c.tpl.id&&
         Math.hypot(t.x-c.d.cx,t.y-c.d.cy)<sep);
-  for(const c of cands) c.score=c.err-(continues(c)?0.05:0);
+  /* De fout van een driehoek is een verhouding en die van een ring staat in
+     graden. Ze zijn daarom allebei op hun eigen tolerantie gedeeld (`errN`:
+     0 is precies, 1 is net binnen), zodat ze eerlijk om dezelfde punten
+     strijden. Een halve tolerantie voorsprong voor wie een puck voortzet. */
+  for(const c of cands) c.score=c.errN-(continues(c)?0.5:0);
   cands.sort((a,b)=>a.score-b.score);
   const used=new Set(),out=[];
   for(const c of cands){
@@ -1464,10 +1707,22 @@ function recognise(points,tpls){
     if(out.some(o=>Math.hypot(o.x-c.d.cx,o.y-c.d.cy)<sep)) continue;
     c.idx.forEach(i=>used.add(i));
     out.push({tpl:c.tpl,conf:c.conf,x:c.d.cx,y:c.d.cy,
-              angle:Math.atan2(c.d.anchor.y-c.d.cy,c.d.anchor.x-c.d.cx)});
+              angle:c.d.ring?c.d.angle
+                             :Math.atan2(c.d.anchor.y-c.d.cy,c.d.anchor.x-c.d.cx)});
   }
   return {pucks:out,usedIdx:used};
 }
+/* Een luikje voor de rooktest. Met `?test` in de URL staan de rekenstukjes van
+   de herkenning even op `window`: zo kan de test vijf punten aanbieden en
+   nakijken welke puck eruit komt en onder welke hoek, zonder tafel en zonder
+   glas. Zonder `?test` bestaat het niet, dus er valt aan een echte tafel niets
+   mee te doen. */
+if(QS.has("test")) window.__puck={describeRing,matchRing,recognise,padsFor,gapsOf,
+                                  templates:()=>templates,pxPerMM:()=>pxPerMM,
+                                  // Voor de rooktest: waar een optie op de ring ligt.
+                                  topics:()=>topics(),ringStart:n=>ringStart(n),
+                                  ringPX:()=>CFG.ringPX};
+
 /* Hoe dicht twee pucks bij elkaar kunnen liggen. Een puck is een schijf, dus
    twee middelpunten liggen nooit dichter bij elkaar dan zijn breedte; deze maat
    houdt daar ruim afstand van en dient twee doelen: kandidaten die te dicht op
@@ -1502,13 +1757,12 @@ function startTrack(d,now){
            angleOrigin:d.angle,rawOrigin:d.angle,
            frames:0,state:"candidate",buf:[],
            conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
-           // De puck begint in het hoofdmenu. In welke stand hij landt is
-           // meteen de keuze: leg je hem neer met de neus op Zoomen, dan
-           // zoomt hij, zonder eerst weg te draaien en zonder te wachten.
-           // `landing` zegt dat die keuze nog gemaakt moet worden; dat
-           // gebeurt zodra de puck herkend is (zie hieronder).
-           menu:"root",mode:"move",topicIdx:0,landing:true,
-           dwellIdx:-1,dwellT0:now,dwellDone:true,zoomRefY:d.y,zoomAnchor:null};
+           // De puck begint in het hoofdmenu, in de rusttoestand Verplaatsen.
+           // Hoe hij op tafel landt zegt niets meer over zijn keuze: die maak
+           // je door een optie op de ring aan te tikken. `tapIdx`/`tapT0`
+           // houden alleen het oplichten van de laatst aangetikte optie bij.
+           menu:"root",mode:"move",topicIdx:0,
+           tapIdx:-1,tapT0:0,zoomRefY:d.y,zoomAnchor:null};
   tracks.set(t.id,t);
   // Kwam dezelfde puck net van de tafel? Dan is dit geen nieuwe puck maar
   // dezelfde die even wegviel: hij pakt zijn stand weer op en kiest dus niet
@@ -1519,11 +1773,10 @@ function startTrack(d,now){
   if(mi>=0){
     const mem=puckMemory.splice(mi,1)[0];
     t.menu=mem.menu; t.mode=mem.mode; t.topicIdx=mem.topicIdx;
-    t.pinId=mem.pinId; t.armed=mem.armed; t.landing=false;
+    t.pinId=mem.pinId; t.armed=mem.armed;
     t.angleOrigin=mem.angleOrigin; t.angle=mem.angleOrigin;
     t.zoomAnchor=mem.zoomAnchor;
   }
-  t.dwellIdx=ringIndexOf(t.angle,ringItems(t).length);
   return t;
 }
 /* Welke detectie hoort bij welke puck die er al lag? Niet op sjabloon -- twee
@@ -1570,14 +1823,11 @@ function track(dets,now){
     t.lastRawAngle=d.angle;
     t.measuredAngle+=rawStep;
     t.filteredAngle+=(t.measuredAngle-t.filteredAngle)*0.55;
-    // Eén graad aan de puck telt als twee graden op de keuzering: 5 graden
-    // draaien is 10 graden op het scherm. Daarmee is ongeveer 45 graden
-    // draaien genoeg om naar de volgende van vier opties te gaan. Drie was te
-    // scherp — je schoot je optie voorbij; minder dan twee vraagt een halve
-    // slag per keuze. De filtering hierboven dempt kleine contacttrillingen,
-    // en meer versterking dan dit maakt de ring nerveus: dan tikt de trilling
-    // van de contactpunten al tegen een segmentgrens aan.
-    t.angle=t.angleOrigin+(t.filteredAngle-t.rawOrigin)*CFG.rotationGain;
+    // De hoek stuurde de keuzering aan en stond daarom versterkt: één graad
+    // aan de puck was er twee op de ring. Nu je kiest door te tikken hoeft hij
+    // niets meer te sturen — dit is weer gewoon de gemeten stand van de puck,
+    // gedempt tegen de trilling van de contactpunten.
+    t.angle=t.angleOrigin+(t.filteredAngle-t.rawOrigin);
     t.state=t.frames>=CFG.stableFrames?"recognised":"candidate";
     const moved=Math.hypot(t.x-t.anchorX,t.y-t.anchorY);
     if(moved>CFG.jitterPX){ t.anchorX=t.x; t.anchorY=t.y; }
@@ -1587,12 +1837,8 @@ function track(dets,now){
     // Wie de puck echt oppakt en ergens anders neerlegt, wijst een nieuwe plek
     // aan: het zoom-ijkpunt gaat mee.
     if(moved>CFG.rearmPX) t.zoomAnchor=null;
-    // Draaien bedient het menu, verschuiven bedient (in de zoomstand) de kaart.
-    if(t.state==="recognised"){
-      // De stand waarin de puck op tafel komt is zijn eerste keuze.
-      if(t.landing){ t.landing=false; commitPuckChoice(t,ringIndexOf(t.angle,ringItems(t).length)); }
-      updatePuckMenu(t,now);
-    }
+    // Kiezen gaat met een tik op de ring (zie `tryPuckMenuTap`); verschuiven
+    // bedient (in de zoomstand) de kaart.
     applyPuckZoom(t);
   }
   for(const [id,t] of [...tracks]){
@@ -1632,10 +1878,12 @@ function track(dets,now){
    blijft de verdeling van de ring hetzelfde en zie je meteen waar hij komt
    te staan zodra je één niveau dieper zit.
 
-   Kiezen gaat niet met een tik. Een tik legt de markering vast, en dat mag
-   niet dubbelop. Je draait naar een optie en houdt de puck even stil; na
-   `CFG.puckDwellMS` staat de keuze. Dat is ook wat een zware schijf op tafel
-   vanzelf doet — hij blijft liggen waar je hem loslaat. */
+   Kiezen doe je door de optie aan te tikken — op de boog of op zijn label,
+   allebei dezelfde taartpunt. Het ging eerst met draaien en stilhouden, maar
+   dat vraagt dat je de puck laat staan terwijl je kiest, en het maakt elke
+   onbedoelde draai een keuze. Tikken botst niet met het vastleggen van een
+   markering: dat gebeurt in het kijkgat, binnen de puck, en de ring ligt daar
+   ruim buiten. */
 /* De ring begint bovenaan. Het eerste segment ligt met zijn midden op twaalf
    uur, en de rest volgt met de klok mee. Zonder die draaiing begon segment 0
    linksboven, en dan wijst "de eerste optie" nergens naar — aan een tafel is
@@ -1687,29 +1935,49 @@ function commitPuckChoice(t,idx){
     // het vizier ligt. Zie applyPuckZoom.
     t.mode="zoom"; t.zoomRefY=t.y; t.zoomAnchor=MV.unproject(t.x,t.y);
   }
-  // Na een sprong naar een ander niveau wijst dezelfde hoek naar een andere
-  // optie. Die telt als "al gezien", anders vuurt het volgende niveau meteen.
-  t.dwellIdx=ringIndexOf(t.angle,ringItems(t).length);
-  t.dwellDone=true;
 }
 
-/* Hoe lang stilhouden op dit niveau een keuze is. In het thema-menu draai je
-   langs alle thema's om ze te lezen; daar mag onderweg blijven hangen nog geen
-   keuze zijn, dus staat de tijd daar veel ruimer. */
-const dwellMSFor=t=>t.menu==="topics"?CFG.puckTopicDwellMS:CFG.puckDwellMS;
-/* De stilstand bijhouden. Wordt elk beeld aangeroepen zolang een puck ligt. */
-function updatePuckMenu(t,now){
-  const n=ringItems(t).length, idx=ringIndexOf(t.angle,n);
-  if(idx!==t.dwellIdx){ t.dwellIdx=idx; t.dwellT0=now; t.dwellDone=false; return; }
-  if(t.dwellDone) return;
-  if(now-t.dwellT0>=dwellMSFor(t)){ t.dwellDone=true; commitPuckChoice(t,idx); }
+/* Waar de ring ophoudt: net voorbij de labelchip. Het venster van een puck
+   wordt op dezelfde maat weggehouden (`puckReach`), zodat een open venster
+   nooit over een optie heen ligt die je moet kunnen raken. */
+const puckMenuOuterPX=()=>CFG.ringPX+chipHeight()*1.35+10;
+/* Welke optie ligt er onder deze tik? Het raakvlak is de hele taartpunt: van
+   net buiten de schijf tot voorbij het label. Alleen de labelchip zou aan een
+   tafel een te klein doel zijn — je tikt staand, van opzij, met een hele hand.
+   Binnen de schijf telt niet mee: daar zit het kijkgat, en dat legt vast. */
+function puckMenuHit(x,y){
+  const inner=CFG.puckRadiusMM*pxPerMM+4, outer=puckMenuOuterPX();
+  let best=null,bd=Infinity;
+  for(const t of tracks.values()){
+    if(t.state!=="recognised") continue;
+    const d=Math.hypot(x-t.x,y-t.y);
+    if(d<inner||d>outer||d>=bd) continue;
+    bd=d; best=t;
+  }
+  if(!best) return null;
+  const items=ringItems(best);
+  const idx=ringIndexOf(Math.atan2(y-best.y,x-best.x),items.length);
+  const item=items[idx];
+  return item?{track:best,idx,item}:null;
 }
-/* Hoever de stilstand gevorderd is; 0 als er niets loopt. Alleen voor het beeld. */
-function puckDwellProgress(t,now){
-  if(t.dwellDone) return 0;
-  const items=ringItems(t), item=items[t.dwellIdx];
-  if(!item||item.disabled) return 0;
-  return Math.max(0,Math.min(1,(now-t.dwellT0)/dwellMSFor(t)));
+/* Een tik op de ring uitvoeren. Een uitgeschakelde optie doet niets, maar
+   slikt de tik wel: hij hoort bij de puck en niet bij de kaart eronder, en een
+   tik die “doorvalt” zou de sleepkopieën wissen. */
+function tryPuckMenuTap(x,y){
+  const hit=puckMenuHit(x,y);
+  if(!hit) return false;
+  if(hit.item.disabled) return true;
+  hit.track.tapIdx=hit.idx; hit.track.tapT0=performance.now();
+  commitPuckChoice(hit.track,hit.idx);
+  return true;
+}
+/* Hoe fel de laatst aangetikte optie nog oplicht: 1 op het moment van de tik,
+   0 als het voorbij is. Alleen voor het beeld — zonder die terugkoppeling weet
+   je bij een optie die weinig verandert niet of je tik is aangekomen. */
+function puckTapGlow(t,now){
+  if(!t.tapT0) return 0;
+  const k=1-(now-t.tapT0)/CFG.puckTapMS;
+  return k>0?k:0;
 }
 
 /* Zoomen met de puck zelf: vooruit duwen (van je af, het scherm op) zoomt in,
@@ -2020,6 +2288,9 @@ addEventListener("pointerup",e=>{
   // Een tik in het kijkgat legt de markering vast; dat gaat voor op al het
   // andere, want het is de enige handeling die iets nieuws op de kaart zet.
   if(tryConfirmPuck(e.clientX,e.clientY)) return;
+  // Daarna de ring eromheen: daar kiest een tik een optie. Dat gaat voor op
+  // alles wat er verder onder de tik kan liggen, want de ring hoort bij de puck.
+  if(tryPuckMenuTap(e.clientX,e.clientY)) return;
   // A tap that lands on a puck (simulated or detected) belongs to that puck.
   const R=CFG.puckRadiusMM*pxPerMM;
   if(simPuckAt(e.clientX,e.clientY)) return;
@@ -2225,7 +2496,7 @@ function openNote(pin,x,y,fromPuck=false){
   // Het venster gaat naast de puck open, maar moet ook langs zijn ring met
   // keuzes vallen: anders ligt het over "Kiezen" en "Zoomen" heen. De maat
   // volgt daarom de ring en de chips die eromheen staan.
-  n.dataset.puckReach=String(fromPuck?Math.round(CFG.ringPX+chipHeight()*1.35+10):34);
+  n.dataset.puckReach=String(fromPuck?Math.round(puckMenuOuterPX()):34);
   positionNoteX(v);
   positionNote(v);
   n.classList.remove("opening");
@@ -2651,31 +2922,33 @@ function frame(){
   for(const t of pucks){
     const c=vColor(t.tpl.verdict), R=CFG.puckRadiusMM*pxPerMM;
     const items=ringItems(t), n=items.length;
-    const ti=ringIndexOf(t.angle,n), chosen=ringChosen(t);
-    const dwell=puckDwellProgress(t,now);
+    const chosen=ringChosen(t), glow=puckTapGlow(t,now);
     syncPlacedPinTopic(t);
     ctx.save(); ctx.globalAlpha=t.state==="incomplete"?0.35:1;
     for(let k=0;k<n;k++){
       const item=items[k], off=item.disabled;
       const a0=ringStart(n)+(k/n)*Math.PI*2+0.03, a1=ringStart(n)+((k+1)/n)*Math.PI*2-0.03;
-      // Drie standen op de ring, en ze moeten van een meter afstand uit elkaar
-      // te houden zijn: waar de puck nú op wijst (dik), wat er gekozen ís
-      // (vol), en wat er verder te kiezen valt (dun). Uitgeschakeld is niet
-      // onzichtbaar maar flauw: je moet kunnen zien dat de optie bestaat.
+      // Twee standen op de ring, en ze moeten van een meter afstand uit elkaar
+      // te houden zijn: wat er gekozen ís (vol en dik) en wat er verder te
+      // kiezen valt (dun). Uitgeschakeld is niet onzichtbaar maar flauw: je
+      // moet kunnen zien dat de optie bestaat.
       ctx.beginPath(); ctx.arc(t.x,t.y,CFG.ringPX,a0,a1);
-      ctx.strokeStyle=off?c+"18":(k===chosen?c:(k===ti?c+"88":c+"33"));
-      ctx.lineWidth=off?2:(k===chosen?7:(k===ti?5:3));
+      ctx.strokeStyle=off?c+"18":(k===chosen?c:c+"44");
+      ctx.lineWidth=off?2:(k===chosen?7:4);
       ctx.stroke();
-      // De stilstand die de keuze maakt, loopt zichtbaar vol. Zonder die
-      // terugkoppeling voelt wachten als "er gebeurt niets".
-      if(k===ti&&dwell>0){
-        ctx.beginPath(); ctx.arc(t.x,t.y,CFG.ringPX,a0,a0+(a1-a0)*dwell);
-        ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.lineWidth=9; ctx.stroke();
+      // De aangetikte optie licht kort wit op. Kiezen is nu één tik, dus dit
+      // is het enige moment waarop de tafel terugzegt dat hij je gehoord heeft.
+      if(k===t.tapIdx&&glow>0){
+        ctx.beginPath(); ctx.arc(t.x,t.y,CFG.ringPX,a0,a1);
+        ctx.strokeStyle="rgba(255,255,255,"+(glow*0.9).toFixed(3)+")";
+        ctx.lineWidth=9; ctx.stroke();
       }
       const am=(a0+a1)/2, lr=CFG.ringPX+chipHeight()*0.85;
       const lx=t.x+Math.cos(am)*lr, ly=t.y+Math.sin(am)*lr;
-      const selected=k===ti&&!off;
-      const label=(k===chosen&&!off?"\u2022 ":"")+item.label;
+      // Er is nog maar één bijzondere stand — de gekozen optie. De wijzer die
+      // liet zien waar je heen draaide is weg, dus "aangewezen" bestaat niet meer.
+      const selected=k===chosen&&!off;
+      const label=item.label;
       // Dezelfde chip als een knop in een paneel: zelfde maat, zelfde hoeken.
       // Wat gekozen is verschilt in rand en vulling, niet in formaat — een
       // label dat groeit zodra je erlangs draait laat de hele ring dansen.
@@ -2690,32 +2963,23 @@ function frame(){
       ctx.roundRect(lx-labelW/2,ly-labelH/2,labelW,labelH,Math.min(CHIP.radius,labelH/2));
       ctx.fillStyle=selected?"rgba(9,12,17,.98)":"rgba(9,12,17,.88)";
       ctx.fill();
-      ctx.strokeStyle=off?"rgba(232,237,244,.12)":(selected?c:(k===chosen?c+"88":"rgba(232,237,244,.28)"));
+      ctx.strokeStyle=off?"rgba(232,237,244,.12)":(selected?c:"rgba(232,237,244,.28)");
       ctx.lineWidth=selected?2:1;
       ctx.stroke();
       ctx.fillStyle=off?"rgba(232,237,244,.32)":(selected?"#ffffff":"rgba(232,237,244,.9)");
       ctx.fillText(label,lx,ly+.5);
+      // Hetzelfde oplichten op het label, want daar stond de vinger.
+      if(k===t.tapIdx&&glow>0){
+        ctx.beginPath();
+        ctx.roundRect(lx-labelW/2,ly-labelH/2,labelW,labelH,Math.min(CHIP.radius,labelH/2));
+        ctx.strokeStyle="rgba(255,255,255,"+(glow*0.95).toFixed(3)+")";
+        ctx.lineWidth=3; ctx.stroke();
+      }
     }
-    /* De wijzer. De ring zelf staat stil en alleen het dikke segment verspringt,
-       dus tot je een heel segment verder bent verandert er niets aan het beeld —
-       en dan lijkt de tafel dood terwijl hij je gewoon volgt. Deze wijzer staat
-       op de gemeten hoek en beweegt met elke graad mee: je ziet meteen dát je
-       gehoord wordt, en hoever je nog moet tot de volgende optie. */
-    {
-      const na=t.angle, nr0=R+6, nr1=CFG.ringPX-7;
-      ctx.save();
-      ctx.lineCap="round";
-      ctx.beginPath();
-      ctx.moveTo(t.x+Math.cos(na)*nr0,t.y+Math.sin(na)*nr0);
-      ctx.lineTo(t.x+Math.cos(na)*nr1,t.y+Math.sin(na)*nr1);
-      ctx.strokeStyle="rgba(7,9,12,.85)"; ctx.lineWidth=6; ctx.stroke();
-      ctx.strokeStyle="rgba(255,255,255,.92)"; ctx.lineWidth=3; ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(t.x+Math.cos(na)*nr1,t.y+Math.sin(na)*nr1,5,0,Math.PI*2);
-      ctx.fillStyle="#ffffff"; ctx.fill();
-      ctx.strokeStyle="rgba(7,9,12,.85)"; ctx.lineWidth=1.5; ctx.stroke();
-      ctx.restore();
-    }
+    /* Hier stond een wijzer op de gemeten hoek: die liet zien naar welke optie
+       je aan het draaien was. Nu je kiest door te tikken wijst de puck nergens
+       meer naar, en een naald die naar een segment wijst zou juist suggereren
+       dat draaien nog iets doet. */
     ctx.textBaseline="alphabetic";
     if(t.armed&&t.state==="recognised"){
       const pulse=0.45+0.35*(0.5+0.5*Math.sin(now/380));
@@ -3783,8 +4047,11 @@ el("btnCsv").onclick=()=>download(el("sess").value+".csv",
      '"'+(p.transcript||"").replace(/"/g,'""')+'"',p.t].join(",")).join("\n"),"text/csv");
 
 /* ── Puck herkennen ──────────────────────────────────────────────────────
-   Drie stukjes koperfolie in een driehoek zijn een puck; welke puck dat is,
-   staat nergens op de tape te lezen. Dit venster meet de driehoek die op tafel
+   Vijf pootjes op een ring zijn een puck — of, bij de oude pucks, drie stukjes
+   koperfolie in een driehoek. Welke puck het is, staat er nergens op te lezen.
+   Het aantal punten op het glas zegt zelf welke van de twee er ligt: drie is
+   een driehoek, vijf is een ring. Bij een ring moet de pijl naar boven wijzen,
+   want anders weet de tafel wel de vorm maar niet de voorkant. Dit venster meet de driehoek die op tafel
    ligt en laat je hem daarna een naam geven — Goed, Probleem, Discussie, Idee.
    De meting overschrijft de driehoek van die ene puck en blijft in localStorage
    staan, dus dit scherm kent hem ook na herladen. Er komt nooit een vijfde puck
@@ -3794,6 +4061,13 @@ el("btnCsv").onclick=()=>download(el("sess").value+".csv",
    trilt een paar pixels, en de mediaan van ~50 metingen ligt veel vaster dan
    een momentopname. Verschuift de puck tijdens het meten, dan begint de reeks
    opnieuw — anders meet je de beweging mee. */
+/* Eén regel die een sjabloon beschrijft, voor alle lijstjes in dit venster: de
+   gaten tussen de pootjes zijn wat een ringpuck is, de zijdeverhoudingen wat
+   een driehoek is. */
+const gapText=angles=>gapsOf(angles).map(g=>Math.round(g)).join("·");
+const tplSummary=t=>isRing(t)
+  ? `${gapText(t.angles)}° · straal ${tplRing(t).toFixed(1)} mm`
+  : `${t.ratios[0].toFixed(3)} / ${t.ratios[1].toFixed(3)} · ${tplLongest(t).toFixed(1)} mm`;
 const LEARN_HOLD_MS=900, LEARN_STILL_PX=9, LEARN_MIN_SAMPLES=12;
 const learn={open:false,phase:"wait",samples:[],t0:0,m:null,tplId:null,clash:null,note:"",moved:false};
 
@@ -3858,38 +4132,83 @@ function updateLearn(now){
     if(!pts.length){ learn.phase="wait"; renderLearn(); }
     return;
   }
-  if(pts.length!==3){
+  if(pts.length!==3&&pts.length!==5){
     if(learn.phase!=="wait"){ learn.phase="wait"; renderLearn(); }
     learn.samples=[]; learn.moved=false; setLearnBar(0);
     st.innerHTML=tr("recogWait",pts.length)+learnKnownNote();
     return;
   }
-  const d=describe(pts[0],pts[1],pts[2]);
+  /* Vijf punten is een gedrukte puck, drie een driehoek van tape. Wat er ligt
+     bepaalt dus zelf welke vorm er wordt opgeslagen. */
+  const ring=pts.length===5;
+  const d=ring?describeRing(pts):describe(pts[0],pts[1],pts[2]);
   if(!d) return;
+  // Vijf punten die niet op één cirkel liggen zijn vingers, geen puck.
+  if(ring&&d.spread>0.20){
+    learn.samples=[]; setLearnBar(0);
+    st.innerHTML=tr("recogWait",pts.length)+learnKnownNote();
+    return;
+  }
+  const size=ring?d.radius:d.longest;
   const last=learn.samples[learn.samples.length-1];
-  if(last && (Math.hypot(d.cx-last.cx,d.cy-last.cy)>LEARN_STILL_PX ||
-              Math.abs(d.longest-last.longest)>LEARN_STILL_PX)){
+  if(last && (last.ring!==ring ||
+              Math.hypot(d.cx-last.cx,d.cy-last.cy)>LEARN_STILL_PX ||
+              Math.abs(size-last.size)>LEARN_STILL_PX)){
     learn.samples=[]; learn.moved=true;
   }
   if(!learn.samples.length) learn.t0=now;
-  learn.samples.push({r0:d.ratios[0],r1:d.ratios[1],longest:d.longest,cx:d.cx,cy:d.cy});
+  /* De hoeken gaan meteen om naar hoeken vanaf de pijl. Op het scherm wijst de
+     pijl naar boven en dat is −90°, dus er komt 90 bij. */
+  learn.samples.push(ring
+    ? {ring:true,angles:d.angles.map(a=>norm360(a+90)),size,cx:d.cx,cy:d.cy}
+    : {ring:false,r0:d.ratios[0],r1:d.ratios[1],size,cx:d.cx,cy:d.cy});
   if(learn.phase!=="hold"){ learn.phase="hold"; learn.note=""; renderLearn(); }
   const held=now-learn.t0;
   setLearnBar(held/LEARN_HOLD_MS);
-  st.innerHTML=learn.moved&&held<250?tr("recogMoved"):tr("recogHold");
+  st.innerHTML=learn.moved&&held<250?tr("recogMoved"):tr("recogHold",pts.length);
   if(held>=LEARN_HOLD_MS && learn.samples.length>=LEARN_MIN_SAMPLES){
-    const med=f=>{ const a=learn.samples.map(f).sort((x,y)=>x-y); return a[a.length>>1]; };
-    learn.m={r0:med(s=>s.r0),r1:med(s=>s.r1),longest:med(s=>s.longest)};
+    learn.m=learnMedian();
     learn.phase="done"; learn.moved=false; setLearnBar(1); renderLearn();
   }
 }
-/* De gemeten driehoek staat over de kaart heen getekend: zo zie je meteen of de
+/* De mediaan over de reeks. Bij een driehoek gaat dat getal voor getal. Bij een
+   ring moet eerst vaststaan welk pootje welk is: het eerste beeldje is de maat
+   en elk volgend beeldje wordt zo gedraaid dat het daar het beste op past.
+   Zonder dat verspringt de volgorde zodra een pootje net langs de pijl trilt,
+   en meet je een puck die er niet is. Het optellen gebeurt in verschillen ten
+   opzichte van dat eerste beeldje, zodat 359° en 1° buren blijven. */
+function learnMedian(){
+  const S=learn.samples;
+  const med=f=>{ const a=S.map(f).sort((x,y)=>x-y); return a[a.length>>1]; };
+  const size=med(s=>s.size);
+  if(!S[0].ring) return {ring:false,r0:med(s=>s.r0),r1:med(s=>s.r1),longest:size};
+  const base=S[0].angles, wrap=a=>((a+180)%360+360)%360-180;
+  const cols=[[],[],[],[],[]];
+  for(const sm of S){
+    let bs=0,bErr=Infinity;
+    for(let k=0;k<5;k++){
+      let e=0; for(let i=0;i<5;i++) e+=Math.abs(wrap(sm.angles[(i+k)%5]-base[i]));
+      if(e<bErr){ bErr=e; bs=k; }
+    }
+    for(let i=0;i<5;i++) cols[i].push(base[i]+wrap(sm.angles[(i+bs)%5]-base[i]));
+  }
+  const angles=cols.map(c=>{ c.sort((x,y)=>x-y); return norm360(c[c.length>>1]); });
+  return {ring:true,angles:angles.sort((a,b)=>a-b),radius:size};
+}
+/* De meting staat over de kaart heen getekend: zo zie je meteen of de
    tafel alle drie de plakkers ziet en op de goede plek. */
 function drawLearnPoints(pts){
   const svg=el("learnPoints");
-  const poly=pts.length===3
-    ? `<polygon points="${pts.map(p=>p.x.toFixed(1)+","+p.y.toFixed(1)).join(" ")}"/>` : "";
-  const html=poly+pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="15"/>`).join("");
+  let shape="";
+  if(pts.length===3)
+    shape=`<polygon points="${pts.map(p=>p.x.toFixed(1)+","+p.y.toFixed(1)).join(" ")}"/>`;
+  else if(pts.length===5){
+    // Bij vijf punten de gepaste cirkel: zo zie je in één oogopslag of ze
+    // allemaal op de rand van de puck liggen.
+    const f=fitCircle(pts);
+    if(f) shape=`<circle cx="${f.cx.toFixed(1)}" cy="${f.cy.toFixed(1)}" r="${f.r.toFixed(1)}" class="learn-fit"/>`;
+  }
+  const html=shape+pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="15"/>`).join("");
   if(svg.dataset.h===html) return;
   svg.dataset.h=html; svg.innerHTML=html;
 }
@@ -3910,7 +4229,7 @@ function ownPuckList(){
   return `<p class="learn-which">${tr("recogKnown",ownPucks.length)}</p>`+ownPucks.map(t=>
     `<div class="own-row" style="--c:${vColor(t.verdict)}">
        <b>${vName(t.verdict)}</b>
-       <span>${t.id} &middot; ${t.ratios[0].toFixed(3)} / ${t.ratios[1].toFixed(3)} &middot; ${tplLongest(t).toFixed(1)} mm &middot; ${learnStamp(t)}</span>
+       <span>${t.id} &middot; ${tplSummary(t)} &middot; ${learnStamp(t)}</span>
        <button class="own-del danger" data-id="${t.id}" aria-label="${tr("recogRemove")}" title="${tr("recogRemove")}">&times;</button>
      </div>`).join("");
 }
@@ -3924,17 +4243,27 @@ function renderLearn(){
   if(learn.phase==="saved"){
     const tpl=activeTemplates().find(t=>t.id===learn.tplId);
     if(!tpl){ restartLearn(); return; }
-    st.innerHTML=tr("recogSaved",vName(tpl.verdict),tpl.ratios[0].toFixed(3),
-                    tpl.ratios[1].toFixed(3),tplLongest(tpl).toFixed(1))
+    st.innerHTML=(isRing(tpl)
+        ? tr("recogSavedRing",vName(tpl.verdict),gapText(tpl.angles),tplRing(tpl).toFixed(1))
+        : tr("recogSaved",vName(tpl.verdict),tpl.ratios[0].toFixed(3),
+                          tpl.ratios[1].toFixed(3),tplLongest(tpl).toFixed(1)))
                 +(learn.clash?tr("recogClash",learn.clash):"");
     body.innerHTML=`<div class="row"><button class="primary" id="btnLearnAgain">${tr("recogAgain")}</button></div>`;
     el("btnLearnAgain").onclick=()=>restartLearn(true);
     return;
   }
   if(learn.phase==="done"){
-    st.innerHTML=tr("recogMeasured",learn.m.r0.toFixed(3),learn.m.r1.toFixed(3),
-                    (learn.m.longest/pxPerMM).toFixed(1));
-    const iso=nearlyIsosceles(learn.m.r0,learn.m.r1)?`<p class="learn-warn">${tr("recogIso")}</p>`:"";
+    st.innerHTML=learn.m.ring
+      ? tr("recogMeasuredRing",gapText(learn.m.angles),(learn.m.radius/pxPerMM).toFixed(1))
+      : tr("recogMeasured",learn.m.r0.toFixed(3),learn.m.r1.toFixed(3),
+                           (learn.m.longest/pxPerMM).toFixed(1));
+    /* Dezelfde waarschuwing, twee vormen: een driehoek zonder duidelijke
+       voorkant is bijna gelijkbenig, een ring lijkt op zichzelf na een slag
+       draaien. In allebei de gevallen loopt het ringmenu straks vast. */
+    const wobbly=learn.m.ring
+      ? (ringSelfSym(gapsOf(learn.m.angles))<CFG.ringToleranceDeg*1.2?tr("recogRingSym"):"")
+      : (nearlyIsosceles(learn.m.r0,learn.m.r1)?tr("recogIso"):"");
+    const iso=wobbly?`<p class="learn-warn">${wobbly}</p>`:"";
     if(puckMode()){
       /* Geen preset. De meting wordt een nieuwe puck; je zegt alleen nog wat
          voor soort het is, en dezelfde soort mag vaker voorkomen. */
@@ -3949,7 +4278,7 @@ function renderLearn(){
     body.innerHTML=iso+`<p class="learn-which">${tr("recogWhich")}</p>`+templates.map(t=>
       `<button class="learn-pick" data-id="${t.id}" style="--c:${vColor(t.verdict)}">
          <b>${vName(t.verdict)}</b>
-         <span>${t.id} · ${t.ratios[0].toFixed(3)} / ${t.ratios[1].toFixed(3)} · ${tplLongest(t).toFixed(1)} mm · ${learnStamp(t)}</span>
+         <span>${t.id} · ${tplSummary(t)} · ${learnStamp(t)}</span>
        </button>`).join("");
     [...body.querySelectorAll(".learn-pick")].forEach(b=>b.onclick=()=>assignLearn(b.dataset.id));
     return;
@@ -3970,13 +4299,29 @@ function renderLearn(){
    ook zijn maat, want geknipte tape is nooit precies 60 mm — en meteen
    weggeschreven. Lijkt de nieuwe driehoek te veel op die van een andere puck,
    dan wordt dat er hard bij gezegd: dan verwisselt de tafel ze straks. */
+/* De meting als sjabloonvorm: vijf hoeken vanaf de pijl plus de straal, of de
+   twee zijdeverhoudingen plus de langste zijde. */
+const learnShape=()=>learn.m.ring
+  ? {angles:learn.m.angles.map(a=>+a.toFixed(1)),ringMM:+(learn.m.radius/pxPerMM).toFixed(1)}
+  : {ratios:[+learn.m.r0.toFixed(3),+learn.m.r1.toFixed(3)],
+     longestMM:+(learn.m.longest/pxPerMM).toFixed(1)};
+/* Lijkt deze meting te veel op een puck die er al is? Bij ringen gaat dat over
+   de gaten tussen de pootjes, bij driehoeken over de zijdeverhoudingen — en een
+   ring lijkt nooit op een driehoek. */
+function shapeClash(t,shape){
+  if(isRing(t)!==!!shape.angles) return false;
+  if(shape.angles){
+    const a=[...shape.angles].sort((x,y)=>x-y);
+    return matchRing({angles:a,gaps:gapsOf(a)},t).err<CFG.ringToleranceDeg*1.5;
+  }
+  return Math.hypot(t.ratios[0]-shape.ratios[0],t.ratios[1]-shape.ratios[1])<0.12;
+}
 function assignLearn(id){
   const tpl=templates.find(t=>t.id===id);
   if(!tpl||!learn.m) return;
-  const r=[+learn.m.r0.toFixed(3),+learn.m.r1.toFixed(3)];
-  const clash=templates.find(t=>t!==tpl&&Math.hypot(t.ratios[0]-r[0],t.ratios[1]-r[1])<0.12);
-  tpl.ratios=r;
-  tpl.longestMM=+(learn.m.longest/pxPerMM).toFixed(1);
+  const shape=learnShape();
+  const clash=templates.find(t=>t!==tpl&&shapeClash(t,shape));
+  applyShape(tpl,shape);
   tpl.learnedAt=new Date().toISOString();
   saveTemplates();
   learn.tplId=id; learn.clash=clash?vName(clash.verdict):null; learn.phase="saved";
@@ -3988,9 +4333,10 @@ function assignLearn(id){
    die twee verwisselt de tafel straks. */
 function addLearnedPuck(verdict){
   if(!learn.m||!VERDICTS.some(v=>v.key===verdict)) return;
-  const r=[+learn.m.r0.toFixed(3),+learn.m.r1.toFixed(3)];
-  const clash=ownPucks.find(t=>Math.hypot(t.ratios[0]-r[0],t.ratios[1]-r[1])<0.12);
-  const p=addOwnPuck(verdict,r,+(learn.m.longest/pxPerMM).toFixed(1));
+  const shape=learnShape();
+  const clash=ownPucks.find(t=>shapeClash(t,shape));
+  const p=addOwnPuck(verdict,shape);
+  if(!p) return;
   learn.tplId=p.id; learn.clash=clash?vName(clash.verdict):null; learn.phase="saved";
   renderLearn();
   if(el("sheet").style.display==="block") buildSheet();
@@ -4005,25 +4351,29 @@ el("btnLearnReset").onclick=()=>{
 };
 el("btnLearnExport").onclick=()=>download("puck-metingen.json",JSON.stringify({
   screenDiagIn:CFG.screenDiagIn, pxPerMM:+pxPerMM.toFixed(3), tolerance,
-  templates:activeTemplates().map(t=>({id:t.id,verdict:t.verdict,ratios:t.ratios,
-                               longestMM:+tplLongest(t).toFixed(1),learnedAt:t.learnedAt||null}))
+  templates:activeTemplates().map(tplWire)
 },null,2),"application/json");
 el("btnExport").onclick=()=>download("puck-config.json",
   JSON.stringify({longestSideMM:CFG.longestSideMM,tolerance,templates:activeTemplates()},null,2),"application/json");
 function buildSheet(){
   el("sheetGrid").innerHTML=activeTemplates().map(t=>{
-    const Lmm=tplLongest(t), pads=padsFor(t,Lmm),S=150,sc=(S*0.34)/Lmm*2;
+    const span=tplSpanMM(t), pads=padsFor(t), S=150, sc=(S*0.34)/span*2;
     const pts=pads.map(p=>({x:S/2+p.x*sc,y:S/2+p.y*sc})),c=vColor(t.verdict);
     return `<div class="sheetcard"><h3 style="color:${c}">${t.id} · ${vName(t.verdict)}</h3>
       <svg width="100%" viewBox="0 0 ${S} ${S}">
         <circle cx="${S/2}" cy="${S/2}" r="${CFG.puckRadiusMM*sc}" fill="none" stroke="#2c3846"/>
-        <polygon points="${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')}" fill="none" stroke="${c}" stroke-dasharray="3 3"/>
+        ${isRing(t)
+          ? `<circle cx="${S/2}" cy="${S/2}" r="${(tplRing(t)*sc).toFixed(1)}" fill="none" stroke="${c}" stroke-dasharray="3 3"/>`
+          : `<polygon points="${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')}" fill="none" stroke="${c}" stroke-dasharray="3 3"/>`}
         ${pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="${c}"/>
         <text x="${(p.x+9).toFixed(1)}" y="${(p.y+4).toFixed(1)}" font-size="10" font-family="monospace" fill="#7f8b9b">${"ABC"[i]}</text>`).join("")}
       </svg>
-      <table>${pads.map((p,i)=>`<tr><td>${tr("sheetPad")} ${"ABC"[i]}</td><td>x ${p.x.toFixed(1)} mm</td><td>y ${p.y.toFixed(1)} mm</td></tr>`).join("")}
-      <tr><td>${tr("sheetRatios")}</td><td colspan="2">${t.ratios[0]} / ${t.ratios[1]}</td></tr>
-      <tr><td>${tr("sheetLongest")}</td><td colspan="2">${Lmm.toFixed(1)} mm</td></tr></table></div>`;
+      <table>${pads.map((p,i)=>`<tr><td>${tr("sheetPad")} ${"ABCDE"[i]}</td><td>x ${p.x.toFixed(1)} mm</td><td>y ${p.y.toFixed(1)} mm</td></tr>`).join("")}
+      ${isRing(t)
+        ? `<tr><td>${tr("sheetGaps")}</td><td colspan="2">${gapText(t.angles)}°</td></tr>
+           <tr><td>${tr("sheetRing")}</td><td colspan="2">${tplRing(t).toFixed(1)} mm</td></tr>`
+        : `<tr><td>${tr("sheetRatios")}</td><td colspan="2">${t.ratios[0]} / ${t.ratios[1]}</td></tr>
+           <tr><td>${tr("sheetLongest")}</td><td colspan="2">${tplLongest(t).toFixed(1)} mm</td></tr>`}</table></div>`;
   }).join("");
 }
 el("btnSheet").onclick=()=>{ buildSheet(); el("sheet").style.display="block"; };

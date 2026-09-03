@@ -506,6 +506,122 @@ async function newPage(uiMode, {twoSided=false}={}){
   await ctx4.close();
 }
 
+// ── vijf pootjes op een ring: hoek, ruis, en vier pucks uit elkaar houden ──
+{
+  /* Dit is de rekenkant van de herkenning, zonder tafel: met ?test staan
+     `padsFor` en `recognise` op window. We leggen elke puck onder vijf hoeken
+     neer, met een halve millimeter ruis op elk pootje, en kijken of er precies
+     één puck uit komt — de juiste — en of de gemeten hoek klopt. */
+  const ctx5 = await browser.newContext({ viewport:{width:W,height:H}, hasTouch:true });
+  const page = await ctx5.newPage();
+  await page.addInitScript(()=>{ try{ localStorage.clear(); }catch(e){} });
+  const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
+  await page.goto(BASE+'/index.html?test'); await page.waitForTimeout(900);
+
+  const uit = await page.evaluate(()=>{
+    const P=window.__puck; if(!P) return {fout:'geen luikje'};
+    const k=P.pxPerMM(), rijen=[];
+    const leg=(tpl,deg,cx,cy)=>{
+      const rot=deg*Math.PI/180, c=Math.cos(rot), s=Math.sin(rot);
+      return P.padsFor(tpl,k).map((p,i)=>({
+        // een halve millimeter ruis, vast patroon zodat de test niet wisselt
+        x:cx+p.x*c-p.y*s+((i*37%7)-3)*0.17*k,
+        y:cy+p.x*s+p.y*c+((i*53%7)-3)*0.17*k}));
+    };
+    const graden=a=>((a*180/Math.PI)%360+360)%360;
+    for(const tpl of P.templates()) for(const deg of [0,37,123,250,318]){
+      const r=P.recognise(leg(tpl,deg,800,500));
+      const p0=r.pucks[0];
+      rijen.push({id:tpl.id,deg,aantal:r.pucks.length,gezien:p0?p0.tpl.id:null,
+                  mis:p0?Math.min(Math.abs(graden(p0.angle)-deg),360-Math.abs(graden(p0.angle)-deg)):999});
+    }
+    // twee ringpucks naast elkaar
+    const t=P.templates();
+    const paar=P.recognise(leg(t[0],20,500,500).concat(leg(t[2],200,500+140*k,500)));
+    // vijf punten die niet op een cirkel liggen zijn geen puck
+    const rommel=P.recognise([{x:400,y:400},{x:470,y:405},{x:520,y:520},
+                              {x:410,y:560},{x:600,y:430}]);
+    return {rijen,paar:paar.pucks.map(x=>x.tpl.id).sort(),rommel:rommel.pucks.length};
+  });
+
+  ok('het testluikje bestaat met ?test', !uit.fout);
+  if(!uit.fout){
+    const fout=uit.rijen.filter(r=>r.aantal!==1||r.gezien!==r.id);
+    ok('elke ringpuck wordt onder elke hoek als zichzelf herkend',
+       fout.length===0 || (console.log('mis:',fout.slice(0,4)),false));
+    const hoekfout=uit.rijen.filter(r=>r.mis>6);
+    ok('en de gemeten hoek klopt binnen 6°',
+       hoekfout.length===0 || (console.log('hoekfout:',hoekfout.slice(0,4)),false));
+    ok('twee ringpucks naast elkaar worden allebei gezien',
+       uit.paar.length===2 || (console.log('paar:',uit.paar),false));
+    ok('vijf losse vingers zijn geen puck', uit.rommel===0);
+  }
+  ok('geen JS-fouten (ringpucks)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx5.close();
+}
+
+// ── kiezen doe je door een optie op de ring aan te tikken ──
+{
+  /* Draaien koos vroeger: naar een optie draaien en stilhouden. Nu tik je hem
+     aan. Twee dingen mogen daarbij niet stuk: een tik op de ring mag nooit een
+     markering vastleggen (dat is het kijkgat), en een tik op een thema moet
+     het thema van de markering die er al ligt meteen omzetten. Met ?test staan
+     de maten van de ring op window, zodat de test rekent met wat de app
+     tekent in plaats van met overgeschreven getallen. */
+  const ctx6 = await browser.newContext({ viewport:{width:W,height:H} });
+  const page = await ctx6.newPage();
+  await page.addInitScript(()=>{ try{ localStorage.clear();
+    localStorage.setItem('pucktable-ui-mode','laptop'); }catch(e){} });
+  const errs=[]; page.on('pageerror',e=>errs.push(String(e)));
+  page.on('console', m=>{ if(m.type()==='error' && !/tile|tunnel|ERR_|favicon|Failed to load resource/i.test(m.text())) errs.push(m.text()); });
+  await page.goto(BASE+'/index.html?test'); await page.waitForTimeout(900);
+
+  const cx=W/2, cy=H/2;
+  const pins = () => page.evaluate(()=>{
+    const k='pucktable-'+document.getElementById('sess').value;
+    try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; }
+  });
+  // Waar het midden van optie `i` van `n` ligt, op de straal van de ring.
+  const optie = (i,n) => page.evaluate(o=>{
+    const P=window.__puck, a=P.ringStart(o.n)+(o.i+0.5)*Math.PI*2/o.n, r=P.ringPX();
+    return {x:o.cx+Math.cos(a)*r, y:o.cy+Math.sin(a)*r};
+  }, {i,n,cx,cy});
+
+  const tray = page.locator('#puckDock .traypuck').first();
+  const box = await tray.boundingBox();
+  await page.mouse.move(box.x+box.width/2, box.y+box.height/2);
+  await page.mouse.down(); await page.mouse.move(cx,cy,{steps:12}); await page.mouse.up();
+  await page.waitForTimeout(400);
+
+  // Sessie-01 heeft voorbeeldmarkeringen; tellen doen we vanaf wat er al ligt.
+  const basis = (await pins()).length;
+  await page.mouse.click(cx,cy); await page.waitForTimeout(400);
+  const na = await pins();
+  ok('tik in het kijkgat legt vast (ring)', na.length===basis+1);
+  const thema0 = na[na.length-1]?.topic;
+
+  // Het venster ligt bij de puck; weg ermee, anders vangt het paneel de tik.
+  await page.keyboard.press('Escape'); await page.waitForTimeout(250);
+
+  // Hoofdmenu: vier opties, "Kiezen" is de derde (vanaf boven met de klok mee).
+  const kiezen = await optie(2,4);
+  await page.mouse.click(kiezen.x,kiezen.y); await page.waitForTimeout(300);
+  ok('een tik op de ring legt niets vast', (await pins()).length===basis+1);
+
+  // Themamenu: alle thema's plus Terug. Het tweede thema is een ander thema
+  // dan waar de puck op begon, dus de markering moet meeveranderen.
+  const lijst = await page.evaluate(()=>window.__puck.topics());
+  const thema = await optie(1,lijst.length+1);
+  await page.mouse.click(thema.x,thema.y); await page.waitForTimeout(300);
+  const daarna = (await pins()).pop();
+  ok('een tik op een thema zet het thema van de markering om',
+     daarna && daarna.topic===lijst[1] && daarna.topic!==thema0
+     || (console.log('thema:',thema0,'->',daarna&&daarna.topic,'verwacht',lijst[1]),false));
+
+  ok('geen JS-fouten (ring aantikken)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx6.close();
+}
+
 await browser.close();
 server.close();
 fs.rmSync(work, { recursive: true, force: true });
