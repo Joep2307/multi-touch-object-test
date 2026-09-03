@@ -350,6 +350,18 @@ body.controls-flipped #zoom{left:50%;top:calc(100vh - 18px);right:auto;bottom:au
 body.two-sided .note-flip{display:block}
 .note input,.note textarea{margin-bottom:2px}
 .note .field{margin-top:10px}
+.contact-followup{display:none}
+.note.contact-step .note-main{display:none}
+.note.contact-step .contact-followup{display:block}
+.contact-title{font-size:var(--text-lg);font-weight:800;margin:8px 0 5px}
+.contact-intro{color:var(--ink-dim);line-height:1.45;margin:0 0 12px}
+.contact-consent{display:flex;align-items:flex-start;gap:11px;margin:16px 0 4px;
+  line-height:1.38;cursor:pointer}
+.contact-consent input{appearance:auto;flex:none;width:22px;height:22px;min-height:22px;
+  margin:0;padding:0;accent-color:var(--accent)}
+.contact-status{min-height:1.35em;margin:8px 0 0;color:var(--warn);font-weight:650}
+.contact-status.saved{color:var(--good)}
+.contact-actions{margin-bottom:0}
 @keyframes puck-note-out{
   from{opacity:0;transform:rotate(var(--flip,0deg)) translateX(var(--enter-x,-28px)) scale(.72)}
   to{opacity:1;transform:rotate(var(--flip,0deg)) translateX(0) scale(1)}

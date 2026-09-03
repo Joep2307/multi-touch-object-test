@@ -276,6 +276,16 @@ const L = {
        newNote:"Nieuwe bijdrage", fTitle:"Titel", titlePh:"Geef deze bijdrage een titel",
        fDescription:"Beschrijving", descPh:"Wat is hier aan de hand?",
        del:"Verwijderen", saveBtn:"Bewaren",
+       contactTitle:"Op de hoogte blijven?",
+       contactIntro:"Laat je contactgegevens achter als je wilt horen wat er met deze bijdrage gebeurt.",
+       contactName:"Naam (optioneel)", contactNamePh:"Je naam",
+       contactEmail:"E-mail (optioneel)", contactEmailPh:"naam@voorbeeld.nl",
+       contactPhone:"Telefoon (optioneel)", contactPhonePh:"06 …",
+       contactConsent:"Ja, ik geef toestemming om mij over deze bijdrage te benaderen.",
+       contactSkip:"Nee, bedankt", contactSave:"Contact bewaren",
+       contactNeedDetail:"Vul ten minste een e-mailadres of telefoonnummer in.",
+       contactNeedConsent:"Vink eerst aan dat we je hierover mogen benaderen.",
+       contactInvalidEmail:"Controleer het e-mailadres.", contactSaved:"Contactgegevens bewaard.",
        talkHead:"Gesprek", talkStart:"Gesprek opnemen", talkStop:"Opname stoppen",
        talkLangGroup:"Taal van het gesprek", talkLangAuto:"Auto",
        talkLangAutoTip:"De tafel bepaalt per stukje zelf welke taal er gesproken wordt.",
@@ -454,6 +464,16 @@ const L = {
        newNote:"New contribution", fTitle:"Title", titlePh:"Give this contribution a title",
        fDescription:"Description", descPh:"What is going on here?",
        del:"Delete", saveBtn:"Save",
+       contactTitle:"Stay up to date?",
+       contactIntro:"Leave your contact details if you would like to hear what happens with this contribution.",
+       contactName:"Name (optional)", contactNamePh:"Your name",
+       contactEmail:"Email (optional)", contactEmailPh:"name@example.com",
+       contactPhone:"Phone (optional)", contactPhonePh:"Phone number",
+       contactConsent:"Yes, I consent to being contacted about this contribution.",
+       contactSkip:"No, thanks", contactSave:"Save contact details",
+       contactNeedDetail:"Enter at least an email address or phone number.",
+       contactNeedConsent:"First confirm that we may contact you about this.",
+       contactInvalidEmail:"Check the email address.", contactSaved:"Contact details saved.",
        talkHead:"Conversation", talkStart:"Record conversation", talkStop:"Stop recording",
        talkLangGroup:"Language of the conversation", talkLangAuto:"Auto",
        talkLangAutoTip:"The table works out which language is spoken, chunk by chunk.",
@@ -2442,11 +2462,16 @@ const validPin=p=>!!p && typeof p==="object" && VERDICT_KEYS.has(p.verdict)
                  && Number.isFinite(+p.lat) && Number.isFinite(+p.lng);
 function cleanPin(p){
   const text=v=>typeof v==="string"?v:"";
+  const c=p.contact&&typeof p.contact==="object"?p.contact:null;
+  const contact=c&&c.consent===true&&(text(c.email)||text(c.phone))
+    ? {name:text(c.name),email:text(c.email),phone:text(c.phone),consent:true,
+       consentAt:text(c.consentAt)||new Date().toISOString()}
+    : undefined;
   return {...p, lat:+p.lat, lng:+p.lng,
           id:String(p.id||Date.now()+"-"+Math.random().toString(36).slice(2,6)),
           topic:text(p.topic)||topics()[0],
           title:text(p.title), description:text(p.description)||text(p.note), note:text(p.note),
-          transcript:text(p.transcript),
+          transcript:text(p.transcript), contact,
           t:typeof p.t==="string"&&p.t.length>=16?p.t:new Date().toISOString()};
 }
 function restore(){
@@ -2594,8 +2619,10 @@ function wireNote(v){
   q("noteSave").onclick=()=>{
     const pin=v.pin;
     if(pin){ setTimeout(()=>{ if(v.pin===pin) renderMatches(v,pin); },0); noteToPin(v); save(); }
-    closeNote(v);
+    if(pin) showContactFollowup(v,pin); else closeNote(v);
   };
+  q("contactSkip").onclick=()=>closeNote(v);
+  q("contactSave").onclick=()=>saveContactFollowup(v);
   q("noteDel").onclick=()=>{
     if(v.pin){ const i=pins.indexOf(v.pin); if(i>=0) pins.splice(i,1); save(); }
     closeNote(v);
@@ -2621,6 +2648,42 @@ function wireNote(v){
     new ResizeObserver(()=>positionNote(v,false)).observe(v.el);
 }
 buildNoteViews();
+
+/* Contactgegevens zijn bewust een tweede, optionele stap. De bijdrage is op
+   dit moment al bewaard; overslaan kan hem dus nooit ongedaan maken. */
+function showContactFollowup(v,pin){
+  const c=pin.contact||{};
+  notePart(v,"contactName").value=c.name||"";
+  notePart(v,"contactEmail").value=c.email||"";
+  notePart(v,"contactPhone").value=c.phone||"";
+  notePart(v,"contactConsent").checked=c.consent===true;
+  const status=notePart(v,"contactStatus");
+  status.textContent=""; status.classList.remove("saved");
+  v.el.classList.add("contact-step");
+  positionNote(v);
+  notePart(v,"contactName").focus();
+}
+function saveContactFollowup(v){
+  if(!v.pin) return;
+  const name=notePart(v,"contactName").value.trim();
+  const email=notePart(v,"contactEmail").value.trim();
+  const phone=notePart(v,"contactPhone").value.trim();
+  const consent=notePart(v,"contactConsent").checked;
+  const status=notePart(v,"contactStatus");
+  status.classList.remove("saved");
+  if(!email&&!phone){ status.textContent=tr("contactNeedDetail"); return; }
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    status.textContent=tr("contactInvalidEmail"); return;
+  }
+  if(!consent){ status.textContent=tr("contactNeedConsent"); return; }
+  const old=v.pin.contact;
+  v.pin.contact={name,email,phone,consent:true,
+    consentAt:old?.consentAt||new Date().toISOString()};
+  save();
+  status.textContent=tr("contactSaved"); status.classList.add("saved");
+  const pin=v.pin;
+  setTimeout(()=>{ if(v.pin===pin) closeNote(v); },650);
+}
 
 function positionNote(v,recentre=true){
   const n=v?.el;
@@ -2703,6 +2766,7 @@ function openNote(pin,x,y,fromPuck=false){
   if(v.pin&&v.pin!==pin) closeNote(v);
   v.pin=pin;
   const n=v.el;
+  n.classList.remove("contact-step");
   // Een venster hangt aan een markering. Gaat het bij een andere markering
   // open, dan hoort het weer naast díe markering te beginnen — de vorige
   // verschuiving met de hand geldt niet voor een nieuw venster.
@@ -3584,7 +3648,8 @@ const KEY_ROWS=[
   ["q","w","e","r","t","y","u","i","o","p"],
   ["a","s","d","f","g","h","j","k","l"],
   ["shift","z","x","c","v","b","n","m","backspace"],
-  ["close",",","space",".","enter"]
+  ["1","2","3","4","5","6","7","8","9","0"],
+  ["close","@",",","space",".","-","enter"]
 ];
 /* Twee toetsenborden, één per tafelkant. Eén toetsenbord onderaan is voor wie
    aan de overkant staat onbereikbaar én ondersteboven, en zolang het er één
@@ -4326,8 +4391,8 @@ el("search").onkeydown=async e=>{
 /* Elke aanslag gaat meteen naar de markering. Dit is een tafel waar meerdere
    mensen tegelijk bezig zijn: er is één notitievenster, en wachten tot iemand
    op "Bewaren" drukt betekende dat de half getypte bijdrage van de eerste weg
-   was zodra de tweede een markering aantikte. "Bewaren" sluit nu het venster;
-   het bewaart niets meer wat er niet al stond. */
+   was zodra de tweede een markering aantikte. "Bewaren" opent nu alleen nog
+   de optionele contactstap; de bijdrage zelf stond daarvoor al veilig. */
 function noteToPin(v){
   const pin=v?.pin; if(!pin) return;
   pin.title=notePart(v,"noteTitle").value.trim();
@@ -4372,13 +4437,16 @@ el("btnGeo").onclick=()=>download(el("sess").value+".geojson",JSON.stringify({
   type:"FeatureCollection",
   features:pins.map(p=>({type:"Feature",geometry:{type:"Point",coordinates:[p.lng,p.lat]},
     properties:{verdict:p.verdict,topic:p.topic,title:p.title||"",description:p.description||p.note||"",
-                transcript:p.transcript||"",time:p.t}}))
+                transcript:p.transcript||"",time:p.t,contact_name:p.contact?.name||"",
+                contact_email:p.contact?.email||"",contact_phone:p.contact?.phone||"",
+                contact_consent_at:p.contact?.consentAt||""}}))
 },null,2),"application/geo+json");
+const csvCell=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
 el("btnCsv").onclick=()=>download(el("sess").value+".csv",
-  "lat,lng,verdict,topic,title,description,gesprek,time\n"+pins.map(p=>
-    [p.lat,p.lng,p.verdict,p.topic,'"'+(p.title||"").replace(/"/g,'""')+'"',
-     '"'+(p.description||p.note||"").replace(/"/g,'""')+'"',
-     '"'+(p.transcript||"").replace(/"/g,'""')+'"',p.t].join(",")).join("\n"),"text/csv");
+  "lat,lng,verdict,topic,title,description,gesprek,time,contact_name,contact_email,contact_phone,contact_consent_at\n"+pins.map(p=>
+    [p.lat,p.lng,p.verdict,p.topic,csvCell(p.title),csvCell(p.description||p.note),
+     csvCell(p.transcript),p.t,csvCell(p.contact?.name),csvCell(p.contact?.email),
+     csvCell(p.contact?.phone),csvCell(p.contact?.consentAt)].join(",")).join("\n"),"text/csv");
 
 /* ── Puck herkennen ──────────────────────────────────────────────────────
    Vijf pootjes op een ring zijn een puck — of, bij de oude pucks, drie stukjes

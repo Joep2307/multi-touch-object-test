@@ -150,6 +150,26 @@ async function plaatsMarkering(page,x,y,i=0){
   ok('de ring gaat daarna weer dicht',
      !(await page.evaluate(()=>window.__puck.ringOpen())).some(Boolean));
 
+  // De bijdrage is al veilig opgeslagen voordat de optionele contactvraag
+  // verschijnt. Alleen met expliciete toestemming komen gegevens bij de puck.
+  await page.click('#noteSave');
+  await page.waitForTimeout(150);
+  ok('na bewaren verschijnt de optionele contactvraag',
+     await page.locator('#contactFollowup').isVisible());
+  await page.fill('#contactName','Ada Test');
+  await page.fill('#contactEmail','ada@example.com');
+  await page.fill('#contactPhone','0612345678');
+  await page.check('#contactConsent');
+  await page.click('#contactSave');
+  await page.waitForTimeout(750);
+  const contact=await page.evaluate(()=>{
+    const k='pucktable-'+document.getElementById('sess').value;
+    return JSON.parse(localStorage.getItem(k)||'[]').at(-1)?.contact;
+  });
+  ok('contactgegevens en toestemming blijven bij de bijdrage bewaard',
+     contact?.name==='Ada Test'&&contact?.email==='ada@example.com'&&
+     contact?.phone==='0612345678'&&contact?.consent===true&&!!contact?.consentAt);
+
   // nog een ronde langs dezelfde weg mag niet dubbel vastleggen
   await page.keyboard.press('Escape'); await page.waitForTimeout(200);
   await plaatsMarkering(page, cx, cy, 0);

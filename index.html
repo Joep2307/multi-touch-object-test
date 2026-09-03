@@ -336,6 +336,7 @@
     <p class="eyebrow" id="noteHead" data-i18n="newNote">Nieuwe bijdrage</p>
     <button type="button" id="noteFlip" class="note-flip" title="Naar de overkant" aria-label="Naar de overkant" data-i18n-title="flipNote" data-i18n-aria="flipNote">⇅</button>
   </div>
+  <div class="note-main">
   <label class="field" for="noteTitle" data-i18n="fTitle">Titel</label>
   <input id="noteTitle" placeholder="Geef deze bijdrage een titel" data-i18n-ph="titlePh" maxlength="80">
   <label class="field" for="noteText" data-i18n="fDescription">Beschrijving</label>
@@ -385,6 +386,27 @@
     </div>
     <div id="noteAnswer" class="note-answer"></div>
     <div id="noteSources" class="note-sources"></div>
+  </div>
+  </div>
+
+  <div class="contact-followup" id="contactFollowup">
+    <p class="contact-title" data-i18n="contactTitle">Op de hoogte blijven?</p>
+    <p class="contact-intro" data-i18n="contactIntro">Laat je contactgegevens achter als je wilt horen wat er met deze bijdrage gebeurt.</p>
+    <label class="field" for="contactName" data-i18n="contactName">Naam (optioneel)</label>
+    <input id="contactName" type="text" autocomplete="name" placeholder="Je naam" data-i18n-ph="contactNamePh" maxlength="100">
+    <label class="field" for="contactEmail" data-i18n="contactEmail">E-mail (optioneel)</label>
+    <input id="contactEmail" type="text" autocomplete="email" placeholder="naam@voorbeeld.nl" data-i18n-ph="contactEmailPh" maxlength="160">
+    <label class="field" for="contactPhone" data-i18n="contactPhone">Telefoon (optioneel)</label>
+    <input id="contactPhone" type="text" autocomplete="tel" placeholder="06 …" data-i18n-ph="contactPhonePh" maxlength="40">
+    <label class="contact-consent" for="contactConsent">
+      <input id="contactConsent" type="checkbox">
+      <span data-i18n="contactConsent">Ja, ik geef toestemming om mij over deze bijdrage te benaderen.</span>
+    </label>
+    <p class="contact-status" id="contactStatus" role="status"></p>
+    <div class="row contact-actions">
+      <button id="contactSkip" data-i18n="contactSkip">Nee, bedankt</button>
+      <button id="contactSave" class="primary" data-i18n="contactSave">Contact bewaren</button>
+    </div>
   </div>
 </div>
 
