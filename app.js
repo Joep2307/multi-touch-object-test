@@ -59,7 +59,7 @@ const CFG = {
      `puckTapMS` is hoe lang een aangetikte optie oplicht, zodat je van een
      meter afstand ziet dát je tik aankwam. */
   puckTapMS:280,
-  puckZoomRotDeg:90, puckRotDeadRAD:0.02,
+  puckZoomRotDeg:90, puckRotDeadRAD:0.02, puckZoomEaseMS:70,
   /* En een bovengrens: hoe snel een puck ten hoogste kan draaien voor het
      nog een draai is. Een hand haalt anderhalve slag per seconde niet;
      alles daarboven is een meetsprong — een pootje dat wegvalt, een hand
@@ -1905,7 +1905,7 @@ function startTrack(d,now){
            ring:false,topicIdx:0,tapIdx:-1,tapT0:0,
            // Waar hij ging liggen is het ijkpunt van het schuiven, en de hoek
            // waaronder hij ging liggen is het nulpunt van het zoomen.
-           panOX:d.x,panOY:d.y,panT:0,zoomRot:d.angle};
+           panOX:d.x,panOY:d.y,panT:0,zoomRot:d.angle,zoomCarry:0};
   tracks.set(t.id,t);
   // Kwam dezelfde puck net van de tafel? Dan is dit geen nieuwe puck maar
   // dezelfde die even wegviel: hij pakt zijn stand weer op en kiest dus niet
@@ -2155,7 +2155,7 @@ function applyPuckControls(t,now){
   // Niet (meer) herkend of de kaart staat vast: alleen bijhouden waar de puck
   // is, zodat hij niet bij het hervatten een hele reis in één beeld inhaalt.
   if(t.state!=="recognised"||mapLocked){
-    t.panOX=t.x; t.panOY=t.y; t.zoomRot=t.angle; return;
+    t.panOX=t.x; t.panOY=t.y; t.zoomRot=t.angle; t.zoomCarry=0; return;
   }
   const dRot=t.angle-t.zoomRot;
   if(Math.abs(dRot)>=CFG.puckRotDeadRAD){
@@ -2166,7 +2166,17 @@ function applyPuckControls(t,now){
     // meetsprong; die hoort niet op de kaart terecht te komen.
     const grens=CFG.puckRotMaxDegS*Math.PI/180*(dt||0.1);
     if(Math.abs(dRot)<=grens)
-      MV.zoomBy(dRot/(CFG.puckZoomRotDeg*Math.PI/180),t.x,t.y);
+      t.zoomCarry+=(dRot/(CFG.puckZoomRotDeg*Math.PI/180));
+  }
+  /* De herkenning levert de hoek in kleine, niet exact gelijkmatige stapjes.
+     Rechtstreeks zoomen maakte ieder stapje zichtbaar. De gemeten draaiing
+     blijft exact behouden, maar wordt in ongeveer 70 ms gelijkmatig over de
+     beelden verdeeld. */
+  if(dt&&Math.abs(t.zoomCarry)>0.0001){
+    const k=1-Math.exp(-dt*1000/CFG.puckZoomEaseMS);
+    const dz=t.zoomCarry*k;
+    t.zoomCarry-=dz;
+    MV.zoomBy(dz,t.x,t.y);
   }
   const ox=t.x-t.panOX, oy=t.y-t.panOY, off=Math.hypot(ox,oy);
   if(dt&&off>CFG.puckPanDeadPX){
@@ -3123,16 +3133,16 @@ function paintMapLayer(now){
   const baseChanged=!mapSnapshot||mapSnapshot.baseKey!==baseKey||!mapRenderKey;
   const room=Math.max(0,Math.min(((W+MAP_PAD*2)*scale-W)/2,
                                  ((H+MAP_PAD*2)*scale-H)/2));
-  const beyondBuffer=mapSnapshot&&(
-    drift>room*0.75 ||
-    MV.zoom-mapSnapshot.zoom>0.35 || MV.zoom-mapSnapshot.zoom<-0.18);
-  const settled=now-mapLastMove>120;
+  /* Inzoomen vergroot de reserve vanzelf. Bij uitzoomen of ver reizen bouwen
+     we pas opnieuw op als die reserve echt bijna op is; eerder vernieuwen gaf
+     midden in een draai telkens een korte blokkade. */
+  const beyondBuffer=mapSnapshot&&(drift>Math.max(8,room-24)||room<8);
+  const settled=now-mapLastMove>160;
   /* Tijdens een beweging alleen opnieuw opbouwen als de reserve rondom het
      scherm bijna op is. Anders wachten tot de hand 120 ms stil is. Nieuwe
      tegels mogen tijdens een lange reis af en toe doorstromen, maar niet bij
      ieder afzonderlijk onload-bericht. */
-  const tilesDue=mapSnapshot&&tileRevision!==mapSnapshot.tileRevision&&now-mapLastRender>350;
-  if(baseChanged||beyondBuffer||(key!==mapRenderKey&&(settled||tilesDue))){
+  if(baseChanged||beyondBuffer||(key!==mapRenderKey&&settled)){
     drawMap(mapCtx,MAP_PAD);
     mapSnapshot={lng:MV.lng,lat:MV.lat,zoom:MV.zoom,north:MV.north,
                  baseKey,tileRevision};
