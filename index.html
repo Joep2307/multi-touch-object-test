@@ -76,6 +76,37 @@
   </svg>
 </button>
 
+<!-- ── Vastleggen ───────────────────────────────────────────
+     De opbrengst van een sessie is niet alleen wat er getypt is, maar ook hoe
+     het beeld zich vulde. Dat vastleggen is een handeling van tijdens de
+     sessie — je drukt erop terwijl het gesprek loopt — en hoort dus op de
+     kaart en niet in de analyse achteraf. Drie manieren zitten achter één
+     knop: er is er telkens maar één nodig, en drie losse knoppen zouden
+     permanent over de kaart liggen. Zelfde plek als de menuknoppen, derde in
+     de rij, aan beide lange zijden. -->
+<button class="panel menu-btn" id="btnCapA" type="button" data-side="a"
+        aria-label="Vastleggen" data-i18n-aria="capture" aria-expanded="false" aria-controls="capBar">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M3 8.5h3.6L8.6 5.5h6.8l2 3H21v10.5H3z"/><circle cx="12" cy="13.6" r="3.5"/>
+  </svg>
+</button>
+<button class="panel menu-btn" id="btnCapB" type="button" data-side="b"
+        aria-label="Vastleggen" data-i18n-aria="capture" aria-expanded="false" aria-controls="capBar">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M3 8.5h3.6L8.6 5.5h6.8l2 3H21v10.5H3z"/><circle cx="12" cy="13.6" r="3.5"/>
+  </svg>
+</button>
+
+<div class="panel" id="capBar" role="dialog" aria-label="Vastleggen" data-i18n-aria="capture">
+  <p class="eyebrow" data-i18n="captureHead">VASTLEGGEN</p>
+  <div class="row"><button id="btnShot" data-i18n="capShot">Foto van de kaart</button></div>
+  <!-- De tekst van deze twee wisselt met de stand (starten ↔ stoppen, met
+       teller); paintCapBar() in app.ts zet hem, dus geen data-i18n. -->
+  <div class="row"><button id="btnRec">Opname starten</button></div>
+  <div class="row"><button id="btnLapse">Tijdlapse starten</button></div>
+  <p class="hint" id="capHint" data-i18n="capHint">Legt het kaartbeeld vast — de vensters die erboven liggen niet.</p>
+</div>
+
 <div class="panel" id="menu" role="dialog" aria-label="Menu" data-i18n-aria="menu">
   <div class="menu-head">
     <h1 id="menuTitle">Participatietafel</h1>

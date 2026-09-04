@@ -2,6 +2,7 @@ import { kg, loadKG, ensureKG, drawKG, drawGaps, kgAt, kgDescribe, onKgChange,
          nearby, formatDistance, buildQuestion, ask, setKgLang, kgStatusText,
          fileUrl, knowledgeOf, relevantDocs } from "./kg.js";
 import { stt, probeSTT, startTalk } from "./speech.js";
+import * as cap from "./capture.js";
 
 /* ═══════════════════════════════════════════════════════════════
    0. FONTS — loaded from CSS, silently falls back to system faces
@@ -188,6 +189,19 @@ const L = {
        bakeFailed:"<b>Kon het kaartbeeld niet opslaan</b> — de tegels zijn nog niet volledig geladen. Wacht even en probeer opnieuw.",
        bakeSaved:(kb)=>`Kaartbeeld bewaard (${kb} kB). Dit gebied verschijnt nu ook zonder internet.`,
        bakeTooBig:"Bewaard voor deze sessie, maar te groot voor de browseropslag. Zoom iets verder uit en probeer opnieuw.",
+
+       capture:"Vastleggen", captureHead:"VASTLEGGEN",
+       capShot:"Foto van de kaart",
+       capRec:"Opname starten", capRecStop:(t)=>`Opname stoppen \u00b7 ${t}`,
+       capLapse:"Tijdlapse starten", capLapseStop:(n)=>`Tijdlapse stoppen \u00b7 ${n} beelden`,
+       capHint:"Legt het kaartbeeld vast \u2014 de vensters die erboven liggen niet. Het bestand komt bij de downloads terecht.",
+       capBusy:"Bezig met het maken van de tijdlapse\u2026 Even geduld.",
+       capSaved:(mb)=>`Bewaard (${mb} MB). Het bestand staat bij de downloads.`,
+       capLimit:"De opname zat aan zijn maximum en is daar gestopt.",
+       capEmpty:"Te kort voor een tijdlapse \u2014 laat hem wat langer lopen.",
+       capNoFilm:"Deze browser kan geen video opnemen. De foto werkt wel.",
+       capTainted:"<b>Dit kaartbeeld kan niet vastgelegd worden</b> \u2014 de tegelserver staat het uitlezen van de afbeelding niet toe. Kies OpenStreetMap of een PDOK-beeld en probeer het daarmee.",
+       capFailed:"<b>Vastleggen lukte niet.</b> Probeer het opnieuw.",
        resetHead:"Resetknop", resetKey:"Resetknop instellen",
        resetKeyWaiting:"Druk nu op de knop…",
        resetKeyNow:(k)=>`De knop staat op <b>${k}</b>. Ingedrukt houden begint opnieuw.`,
@@ -376,6 +390,19 @@ const L = {
        bakeFailed:"<b>Could not save the map view</b> — the tiles have not fully loaded yet. Wait a moment and try again.",
        bakeSaved:(kb)=>`Map view saved (${kb} kB). This area now also appears without an internet connection.`,
        bakeTooBig:"Saved for this session, but too large for browser storage. Zoom out a little and try again.",
+
+       capture:"Capture", captureHead:"CAPTURE",
+       capShot:"Photo of the map",
+       capRec:"Start recording", capRecStop:(t)=>`Stop recording \u00b7 ${t}`,
+       capLapse:"Start time-lapse", capLapseStop:(n)=>`Stop time-lapse \u00b7 ${n} frames`,
+       capHint:"Captures the map view \u2014 not the panels floating above it. The file lands in your downloads.",
+       capBusy:"Building the time-lapse\u2026 One moment.",
+       capSaved:(mb)=>`Saved (${mb} MB). The file is in your downloads.`,
+       capLimit:"The recording hit its maximum and stopped there.",
+       capEmpty:"Too short for a time-lapse \u2014 let it run a little longer.",
+       capNoFilm:"This browser cannot record video. The photo does work.",
+       capTainted:"<b>This map view cannot be captured</b> \u2014 the tile server does not allow the image to be read back. Choose OpenStreetMap or a PDOK view and try again with that.",
+       capFailed:"<b>Capture failed.</b> Please try again.",
        resetHead:"Reset button", resetKey:"Set the reset button",
        resetKeyWaiting:"Press the button now…",
        resetKeyNow:(k)=>`The button is set to <b>${k}</b>. Hold it to start over.`,
@@ -4096,9 +4123,9 @@ el("btnFullscreen").onclick=()=>{
 };
 addEventListener("fullscreenchange",refreshFullscreenLabel);
 
-el("modeTouch").onclick=()=>{applyMode("touch");reorientMenu();};
-el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();};
-el("modePuck").onclick=()=>{applyMode("puck");reorientMenu();};
+el("modeTouch").onclick=()=>{applyMode("touch");reorientMenu();reorientCap();};
+el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();reorientCap();};
+el("modePuck").onclick=()=>{applyMode("puck");reorientMenu();reorientCap();};
 /* De toevoegknop staat op de plek van de verdwenen balk, aan beide zijden van
    de tafel. Vandaar een klasse en geen id. */
 [...document.querySelectorAll<HTMLElement>(".btn-add-puck")].forEach(b=>b.onclick=openLearn);
@@ -4247,7 +4274,7 @@ function applySides(){
   el("btnSides").setAttribute("aria-pressed",String(twoSided));
   try{ localStorage.setItem("pucktable-two-sided",twoSided?"1":"0"); }catch(e){}
 }
-el("btnSides").onclick=()=>{ twoSided=!twoSided; applySides(); reorientMenu(); reorientNote(); };
+el("btnSides").onclick=()=>{ twoSided=!twoSided; applySides(); reorientMenu(); reorientCap(); reorientNote(); };
 applySides();
 
 /* Staat de aanraking in de bovenste helft, dan staat de persoon aan die kant
@@ -4355,6 +4382,7 @@ const MENU_BTNS=[["btnMapA","a","map"],["btnSetA","a","settings"],
 const MENU_TITLES={map:"mapHead",settings:"appTitle"};
 const menuFlipped=()=>menuSide==="b"&&sidesActive();
 function openMenu(side,view){
+  closeCap();                 // \u00e9\u00e9n venster tegelijk: ze staan op dezelfde hoek
   menuSide=side;
   menuView=view||menuView;
   const m=el("menu");
@@ -4402,6 +4430,114 @@ MENU_BTNS.forEach(([id,side,view])=>{
 el("menuClose").onclick=closeMenu;
 // Het menu blijft open wanneer iemand daarnaast op de kaart werkt. Sluiten
 // gebeurt bewust via het kruisje, dezelfde menuknop of Escape.
+/* ── Vastleggen ──────────────────────────────────────────────────────────
+   Drie manieren om het tafelbeeld mee te nemen — foto, opname, tijdlapse —
+   achter één knop naast de menuknoppen. capture.ts weet hóé dat moet; hier
+   staat alleen wanneer, hoe het bestand heet en wat eronder te lezen valt.
+
+   De GeoJSON- en CSV-export houden de bijdrage over, maar niet het beeld, en
+   juist dat beeld laat zien hoe het gesprek zich over de kaart opbouwde. Dit
+   is een handeling van tijdens de sessie en staat daarom op de kaart, niet in
+   de analyse achteraf.
+
+   Opname en tijdlapse sluiten elkaar uit: ze leggen hetzelfde vast, alleen in
+   een ander tempo, en twee tegelijk is op de NUC zonde van het werk. */
+const CAP_BTNS=[["btnCapA","a"],["btnCapB","b"]] as const;
+let capSide=null;                                     // "a" | "b" | null
+let capMsg="";                                        // laatste uitkomst, onder de knoppen
+function openCap(side){
+  closeMenu();
+  capSide=side;
+  const b=el("capBar");
+  resetPanelOffset(b);
+  b.classList.toggle("at-a",side==="a");
+  b.classList.toggle("at-b",side==="b");
+  b.classList.toggle("flipped",side==="b"&&sidesActive());
+  b.classList.add("open");
+  paintCapBar();
+}
+function closeCap(){
+  if(!capSide) return;
+  capSide=null;
+  el("capBar").classList.remove("open");
+  paintCapBar();
+}
+/* Draait de leesrichting terwijl de balk openstaat, dan draait hij mee — net
+   als het menu, en met dezelfde terugval naar kant A. */
+function reorientCap(){
+  if(!capSide) return;
+  openCap(capSide==="b"&&!sidesActive()?"a":capSide);
+}
+const capClock=ms=>{
+  const s=Math.max(0,Math.round(ms/1000));
+  return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+};
+/* Eén plek die de hele balk bijwerkt: de teller loopt door terwijl hij dicht
+   is, dus de knoptekst mag nergens anders vandaan komen. */
+function paintCapBar(){
+  const st=cap.state(), film=cap.canFilm();
+  CAP_BTNS.forEach(([id,side])=>{
+    const b=el(id);
+    b.classList.toggle("on",capSide===side);
+    // Ook met de balk dicht moet te zien zijn dat er iets loopt.
+    b.classList.toggle("filming",st.rec||st.lapse||st.busy);
+    b.setAttribute("aria-expanded",String(capSide===side));
+  });
+  const shot=el<HTMLButtonElement>("btnShot"),
+        rec =el<HTMLButtonElement>("btnRec"),
+        lap =el<HTMLButtonElement>("btnLapse");
+  rec.textContent=st.rec  ? tr("capRecStop",capClock(st.ms)) : tr("capRec");
+  lap.textContent=st.lapse? tr("capLapseStop",st.frames)     : tr("capLapse");
+  rec.classList.toggle("on",st.rec);
+  lap.classList.toggle("on",st.lapse);
+  shot.disabled=st.busy;
+  rec.disabled = st.busy || st.lapse || !film;
+  lap.disabled = st.busy || st.rec   || !film;
+  el("capHint").innerHTML=st.busy ? tr("capBusy")
+                        : capMsg  ? capMsg
+                        : film    ? tr("capHint") : tr("capNoFilm");
+}
+/* Downloaden met de sessienaam en het tijdstip erin, net als het gesprek en de
+   exports. Op de kiosk komt het bestand in de downloadmap van chromium. */
+function saveCap(kind,blob){
+  const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
+  const soort=kind==="shot"?"beeld":kind==="rec"?"opname":"tijdlapse";
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=(el<HTMLInputElement>("sess").value||"tafel")+"-"+soort+"-"+stamp+
+             (kind==="shot"?".png":cap.ext(blob));
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+  capMsg=tr("capSaved",Math.max(0.1,Math.round(blob.size/104857.6)/10));
+}
+const capReden=r=>r==="besmet"      ? tr("capTainted")
+                 :r==="leeg"        ? tr("capEmpty")
+                 :r==="onbruikbaar" ? tr("capNoFilm")
+                 :                    tr("capFailed");
+cap.init(cv,{
+  change:paintCapBar,
+  done:(kind,blob,reason)=>{
+    if(blob){
+      saveCap(kind,blob);
+      if(reason==="limiet") capMsg+=" "+tr("capLimit");
+    } else capMsg=capReden(reason);
+    paintCapBar();
+  }
+});
+CAP_BTNS.forEach(([id,side])=>{
+  el(id).onclick=()=>capSide===side?closeCap():openCap(side);
+});
+el("btnShot").onclick=async()=>{
+  capMsg=""; paintCapBar();
+  try{ saveCap("shot",await cap.shot()); }
+  // Een tegelserver zonder CORS-header maakt het canvas onleesbaar; dat is
+  // dezelfde reden waarom offline bewaren dan niet lukt.
+  catch(err){ capMsg=taintedSets.has(MV.set)?tr("capTainted"):tr("capFailed"); }
+  paintCapBar();
+};
+el("btnRec").onclick  =()=>{ capMsg=""; cap.toggleRec();   paintCapBar(); };
+el("btnLapse").onclick=()=>{ capMsg=""; cap.toggleLapse(); paintCapBar(); };
+
 buildLayerMenu();
 el<HTMLInputElement>("sess").onchange=restore;
 el("zIn").onclick=()=>MV.zoomBy(1);
@@ -4838,6 +4974,7 @@ addEventListener("keydown",e=>{
   if(el("analytics").classList.contains("open")){ closeAnalytics(); return; }
   if(learn.open){ closeLearn(); return; }
   if(el("sheet").style.display==="block"){ closeSheet(); return; }
+  if(capSide){ closeCap(); return; }
   if(menuSide){ closeMenu(); return; }
   // Escape sluit het bovenste venster: met twee open hoort er één tegelijk weg.
   if(openNotes().length){ closeNote(openNotes().pop()); return; }
@@ -4987,6 +5124,7 @@ function applyLang(){
   refreshNoteFlipLabels();
   refreshOrientationControl();
   refreshFullscreenLabel();
+  paintCapBar();
   // Open vensters horen niet eerst dicht te moeten voordat ze meegaan.
   for(const v of openNotes()){
     notePart(v,"noteHead").textContent=vName(v.pin.verdict)+" \u00b7 "+v.pin.topic;

@@ -967,6 +967,86 @@ async function plaatsMarkering(page,x,y,i=0){
   await ctx7.close();
 }
 
+// ── 12. vastleggen: foto, opname en tijdlapse achter één knop ──
+{
+  const {page, ctx, errs} = await newPage('laptop');
+
+  // De knop staat op de kaart, derde in de rij linksonder.
+  const plek = await page.locator('#btnCapA').evaluate(el=>{
+    const r=el.getBoundingClientRect();
+    return {links:r.x, onder:innerHeight-r.bottom, zichtbaar:getComputedStyle(el).display!=='none'};
+  });
+  ok('vastlegknop staat linksonder op de kaart',
+     plek.zichtbaar && plek.onder<40 && plek.links>100 && plek.links<260
+     || (console.log('plek:',plek),false));
+  ok('de balk zit dicht bij het laden',
+     !(await page.locator('#capBar').evaluate(el=>el.classList.contains('open'))));
+
+  await page.click('#btnCapA'); await page.waitForTimeout(250);
+  ok('één tik brengt de drie handelingen tevoorschijn',
+     await page.locator('#capBar.open #btnShot').isVisible() &&
+     await page.locator('#capBar.open #btnRec').isVisible() &&
+     await page.locator('#capBar.open #btnLapse').isVisible());
+
+  // Foto: er hoort een bestand uit te komen, met de sessienaam erin.
+  const foto = page.waitForEvent('download', {timeout:8000}).catch(()=>null);
+  await page.click('#btnShot');
+  const bestand = await foto;
+  ok('de foto levert een PNG op',
+     !!bestand && /\.png$/.test(bestand.suggestedFilename())
+     || (console.log('download:',bestand&&bestand.suggestedFilename(),
+                     await page.locator('#capHint').textContent()),false));
+  ok('de sessienaam staat in de bestandsnaam',
+     !!bestand && bestand.suggestedFilename().includes('beeld'));
+
+  // Opname: knoptekst en de knop op de kaart moeten laten zien dat hij loopt.
+  const kanFilmen = !(await page.locator('#btnRec').isDisabled());
+  if (kanFilmen) {
+    await page.click('#btnRec'); await page.waitForTimeout(1400);
+    ok('een lopende opname is aan de knoptekst te zien',
+       /stoppen|Stop/.test(await page.locator('#btnRec').textContent()));
+    ok('en aan de knop op de kaart, ook met de balk dicht',
+       await page.locator('#btnCapA').evaluate(el=>el.classList.contains('filming')));
+    ok('de tijdlapse kan er niet tegelijk bij',
+       await page.locator('#btnLapse').isDisabled());
+    const film = page.waitForEvent('download', {timeout:15000}).catch(()=>null);
+    await page.click('#btnRec');
+    const opname = await film;
+    ok('stoppen levert een filmpje op',
+       !!opname && /\.(webm|mp4)$/.test(opname.suggestedFilename())
+       || (console.log('opname:',opname&&opname.suggestedFilename(),
+                       await page.locator('#capHint').textContent()),false));
+    ok('de knop op de kaart is daarna weer rustig',
+       !(await page.locator('#btnCapA').evaluate(el=>el.classList.contains('filming'))));
+  } else {
+    ok('zonder video-ondersteuning staat de uitleg er', /video|opnemen|record/i.test(
+       await page.locator('#capHint').textContent()));
+  }
+
+  // Een tijdlapse van niets hoort niets te maken en dat te zeggen.
+  if (kanFilmen) {
+    await page.click('#btnLapse'); await page.waitForTimeout(300);
+    await page.click('#btnLapse'); await page.waitForTimeout(600);
+    ok('een tijdlapse van één beeld levert een uitleg in plaats van een bestand',
+       /kort|short/i.test(await page.locator('#capHint').textContent()));
+  }
+
+  // Menu en vastlegbalk staan op dezelfde hoek: er hoort er één open te zijn.
+  await page.click('#btnCapA'); await page.waitForTimeout(150);
+  await page.click('#btnMapA'); await page.waitForTimeout(250);
+  ok('het menu openen sluit de vastlegbalk',
+     !(await page.locator('#capBar').evaluate(el=>el.classList.contains('open'))));
+  await page.click('#btnCapA'); await page.waitForTimeout(250);
+  ok('en andersom sluit de vastlegbalk het menu',
+     !(await page.locator('#menu').evaluate(el=>el.classList.contains('open'))));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+  ok('Escape sluit de vastlegbalk',
+     !(await page.locator('#capBar').evaluate(el=>el.classList.contains('open'))));
+
+  ok('geen JS-fouten (vastleggen)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx.close();
+}
+
 await browser.close();
 server.close();
 fs.rmSync(work, { recursive: true, force: true });

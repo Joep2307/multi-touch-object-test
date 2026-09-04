@@ -177,6 +177,38 @@ body.controls-flipped #btnSetA{left:18px;top:100px;right:auto;bottom:auto;transf
 body.controls-flipped #btnMapB{left:auto;top:auto;right:18px;bottom:18px;transform:rotate(-90deg)}
 body.controls-flipped #btnSetB{left:auto;top:auto;right:18px;bottom:100px;transform:rotate(-90deg)}
 
+/* ── Vastleggen ────────────────────────────────────────────────────────
+   Derde knop in dezelfde rij, met dezelfde steek van 82px. Erachter een smal
+   paneel met de drie handelingen; het opent boven de eigen knop en niet op de
+   plek van het menu, want die twee zouden elkaar overlappen. Openen sluit het
+   menu en andersom — op een tafel hoort er één ding tegelijk open te staan. */
+#btnCapA{left:182px;bottom:18px}
+#btnCapB{right:182px;top:18px;display:none}
+body.mode-touch.two-sided #btnCapB{display:flex}
+body.two-sided #btnCapB{transform:rotate(180deg)}
+body.controls-flipped #btnCapA{left:18px;top:182px;right:auto;bottom:auto;transform:rotate(90deg)}
+body.controls-flipped #btnCapB{left:auto;top:auto;right:18px;bottom:182px;transform:rotate(-90deg)}
+#capBar{display:none;width:270px;z-index:31}
+#capBar.open{display:block}
+#capBar.at-a{left:182px;bottom:100px}
+#capBar.at-b{right:182px;top:100px}
+#capBar.flipped{transform:rotate(180deg);transform-origin:50% 50%}
+/* Zelfde truc als bij het menu: eerst omhoog over de eigen hoogte, dan een
+   kwartslag om de hoek linksboven. Zo hoeft de hoogte nergens vast te staan. */
+body.controls-flipped #capBar{transform-origin:0 0}
+body.controls-flipped #capBar.at-a{left:100px;top:182px;right:auto;bottom:auto;
+  transform:rotate(90deg) translateY(-100%)}
+body.controls-flipped #capBar.at-b{left:calc(100vw - 100px);top:calc(100vh - 182px);right:auto;bottom:auto;
+  transform:rotate(-90deg) translateY(-100%)}
+/* Een lopende opname of tijdlapse moet je kunnen zien zonder het paneel te
+   openen: de knop zelf krijgt dan de accentkleur en een zachte hartslag. */
+.menu-btn.filming{color:#ffd9d9;border-color:#e2584f;background:rgba(226,88,79,.18);
+  animation:capPulse 2s ease-in-out infinite}
+@keyframes capPulse{0%,100%{opacity:1}50%{opacity:.62}}
+@media (prefers-reduced-motion:reduce){.menu-btn.filming{animation:none}}
+#capBar button{width:100%}
+#capBar button.on{color:#ffd9d9;border-color:#e2584f;background:rgba(226,88,79,.18)}
+
 #menu{display:none;width:400px;max-height:calc(100vh - 140px);overflow-y:auto;z-index:31;
   scrollbar-width:thin;scrollbar-color:#293443 transparent}
 #menu.open{display:block}
@@ -615,6 +647,10 @@ body.keyboard-open .note{z-index:45}
 :root[data-theme="light"] .menu-btn.on,
 :root[data-theme="light"] button.on{color:#174fae;background:rgba(40,104,230,.12)}
 :root[data-theme="light"] button:disabled:hover{background:var(--control);border-color:var(--line)}
+/* Rood blijft rood in het licht, maar dan als tekst op wit in plaats van
+   omgekeerd — anders is de lopende opname op een lichte kaart niet te lezen. */
+:root[data-theme="light"] .menu-btn.filming,
+:root[data-theme="light"] #capBar button.on{color:#a8302a;border-color:#d1554c;background:rgba(209,85,76,.12)}
 :root[data-theme="light"] .menu-sec{background:rgba(238,243,248,.7)}
 :root[data-theme="light"] .accordion-head:hover{background:rgba(23,32,45,.045);color:var(--ink)}
 :root[data-theme="light"] .menu-sec:not(.collapsed)>.accordion-head{background:rgba(40,104,230,.08);color:#174fae}
