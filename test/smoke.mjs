@@ -1003,10 +1003,20 @@ async function plaatsMarkering(page,x,y,i=0){
   const kanFilmen = !(await page.locator('#btnRec').isDisabled());
   if (kanFilmen) {
     await page.click('#btnRec'); await page.waitForTimeout(1400);
+    ok('starten ruimt de balk op',
+       !(await page.locator('#capBar').evaluate(el=>el.classList.contains('open'))));
+    ok('de knop op de kaart wordt een rood rondje met een klok',
+       await page.locator('#btnCapA').evaluate(el=>
+         el.classList.contains('filming') &&
+         getComputedStyle(el.querySelector('.cap-icon')).display==='none' &&
+         getComputedStyle(el.querySelector('.cap-live')).display!=='none'));
+    ok('en die klok loopt',
+       /^0:0[1-9]$/.test(await page.locator('#btnCapA .cap-time').textContent())
+       || (console.log('klok:',await page.locator('#btnCapA .cap-time').textContent()),false));
+    // Weer open om te kunnen stoppen: de knoptekst zegt dan wat er gebeurt.
+    await page.click('#btnCapA'); await page.waitForTimeout(250);
     ok('een lopende opname is aan de knoptekst te zien',
        /stoppen|Stop/.test(await page.locator('#btnRec').textContent()));
-    ok('en aan de knop op de kaart, ook met de balk dicht',
-       await page.locator('#btnCapA').evaluate(el=>el.classList.contains('filming')));
     ok('de tijdlapse kan er niet tegelijk bij',
        await page.locator('#btnLapse').isDisabled());
     const film = page.waitForEvent('download', {timeout:15000}).catch(()=>null);
@@ -1016,8 +1026,10 @@ async function plaatsMarkering(page,x,y,i=0){
        !!opname && /\.(webm|mp4)$/.test(opname.suggestedFilename())
        || (console.log('opname:',opname&&opname.suggestedFilename(),
                        await page.locator('#capHint').textContent()),false));
-    ok('de knop op de kaart is daarna weer rustig',
+    ok('de knop op de kaart is daarna weer een cameraatje',
        !(await page.locator('#btnCapA').evaluate(el=>el.classList.contains('filming'))));
+    ok('en de balk blijft open met de uitkomst erin',
+       await page.locator('#capBar').evaluate(el=>el.classList.contains('open')));
   } else {
     ok('zonder video-ondersteuning staat de uitleg er', /video|opnemen|record/i.test(
        await page.locator('#capHint').textContent()));
@@ -1026,12 +1038,16 @@ async function plaatsMarkering(page,x,y,i=0){
   // Een tijdlapse van niets hoort niets te maken en dat te zeggen.
   if (kanFilmen) {
     await page.click('#btnLapse'); await page.waitForTimeout(300);
+    ok('ook de tijdlapse ruimt de balk op',
+       !(await page.locator('#capBar').evaluate(el=>el.classList.contains('open'))));
+    await page.click('#btnCapA'); await page.waitForTimeout(250);
     await page.click('#btnLapse'); await page.waitForTimeout(600);
     ok('een tijdlapse van één beeld levert een uitleg in plaats van een bestand',
        /kort|short/i.test(await page.locator('#capHint').textContent()));
   }
 
   // Menu en vastlegbalk staan op dezelfde hoek: er hoort er één open te zijn.
+  await page.keyboard.press('Escape'); await page.waitForTimeout(150);
   await page.click('#btnCapA'); await page.waitForTimeout(150);
   await page.click('#btnMapA'); await page.waitForTimeout(250);
   ok('het menu openen sluit de vastlegbalk',

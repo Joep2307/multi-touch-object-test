@@ -201,11 +201,20 @@ body.controls-flipped #capBar.at-a{left:100px;top:182px;right:auto;bottom:auto;
 body.controls-flipped #capBar.at-b{left:calc(100vw - 100px);top:calc(100vh - 182px);right:auto;bottom:auto;
   transform:rotate(-90deg) translateY(-100%)}
 /* Een lopende opname of tijdlapse moet je kunnen zien zonder het paneel te
-   openen: de knop zelf krijgt dan de accentkleur en een zachte hartslag. */
-.menu-btn.filming{color:#ffd9d9;border-color:#e2584f;background:rgba(226,88,79,.18);
-  animation:capPulse 2s ease-in-out infinite}
-@keyframes capPulse{0%,100%{opacity:1}50%{opacity:.62}}
-@media (prefers-reduced-motion:reduce){.menu-btn.filming{animation:none}}
+   openen. Het paneel gaat bij het starten juist dicht — je drukt op start
+   omdat je verder wilt met het gesprek, niet omdat je nog iets wilt instellen.
+   Wat overblijft is de knop zelf: een rood rondje dat knippert met de looptijd
+   eronder, precies waar anders het cameraatje staat. */
+.menu-btn.filming{border-color:#e2584f}
+.cap-live{display:none;flex-direction:column;align-items:center;gap:5px;line-height:1}
+.menu-btn.filming .cap-icon{display:none}
+.menu-btn.filming .cap-live{display:flex}
+.cap-live i{display:block;width:15px;height:15px;border-radius:50%;background:#e2584f;
+  animation:capBlink 2s ease-in-out infinite}
+.cap-time{font-family:var(--mono);font-size:var(--text-3xs);font-weight:600;
+  font-variant-numeric:tabular-nums;letter-spacing:.02em}
+@keyframes capBlink{0%,100%{opacity:1}50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.cap-live i{animation:none}}
 #capBar button{width:100%}
 #capBar button.on{color:#ffd9d9;border-color:#e2584f;background:rgba(226,88,79,.18)}
 
@@ -649,7 +658,7 @@ body.keyboard-open .note{z-index:45}
 :root[data-theme="light"] button:disabled:hover{background:var(--control);border-color:var(--line)}
 /* Rood blijft rood in het licht, maar dan als tekst op wit in plaats van
    omgekeerd — anders is de lopende opname op een lichte kaart niet te lezen. */
-:root[data-theme="light"] .menu-btn.filming,
+:root[data-theme="light"] .menu-btn.filming{border-color:#d1554c}
 :root[data-theme="light"] #capBar button.on{color:#a8302a;border-color:#d1554c;background:rgba(209,85,76,.12)}
 :root[data-theme="light"] .menu-sec{background:rgba(238,243,248,.7)}
 :root[data-theme="light"] .accordion-head:hover{background:rgba(23,32,45,.045);color:var(--ink)}

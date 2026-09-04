@@ -80,7 +80,7 @@ let recBytes = 0, recStart = 0, recTimer = 0;
 let recReason: CapReason = "stop";
 let recMime = "";
 
-type Lapse = { timer: number; frames: Blob[]; bytes: number; start: number };
+type Lapse = { timer: number; tick: number; frames: Blob[]; bytes: number; start: number };
 let lapse: Lapse | null = null;
 let busy = false;                          // de tijdlapse wordt in elkaar gezet
 
@@ -98,7 +98,10 @@ export const state = () => ({
   rec  : !!rec,
   lapse: !!lapse,
   busy,
-  ms    : rec   ? Date.now() - recStart : 0,
+  /* De klok van wat er loopt \u2014 de knop op de kaart toont hem onder het rode
+     rondje, en dat moet ook tijdens een tijdlapse doorlopen. */
+  ms    : rec   ? Date.now() - recStart
+        : lapse ? Date.now() - lapse.start : 0,
   frames: lapse ? lapse.frames.length   : 0
 });
 
@@ -187,9 +190,12 @@ export function toggleLapse() { lapse ? endLapse("stop") : beginLapse(); }
 
 function beginLapse() {
   if (!cv || lapse || busy) return;
-  lapse = { timer: 0, frames: [], bytes: 0, start: Date.now() };
+  lapse = { timer: 0, tick: 0, frames: [], bytes: 0, start: Date.now() };
   grabFrame();                                       // meteen een beginbeeld
   lapse.timer = setInterval(grabFrame, LAPSE_EVERY_MS) as unknown as number;
+  // Er komt maar elke paar seconden een beeld bij; de klok moet elke seconde
+  // verder, anders staat hij op de knop stil te springen.
+  lapse.tick  = setInterval(() => ev.change?.(), 1000) as unknown as number;
   ev.change?.();
 }
 
@@ -210,7 +216,7 @@ function grabFrame() {
 
 async function endLapse(reason: CapReason) {
   if (!lapse) return;
-  clearInterval(lapse.timer);
+  clearInterval(lapse.timer); clearInterval(lapse.tick);
   const frames = lapse.frames;
   lapse = null;
 
@@ -268,5 +274,5 @@ const wait = (ms: number) => new Promise<void>(res => setTimeout(res, ms));
 /* Bij het wissen van een sessie of een reset hoort niets door te lopen. */
 export function cancelAll() {
   if (rec) finishRec("stop");
-  if (lapse) { clearInterval(lapse.timer); lapse = null; ev.change?.(); }
+  if (lapse) { clearInterval(lapse.timer); clearInterval(lapse.tick); lapse = null; ev.change?.(); }
 }

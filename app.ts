@@ -4479,8 +4479,11 @@ function paintCapBar(){
   CAP_BTNS.forEach(([id,side])=>{
     const b=el(id);
     b.classList.toggle("on",capSide===side);
-    // Ook met de balk dicht moet te zien zijn dat er iets loopt.
+    // Ook met de balk dicht moet te zien zijn dat er iets loopt: de knop wordt
+    // dan een rood rondje met de looptijd eronder.
     b.classList.toggle("filming",st.rec||st.lapse||st.busy);
+    const klok=b.querySelector<HTMLElement>(".cap-time");
+    if(klok) klok.textContent=capClock(st.ms);
     b.setAttribute("aria-expanded",String(capSide===side));
   });
   const shot=el<HTMLButtonElement>("btnShot"),
@@ -4535,8 +4538,15 @@ el("btnShot").onclick=async()=>{
   catch(err){ capMsg=taintedSets.has(MV.set)?tr("capTainted"):tr("capFailed"); }
   paintCapBar();
 };
-el("btnRec").onclick  =()=>{ capMsg=""; cap.toggleRec();   paintCapBar(); };
-el("btnLapse").onclick=()=>{ capMsg=""; cap.toggleLapse(); paintCapBar(); };
+/* Starten sluit de balk: je drukt op start omdat je verder wilt met het
+   gesprek, niet omdat je nog iets wilt instellen. Wat er loopt staat daarna op
+   de knop zelf. Stoppen laat de balk juist open \u2014 daar komt de melding met de
+   uitkomst in te staan. */
+const capNaStart=(liep,loopt)=>(!liep&&loopt)?closeCap():paintCapBar();
+el("btnRec").onclick  =()=>{ capMsg=""; const liep=cap.state().rec;
+  cap.toggleRec();   capNaStart(liep,cap.state().rec); };
+el("btnLapse").onclick=()=>{ capMsg=""; const liep=cap.state().lapse;
+  cap.toggleLapse(); capNaStart(liep,cap.state().lapse); };
 
 buildLayerMenu();
 el<HTMLInputElement>("sess").onchange=restore;
