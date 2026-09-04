@@ -143,6 +143,7 @@ const L = {
        recogHoldDuo:"Duo gezien — twee driehoeken om hetzelfde midden. Even stil houden…",
        recogMeasuredDuo:(o,i)=>`Gemeten: het duo. Buitenste helft ${o} mm, binnenste ${i} mm.`,
        recogWhichDuo:"Beide helften in één keer bewaren:",
+       recogWhichDuoHalf:"Of als losse helft van het duo:",
        recogPickDuo:"Duo · buitenste en binnenste",
        recogSavedDuo:(o,i)=>`Duo bewaard — buitenste ${o} mm, binnenste ${i} mm. De tafel herkent ze nu allebei, in elkaar én los.`,
        duoTurn:"Draai · of tik het gat aan", puckPickTool:"Kies gereedschap",
@@ -354,6 +355,7 @@ const L = {
        recogHoldDuo:"Duo seen — two triangles around the same centre. Hold still…",
        recogMeasuredDuo:(o,i)=>`Measured: the duo. Outer half ${o} mm, inner ${i} mm.`,
        recogWhichDuo:"Save both halves at once:",
+       recogWhichDuoHalf:"Or as one half of the duo:",
        recogPickDuo:"Duo · outer and inner",
        recogSavedDuo:(o,i)=>`Duo saved — outer ${o} mm, inner ${i} mm. The table now recognises both, nested and apart.`,
        duoTurn:"Turn · or tap the hole", puckPickTool:"Pick a tool",
@@ -5261,8 +5263,8 @@ function renderLearn(){
     const tpl=activeTemplates().find(t=>t.id===learn.tplId);
     if(!tpl){ restartLearn(); return; }
     st.innerHTML=(isRing(tpl)
-        ? tr("recogSavedRing",vName(tpl.verdict),gapText(tpl.angles),tplRing(tpl).toFixed(1))
-        : tr("recogSaved",vName(tpl.verdict),tpl.ratios[0].toFixed(3),
+        ? tr("recogSavedRing",tplName(tpl),gapText(tpl.angles),tplRing(tpl).toFixed(1))
+        : tr("recogSaved",tplName(tpl),tpl.ratios[0].toFixed(3),
                           tpl.ratios[1].toFixed(3),tplLongest(tpl).toFixed(1)))
                 +(learn.clash?tr("recogClash",learn.clash):"");
     body.innerHTML=`<div class="row"><button class="primary" id="btnLearnAgain">${tr("recogAgain")}</button></div>`;
@@ -5301,7 +5303,23 @@ function renderLearn(){
            <b>${vName(v.key)}</b>
            <span>${tr("recogKindCount",ownPucks.filter(t=>t.verdict===v.key).length)}</span>
          </button>`).join("");
-      [...body.querySelectorAll<HTMLElement>(".learn-pick")].forEach(b=>b.onclick=()=>addLearnedPuck(b.dataset.verdict));
+      /* Het duo hoort niet bij de vier soorten: het is één vast voorwerp met
+         een eigen bediening. In de puckstand maakt elke meting normaal een
+         nieuwe eigen puck, dus zonder deze twee knoppen kon je hier alleen het
+         páár inmeten en nooit één losse helft. Alleen bij een driehoek — de
+         helften zijn driehoeken, en een ring erop leggen zou van het duo iets
+         anders maken. */
+      if(!learn.m.ring){
+        const helften=templates.filter(t=>t.nest);
+        body.insertAdjacentHTML("beforeend",
+          `<p class="learn-which">${tr("recogWhichDuoHalf")}</p>`+helften.map(t=>
+          `<button class="learn-pick" data-id="${t.id}" style="--c:${tplColor(t)}">
+             <b>${tplName(t)}</b>
+             <span>${t.id} · ${tplSummary(t)} · ${learnStamp(t)}</span>
+           </button>`).join(""));
+      }
+      [...body.querySelectorAll<HTMLElement>(".learn-pick")].forEach(b=>b.onclick=()=>
+        b.dataset.id?assignLearn(b.dataset.id):addLearnedPuck(b.dataset.verdict));
       return;
     }
     body.innerHTML=iso+`<p class="learn-which">${tr("recogWhich")}</p>`+templates.map(t=>
@@ -5373,7 +5391,7 @@ function assignLearn(id){
   applyShape(tpl,shape);
   tpl.learnedAt=new Date().toISOString();
   saveTemplates();
-  learn.tplId=id; learn.clash=clash?vName(clash.verdict):null; learn.phase="saved";
+  learn.tplId=id; learn.clash=clash?tplName(clash):null; learn.phase="saved";
   renderLearn(); renderTray();
   if(el("sheet").style.display==="block") buildSheet();
 }

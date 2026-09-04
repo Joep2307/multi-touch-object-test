@@ -1178,6 +1178,39 @@ async function plaatsMarkering(page,x,y,i=0){
   });
   ok('de puckstand kent het duo ook', uit.join()==='puck-05,puck-06'
      || (console.log('puckstand zag:',uit),false));
+
+  /* En één losse helft moet je daar ook kunnen toewijzen. In de puckstand
+     maakt elke meting normaal een nieuwe eigen puck; de twee duo-knoppen staan
+     eronder, want het duo is geen vijfde soort maar een vast voorwerp. */
+  await page.click('#btnSetA'); await page.waitForTimeout(250);
+  await page.evaluate(()=>document.querySelectorAll('#menu .menu-sec').forEach(s=>s.classList.remove('collapsed')));
+  await page.click('#btnRecognise'); await page.waitForTimeout(400);
+  const cdpP = await page.context().newCDPSession(page);
+  const driehoek = await page.evaluate(()=>{
+    const k=window.__puck.pxPerMM(), L=62*k, a=0.72*L, b=0.88*L;
+    const rx=(L*L+b*b-a*a)/(2*L), ry=Math.sqrt(Math.max(0,b*b-rx*rx));
+    const pts=[{x:0,y:0},{x:L,y:0},{x:rx,y:ry}];
+    const gx=(pts[0].x+pts[1].x+pts[2].x)/3, gy=(pts[0].y+pts[1].y+pts[2].y)/3;
+    return pts.map((p,i)=>({x:Math.round(800+p.x-gx), y:Math.round(500+p.y-gy), id:i+1}));
+  });
+  await cdpP.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:driehoek});
+  await page.waitForTimeout(1700);
+  const knoppen = await page.locator('#learnBody .learn-pick[data-id]').count();
+  ok('de puckstand biedt de twee duo-helften aan', knoppen===2
+     || (console.log('knoppen:',knoppen,(await page.locator('#learnStatus').textContent()||'').slice(0,80)),false));
+  if(knoppen){
+    await page.click('#learnBody .learn-pick[data-id="puck-05"]');
+    await page.waitForTimeout(300);
+    const bewaard = await page.evaluate(()=>{
+      const t=window.__puck.templates().find(x=>x.id==='puck-05');
+      return {leer:!!t.learnedAt, L:t.longestMM&&Math.round(t.longestMM)};
+    });
+    ok('een losse helft wordt op het duo bewaard', bewaard.leer && Math.abs(bewaard.L-62)<4
+       || (console.log('bewaard:',bewaard),false));
+  }
+  await cdpP.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForTimeout(200);
+
   ok('geen JS-fouten (duo in de puckstand)', errs.length===0 || (console.log(errs.slice(0,3)),false));
   await ctx.close();
 }
