@@ -1163,6 +1163,25 @@ async function plaatsMarkering(page,x,y,i=0){
   await ctx.close();
 }
 
+// ── 14. het duo bestaat ook in de puckstand ──
+{
+  /* In de puckstand herkent de tafel bewust alleen wat je zelf hebt ingelezen.
+     Het duo hoorde daar niet bij en viel er dus uit: inmeten lukte, maar de
+     herkenning keek in een lijst waar het niet in stond. Aan de tafel zag je
+     alleen "hij scant hem wel maar ziet hem daarna nooit meer". */
+  const {page, ctx, errs} = await newPage('puck');
+  const uit = await page.evaluate(()=>{
+    const P=window.__puck;
+    const los=[[-52,-30],[52,-30],[0,60],[-18,-12],[20,-10],[-2,22]]
+      .map(([x,y])=>({x:800+x,y:500+y}));
+    return P.recognise(los).pucks.map(p=>p.tpl.id).sort();
+  });
+  ok('de puckstand kent het duo ook', uit.join()==='puck-05,puck-06'
+     || (console.log('puckstand zag:',uit),false));
+  ok('geen JS-fouten (duo in de puckstand)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx.close();
+}
+
 await browser.close();
 server.close();
 fs.rmSync(work, { recursive: true, force: true });

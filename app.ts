@@ -855,7 +855,12 @@ function removeOwnPuck(id){
 }
 /* Welke lijst telt hangt aan de stand: in de puckstand alleen de eigen pucks,
    daarbuiten de vier van de bouwtekening. */
-const activeTemplates=()=>puckMode()?ownPucks:templates;
+/* In de puckstand telt alleen wat je zelf hebt ingelezen — behalve het duo.
+   Dat is één vast voorwerp met een eigen bediening, geen themapuck die je zelf
+   samenstelt, en het hoorde in die stand simpelweg niet te bestaan: je kon hem
+   inmeten en daarna werd hij nooit meer herkend, want deze lijst kende hem
+   niet. */
+const activeTemplates=()=>puckMode()?[...ownPucks,...templates.filter(t=>t.nest)]:templates;
 /* `simMode` bepaalt of de contactpunten van pucks uit de balk meetellen bij de
    herkenning — en de balk is geen ontwikkelgereedschap maar de gewone manier om
    zonder fysieke puck te werken. Stond dit op `DEV`, dan liet een tafel zonder
