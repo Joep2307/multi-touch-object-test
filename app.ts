@@ -624,7 +624,8 @@ const topics=()=>(kg.useThemes&&kg.themes.length?kg.themes:L[lang].topics);
    draait rechtsom. Dat geldt voor de sjablonen én voor de meting, en die twee
    worden alleen met elkaar vergeleken — spiegelen valt zo nergens tussenuit. */
 const isRing=t=>Array.isArray(t?.angles)&&t.angles.length===5;
-const cloneTpl=t=>({...t,...(isRing(t)?{angles:[...t.angles]}:{ratios:[...t.ratios]})});
+const cloneTpl=t=>({...t,...(isRing(t)?{angles:[...t.angles]}:{ratios:[...t.ratios]}),
+  ...(Array.isArray(t.duoRatios)?{duoRatios:[...t.duoRatios]}:{})});
 /* Rond de nul moet dit twee keer hetzelfde antwoord geven. Een pootje vlak
    rechts van het midden komt uit op 359,999… graden; die waarde nog een keer
    door dezelfde som halen levert in drijvende komma 0 op. En `gapsOf`
@@ -663,6 +664,10 @@ export type Tpl = {
      hoort geen oordeel te heten \u2014 en `radiusMM` is zijn schijf, want de kleine
      puck van het paar is niet zo groot als de vier van de bouwtekening. */
   role?:"tool"; nest?:boolean; nameKey?:string; color?:string; radiusMM?:number;
+  /* Alleen het fysieke duo: de vaste driepuntscontacten staan los van het
+     vijfpunts-identiteitssjabloon, zodat losse normale pucks nooit per ongeluk
+     als één helft van het duo worden gelezen. */
+  duoRatios?:number[]; duoLongestMM?:number;
 };
 let templates:Tpl[]=[
   {id:"puck-01",angles:[54,124,206,250,306],ringMM:34,verdict:"good"},
@@ -670,23 +675,24 @@ let templates:Tpl[]=[
   {id:"puck-03",angles:[52,120,166,210,308],ringMM:34,verdict:"talk"},
   {id:"puck-04",angles:[53,99,195,263,307],ringMM:34,verdict:"idea"},
   /* ── Het duo ────────────────────────────────────────────────────
-     Twee pucks die in elkaar passen: een kleine schijf in een grote ring, met
+     Twee pucks die in elkaar passen: een kleine schijf in het gat van een
+     gewone puck, elk met drie contactpunten, en
      hetzelfde middelpunt. Ze zijn één voorwerp met twee knoppen \u2014 de buitenste
      draait de thema's tevoorschijn, de binnenste het gereedschap \u2014 en je kunt
      ze uit elkaar halen om de afstand tussen twee plekken te meten.
 
      Ze staan hier als vijfde en zesde puck en verdringen niemand: de vier van
-     de bouwtekening blijven wat ze waren. Hun hoeken zijn gekozen met dezelfde
-     eisen als de vier (geen puck die op zichzelf lijkt na een slag draaien,
-     ruim uit elkaar), maar de tafel houdt ze vooral uit elkaar aan hun stráál:
-     34 mm tegen 18 mm is geen twijfelgeval. Dat verschil is ook precies wat de
+     de bouwtekening blijven wat ze waren. De twee driehoeken verschillen
+     vooral in maat: de binnenste is ongeveer half zo groot. Dat verschil is
+     geen twijfelgeval voor de herkenning. Dat is ook precies wat de
      tafel toestemming geeft ze op elkaar te laten liggen \u2014 zie `mayOverlap`.
 
      De maten hieronder zijn de bouwtekening; "Puck herkennen" meet de echte. */
   {id:"puck-05",angles:[85,131,185,230,275],ringMM:34,verdict:"good",
-   nest:true,nameKey:"duoTheme"},
+   nest:true,nameKey:"duoTheme",duoRatios:[0.68,0.91],duoLongestMM:62},
   {id:"puck-06",angles:[67,120,165,234,293],ringMM:18,verdict:"good",
-   nest:true,role:"tool",nameKey:"duoTool",color:"#7fb2ff",radiusMM:26}
+   nest:true,role:"tool",nameKey:"duoTool",color:"#7fb2ff",radiusMM:26,
+   duoRatios:[0.60,0.82],duoLongestMM:30}
 ];
 /* Wat hierboven staat is de fabriekswaarde: de vier pucks van de bouwtekening.
    Een puck die je aan de tafel inleest overschrijft de driehoek van één van
@@ -704,7 +710,8 @@ const tplLongest=t=>(t&&Number.isFinite(t.longestMM)&&t.longestMM>0)?t.longestMM
 const tplRing=t=>(t&&Number.isFinite(t.ringMM)&&t.ringMM>0)?t.ringMM:CFG.ringRadiusMM;
 /* Hoe breed een puck op het glas ligt: bij een driehoek de langste zijde, bij
    een ring de diameter. Deze maat bepaalt het zoekraster in `recognise`. */
-const tplSpanMM=t=>isRing(t)?2*tplRing(t):tplLongest(t);
+const tplSpanMM=t=>t?.nest&&Number.isFinite(t.duoLongestMM)
+  ?t.duoLongestMM:isRing(t)?2*tplRing(t):tplLongest(t);
 /* Hoe een puck heet en welke kleur hij draagt. Bij de vier van de bouwtekening
    is dat zijn oordeel; een gereedschapspuck heeft geen oordeel en zegt het zelf. */
 const tplName =t=>t?.nameKey?tr(t.nameKey):vName(t.verdict);
@@ -726,8 +733,11 @@ const puckPX=t=>tplRadiusMM(t?.tpl||t)*pxPerMM;
    doen. Het duo is \u00e9\u00e9n voorwerp: een kleine puck die in een grote ring valt,
    dus met hetzelfde middelpunt. Alleen dan mag de spookregel wijken, en alleen
    als hun stralen zo ver uit elkaar liggen dat de tafel ze niet kan verwarren. */
-const mayOverlap=(a,b)=>!!(a&&b&&a.nest&&b.nest&&a.id!==b.id&&isRing(a)&&isRing(b)&&
-  Math.abs(tplRing(a)-tplRing(b))>Math.max(tplRing(a),tplRing(b))*0.3);
+const mayOverlap=(a,b)=>{
+  if(!(a&&b&&a.nest&&b.nest&&a.id!==b.id)) return false;
+  const sa=tplSpanMM(a),sb=tplSpanMM(b);
+  return Math.abs(sa-sb)>Math.max(sa,sb)*0.25;
+};
 const maxTplSpan=()=>activeTemplates().reduce((m,t)=>Math.max(m,tplSpanMM(t)),CFG.longestSideMM);
 /* Wat er van een sjabloon op schijf gaat, welke vorm het ook heeft. De velden
    van de andere vorm staan er als null bij: zo is aan het bestand te zien dat
@@ -766,6 +776,13 @@ function restoreTemplates(){
   if(!Array.isArray(saved)) return;
   for(const sv of saved){
     const tpl=templates.find(t=>t.id===sv?.id); if(!tpl) continue;
+    /* De eerste versie van het duo had vijf punten per helft. Een automatisch
+       opgeslagen fabriekssjabloon daarvan mag de nieuwe driepuntsvorm niet na
+       een update terugzetten. Alleen een echt ingelezen vorm heeft learnedAt. */
+    if(tpl.nest&&typeof sv.learnedAt!=="string"){
+      if(!isToolPuck(tpl)&&VERDICTS.some(v=>v.key===sv.verdict)) tpl.verdict=sv.verdict;
+      continue;
+    }
     if(!applyShape(tpl,sv)) continue;
     if(typeof sv.learnedAt==="string") tpl.learnedAt=sv.learnedAt;
   }
@@ -1207,6 +1224,14 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
    liggen ze op de cirkel om het middelpunt; bij een driehoek wordt hij eerst om
    zijn zwaartepunt gelegd, want dát is bij een driehoek het hart van de puck. */
 function padsFor(tpl,k=1){
+  if(tpl?.nest&&Array.isArray(tpl.duoRatios)&&tpl.duoRatios.length===2){
+    const Lm=tpl.duoLongestMM*k;
+    const [r1,r2]=tpl.duoRatios,a=r1*Lm,b=r2*Lm,c=Lm;
+    const rx=(c*c+b*b-a*a)/(2*c), ry=Math.sqrt(Math.max(0,b*b-rx*rx));
+    const pts=[{x:0,y:0},{x:c,y:0},{x:rx,y:ry}];
+    const cx=(pts[0].x+pts[1].x+pts[2].x)/3, cy=(pts[0].y+pts[1].y+pts[2].y)/3;
+    return pts.map(p=>({x:p.x-cx,y:p.y-cy}));
+  }
   if(isRing(tpl)){
     const R=tplRing(tpl)*k;
     return [...tpl.angles].map(norm360).sort((a,b)=>a-b)
@@ -1811,6 +1836,47 @@ function noteRingDiag(d,gemeten){
             mm:d.radius/pxPerMM, spread:d.spread,
             lijst:gemeten.map(g=>({naam:g.tpl.name||g.tpl.id, err:g.m.err}))};
 }
+/* De fysieke duo-puck heeft geen vijf pootjes per helft maar twee driehoeken:
+   drie buiten en drie in het losse middendeel. Hun exacte verhoudingen mogen
+   later met "Puck herkennen" worden ingelezen, maar de combinatie zelf is al
+   ondubbelzinnig: zes punten vallen uiteen in een grote en kleine driehoek met
+   vrijwel hetzelfde midden. Zo werkt het duo meteen, ook vóór het inmeten. */
+function nestedTriangleCandidates(points,list){
+  const duo=list.filter(t=>t.nest);
+  if(points.length!==6||duo.length!==2) return [];
+  const sorted=[...duo].sort((a,b)=>tplSpanMM(b)-tplSpanMM(a));
+  const outerTpl=sorted[0],innerTpl=sorted[1];
+  const expected=tplSpanMM(innerTpl)/tplSpanMM(outerTpl);
+  const all=[0,1,2,3,4,5];
+  let best=null;
+  /* Elke verdeling komt één keer langs doordat punt nul altijd in groep A zit:
+     C(5,2) = tien mogelijkheden, dus dit kost per beeld vrijwel niets. */
+  for(let i=1;i<5;i++) for(let j=i+1;j<6;j++){
+    const ai=[0,i,j],bi=all.filter(k=>!ai.includes(k));
+    const da=describe(points[ai[0]],points[ai[1]],points[ai[2]]);
+    const db=describe(points[bi[0]],points[bi[1]],points[bi[2]]);
+    if(!da||!db||da.ratios[0]<0.32||db.ratios[0]<0.32) continue;
+    const outer=da.longest>=db.longest?{d:da,idx:ai}:{d:db,idx:bi};
+    const inner=da.longest>=db.longest?{d:db,idx:bi}:{d:da,idx:ai};
+    const ratio=inner.d.longest/outer.d.longest;
+    if(ratio<0.20||ratio>0.72) continue;
+    const centre=Math.hypot(outer.d.cx-inner.d.cx,outer.d.cy-inner.d.cy);
+    if(centre>outer.d.longest*0.28) continue;
+    const score=centre/outer.d.longest+Math.abs(ratio-expected)*0.25;
+    if(!best||score<best.score) best={outer,inner,score};
+  }
+  if(!best) return [];
+  /* Onthoud de werkelijk gemeten vorm zolang de tafel draait. Zodra de twee
+     helften uit elkaar worden getrokken, kan elk drietal daardoor zelfstandig
+     gevolgd blijven worden zonder dat de gebruiker eerst hoeft te kalibreren. */
+  outerTpl.duoRatios=[...best.outer.d.ratios];
+  outerTpl.duoLongestMM=best.outer.d.longest/pxPerMM;
+  innerTpl.duoRatios=[...best.inner.d.ratios];
+  innerTpl.duoLongestMM=best.inner.d.longest/pxPerMM;
+  const candidate=(tpl,part)=>({tpl,errN:-1,idx:part.idx,d:part.d,
+    conf:Math.max(0.75,1-best.score)});
+  return [candidate(outerTpl,best.outer),candidate(innerTpl,best.inner)];
+}
 function recognise(points,tpls?){
   if(debugMode) ringDiag=null;
   const list=tpls||activeTemplates();
@@ -1818,6 +1884,7 @@ function recognise(points,tpls?){
      drietallen, ringen uit vijftallen op één cirkel. Ze komen daarna in dezelfde
      bak kandidaten en strijden om dezelfde contactpunten. */
   const tris=list.filter(t=>!isRing(t)), rings=list.filter(isRing);
+  const duoTris=list.filter(t=>t.nest&&Array.isArray(t.duoRatios));
   const cands=[],maxSpan=maxTplSpan()*pxPerMM*1.45;
   // Welke soorten er al liggen: die krijgen wat meer speelruimte (zie hieronder).
   const onTable=new Set([...tracks.values()].map(t=>t.tpl.id));
@@ -1859,6 +1926,19 @@ function recognise(points,tpls?){
         const sizeErr=Math.abs(d.longest-want)/want;
         if(sizeErr>(tracked?0.50:0.42)) continue;
         cands.push({tpl,errN:err/errLimit,idx:[i,j,k],d,conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
+      }
+      /* Een losgetrokken helft van het duo blijft een driepuntsvorm, terwijl
+         het gewone identiteitssjabloon bewust een ring blijft. Vergelijk hem
+         daarom apart met de vorm die bij het inschuiven is waargenomen. */
+      for(const tpl of duoTris){
+        const err=Math.hypot(d.ratios[0]-tpl.duoRatios[0],d.ratios[1]-tpl.duoRatios[1]);
+        const tracked=onTable.has(tpl.id), errLimit=tracked?0.08:0.055;
+        if(err>errLimit) continue;
+        const want=tpl.duoLongestMM*pxPerMM;
+        const sizeErr=Math.abs(d.longest-want)/want;
+        if(sizeErr>(tracked?0.28:0.18)) continue;
+        cands.push({tpl,errN:err/errLimit,idx:[i,j,k],d,
+                    conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
       }
     }
     }
@@ -1943,6 +2023,7 @@ function recognise(points,tpls?){
       }
     }
   }
+  cands.push(...nestedTriangleCandidates(points,list));
   /* Hetzelfde sjabloon mag meerdere keren gekozen worden: twee mensen met
      allebei een Probleem-puck is een gewone tafel. Wat een kandidaat nog wél
      uitsluit:

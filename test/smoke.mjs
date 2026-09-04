@@ -674,7 +674,7 @@ async function plaatsMarkering(page,x,y,i=0){
         y:cy+p.x*s+p.y*c+((i*53%7)-3)*0.17*k}));
     };
     const graden=a=>((a*180/Math.PI)%360+360)%360;
-    for(const tpl of P.templates()) for(const deg of [0,37,123,250,318]){
+    for(const tpl of P.templates().filter(t=>!t.nest)) for(const deg of [0,37,123,250,318]){
       const r=P.recognise(leg(tpl,deg,800,500));
       const p0=r.pucks[0];
       rijen.push({id:tpl.id,deg,aantal:r.pucks.length,gezien:p0?p0.tpl.id:null,
@@ -722,7 +722,7 @@ async function plaatsMarkering(page,x,y,i=0){
   const sprongen = await page.evaluate(()=>{
     const P=window.__puck, k=P.pxPerMM(), uit=[];
     const graden=a=>((a*180/Math.PI)%360+360)%360;
-    for(const tpl of P.templates()) for(let deg=0;deg<360;deg+=15){
+    for(const tpl of P.templates().filter(t=>!t.nest)) for(let deg=0;deg<360;deg+=15){
       const r=deg*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
       const pts=P.padsFor(tpl,k).map(p=>({x:900+p.x*c-p.y*s, y:500+p.x*s+p.y*c}));
       const p0=P.recognise(pts).pucks[0];
@@ -1073,6 +1073,17 @@ async function plaatsMarkering(page,x,y,i=0){
   const cx=W/2, cy=H/2;
   const trays = page.locator('#puckDock .traypuck');
   ok('het duo staat als één puck in de balk', await trays.count()===5);
+  const zesPunten=await page.evaluate(()=>{
+    const P=window.__puck,duo=P.templates().filter(t=>t.nest);
+    const los=[[-52,-30],[52,-30],[0,60],[-18,-12],[20,-10],[-2,22]]
+      .map(([x,y])=>({x:800+x,y:500+y}));
+    return {aantal:duo.reduce((n,t)=>n+P.padsFor(t).length,0),
+            ids:P.recognise(los).pucks.map(p=>p.tpl.id).sort()};
+  });
+  ok('de fysieke duo-puck gebruikt in totaal zes contactpunten', zesPunten.aantal===6);
+  ok('twee concentrische driepunts-pucks worden als het duo herkend',
+     zesPunten.ids.join()==='puck-05,puck-06'
+     || (console.log('zes punten:',zesPunten),false));
 
   const b = await trays.nth(4).boundingBox();
   await page.mouse.move(b.x+b.width/2,b.y+b.height/2);
