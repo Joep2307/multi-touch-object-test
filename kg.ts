@@ -383,7 +383,7 @@ export function kgDescribe(n) {
 /* ── Wat is hier bekend? ────────────────────────────────────────────────
    Afstand in meters over het aardoppervlak. Op stadsschaal is de fout van
    deze bolbenadering verwaarloosbaar. */
-function metersBetween(lat1, lon1, lat2, lon2) {
+export function metersBetween(lat1, lon1, lat2, lon2) {
   const R = 6371000, rad = Math.PI / 180;
   const dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
   const a = Math.sin(dLat / 2) ** 2 +

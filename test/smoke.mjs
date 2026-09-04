@@ -1063,6 +1063,95 @@ async function plaatsMarkering(page,x,y,i=0){
   await ctx.close();
 }
 
+// ── 13. het duo: twee pucks die in elkaar liggen ──
+{
+  /* Het lastige aan dit paar is niet het menu maar de herkenning: twee
+     schijven op precies dezelfde plek is exact wat `recognise` normaal als een
+     spook wegfiltert. Deze test legt ze op elkaar, draait aan allebei, en
+     trekt ze daarna uit elkaar om de afstand af te lezen. */
+  const {page, ctx, errs} = await newPage('laptop');
+  const cx=W/2, cy=H/2;
+  const trays = page.locator('#puckDock .traypuck');
+  ok('het duo staat als één puck in de balk', await trays.count()===5);
+
+  const b = await trays.nth(4).boundingBox();
+  await page.mouse.move(b.x+b.width/2,b.y+b.height/2);
+  await page.mouse.down(); await page.mouse.move(cx,cy,{steps:12}); await page.mouse.up();
+  await page.waitForTimeout(700);
+
+  const liggen = () => page.evaluate(()=>window.__puck.tracks().filter(t=>t.state==='recognised'));
+  const opTafel = await liggen();
+  ok('één sleep legt allebei de helften neer',
+     opTafel.filter(t=>t.id==='puck-05').length===1 &&
+     opTafel.filter(t=>t.id==='puck-06').length===1
+     || (console.log('pucks:',opTafel),false));
+  ok('en ze liggen op elkaar',
+     (()=>{ const a=opTafel.find(t=>t.id==='puck-05'), c=opTafel.find(t=>t.id==='puck-06');
+            return !!a&&!!c&&Math.hypot(a.x-c.x,a.y-c.y)<12; })());
+
+  const ringen = () => page.evaluate(()=>window.__puck.ringen());
+  const view   = () => page.evaluate(()=>window.__puck.view());
+
+  // De binnenste puck is de kleinste onder de muis, dus het wiel in het hart
+  // van het duo draait hém.
+  const voor = await view();
+  await page.mouse.move(cx,cy);
+  for(let k=0;k<3;k++){ await page.mouse.wheel(0,100); await page.waitForTimeout(90); }
+  await page.waitForTimeout(350);
+  let r = await ringen();
+  const binnen = r.find(t=>t.id==='puck-06');
+  ok('draaien aan de binnenste haalt het gereedschap tevoorschijn',
+     !!binnen&&binnen.open&&binnen.items.join()==='kind,measure,shot,rec,back'
+     || (console.log('binnen:',binnen),false));
+  ok('en dat zoomt de kaart niet',
+     Math.abs((await view()).zoom-voor.zoom)<0.05
+     || (console.log('zoom:',voor.zoom,'->',(await view()).zoom),false));
+
+  // Buiten het gat van de binnenpuck maar binnen de schijf van de buitenste:
+  // daar pakt het wiel de buitenring.
+  await page.mouse.move(cx+60,cy);
+  for(let k=0;k<3;k++){ await page.mouse.wheel(0,100); await page.waitForTimeout(90); }
+  await page.waitForTimeout(350);
+  r = await ringen();
+  const buiten = r.find(t=>t.id==='puck-05');
+  ok('draaien aan de buitenste haalt de thema\'s tevoorschijn',
+     !!buiten&&buiten.open&&buiten.items.includes('topic')
+     || (console.log('buiten:',buiten),false));
+  ok('en dan staat de ring van de binnenste dicht',
+     !(await ringen()).find(t=>t.id==='puck-06')?.open);
+
+  // Terug naar het gereedschap en "Meten" aantikken: tweede taartpunt van vijf.
+  await page.mouse.move(cx,cy);
+  for(let k=0;k<3;k++){ await page.mouse.wheel(0,100); await page.waitForTimeout(90); }
+  await page.waitForTimeout(350);
+  const punt = await page.evaluate(o=>{
+    const P=window.__puck, n=5;
+    const a=P.ringStart(n)+(o.i+0.5)*Math.PI*2/n, rr=P.ringPX();
+    return {x:o.x+Math.cos(a)*rr, y:o.y+Math.sin(a)*rr};
+  },{x:cx,y:cy,i:1});
+  await page.mouse.click(punt.x,punt.y); await page.waitForTimeout(400);
+  ok('"Meten" zet het meten aan', (await page.evaluate(()=>window.__puck.duo())).meten
+     || (console.log('duo:',await page.evaluate(()=>window.__puck.duo())),false));
+
+  // In elkaar valt er niets te meten.
+  ok('in elkaar staat er geen afstand',
+     (await page.evaluate(()=>window.__puck.duo())).meters===null);
+
+  // Uit elkaar trekken: de muis in het hart pakt de kleinste, dus de binnenste.
+  await page.mouse.move(cx,cy);
+  await page.mouse.down(); await page.mouse.move(cx+320,cy+120,{steps:14}); await page.mouse.up();
+  await page.waitForTimeout(700);
+  const gemeten = await page.evaluate(()=>window.__puck.duo());
+  ok('uit elkaar staat de afstand op de kaart',
+     typeof gemeten.meters==='number' && gemeten.meters>0
+     || (console.log('meting:',gemeten),false));
+  ok('de twee helften liggen nog los',
+     (await liggen()).length===2 || (console.log('los:',await liggen()),false));
+
+  ok('geen JS-fouten (duo)', errs.length===0 || (console.log(errs.slice(0,3)),false));
+  await ctx.close();
+}
+
 await browser.close();
 server.close();
 fs.rmSync(work, { recursive: true, force: true });

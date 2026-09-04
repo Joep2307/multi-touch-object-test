@@ -1,5 +1,5 @@
 import { kg, loadKG, ensureKG, drawKG, drawGaps, kgAt, kgDescribe, onKgChange,
-         nearby, formatDistance, buildQuestion, ask, setKgLang, kgStatusText,
+         nearby, formatDistance, metersBetween, buildQuestion, ask, setKgLang, kgStatusText,
          fileUrl, knowledgeOf, relevantDocs } from "./kg.js";
 import { stt, probeSTT, startTalk } from "./speech.js";
 import * as cap from "./capture.js";
@@ -61,6 +61,10 @@ const CFG = {
      meter afstand ziet dát je tik aankwam. */
   puckTapMS:280,
   puckZoomRotDeg:90, puckRotDeadRAD:0.02, puckZoomEaseMS:70,
+  /* Hoeveel graden je het duo moet draaien voor zijn menu tevoorschijn komt.
+     Ruim boven de ruis van de herkenning, ver onder een kwartslag: je legt de
+     puck neer, geeft hem een tikje draai, en het menu staat er. */
+  duoOpenDeg:14,
   /* En een bovengrens: hoe snel een puck ten hoogste kan draaien voor het
      nog een draai is. Een hand haalt anderhalve slag per seconde niet;
      alles daarboven is een meetsprong — een pootje dat wegvalt, een hand
@@ -135,6 +139,11 @@ const L = {
        touchHint:"Sleep, tik Kiezen aan en tik dan het thema — daarmee ligt de markering vast.",
        laptopHint:"Sleep, klik Kiezen aan en klik dan het thema — daarmee ligt de markering vast.",
        puckBack:"Terug", puckPickTopic:"Kies een thema",
+       duoTheme:"Duo", duoTool:"Duo · gereedschap", duoToolFace:"Gereedschap",
+       duoTurn:"Draai · of tik het gat aan", puckPickTool:"Kies gereedschap",
+       duoMeasureOn:"Meten aan", duoMeasureOff:"Meten uit",
+       duoShot:"Foto", duoRec:"Opname", duoRecStop:"Opname stoppen",
+       duoApart:"Leg de twee helften uit elkaar",
        helpTitle:"Zo werkt de puck", helpTurn:"Draai · zoom",
        helpMove:"Schuif · reis", helpTap:"Tik midden · kies",
        flipSide:"Naar de overkant", flipNote:"Naar de overkant",
@@ -336,6 +345,11 @@ const L = {
        touchHint:"Drag, tap Select and then the theme — that places the mark.",
        laptopHint:"Drag, click Select and then the theme — that places the mark.",
        puckBack:"Back", puckPickTopic:"Pick a theme",
+       duoTheme:"Duo", duoTool:"Duo · tools", duoToolFace:"Tools",
+       duoTurn:"Turn · or tap the hole", puckPickTool:"Pick a tool",
+       duoMeasureOn:"Measure on", duoMeasureOff:"Measure off",
+       duoShot:"Photo", duoRec:"Record", duoRecStop:"Stop recording",
+       duoApart:"Pull the two halves apart",
        helpTitle:"How the puck works", helpTurn:"Turn · zoom",
        helpMove:"Slide · travel", helpTap:"Tap centre · choose",
        flipSide:"To the other side", flipNote:"To the other side",
@@ -643,12 +657,36 @@ export type Tpl = {
   angles?:number[];  ringMM?:number;      // ring
   ratios?:number[];  longestMM?:number;   // driehoek
   learnedAt?:string;
+  /* Het duo (zie hieronder). `role` zegt wat de ring van deze puck laat zien,
+     `nest` dat hij met opzet op dezelfde plek als zijn wederhelft ligt,
+     `nameKey` en `color` geven hem een eigen naam en kleur \u2014 een gereedschap
+     hoort geen oordeel te heten \u2014 en `radiusMM` is zijn schijf, want de kleine
+     puck van het paar is niet zo groot als de vier van de bouwtekening. */
+  role?:"tool"; nest?:boolean; nameKey?:string; color?:string; radiusMM?:number;
 };
 let templates:Tpl[]=[
   {id:"puck-01",angles:[54,124,206,250,306],ringMM:34,verdict:"good"},
   {id:"puck-02",angles:[56,100,168,218,304],ringMM:34,verdict:"bad"},
   {id:"puck-03",angles:[52,120,166,210,308],ringMM:34,verdict:"talk"},
-  {id:"puck-04",angles:[53,99,195,263,307],ringMM:34,verdict:"idea"}
+  {id:"puck-04",angles:[53,99,195,263,307],ringMM:34,verdict:"idea"},
+  /* ── Het duo ────────────────────────────────────────────────────
+     Twee pucks die in elkaar passen: een kleine schijf in een grote ring, met
+     hetzelfde middelpunt. Ze zijn één voorwerp met twee knoppen \u2014 de buitenste
+     draait de thema's tevoorschijn, de binnenste het gereedschap \u2014 en je kunt
+     ze uit elkaar halen om de afstand tussen twee plekken te meten.
+
+     Ze staan hier als vijfde en zesde puck en verdringen niemand: de vier van
+     de bouwtekening blijven wat ze waren. Hun hoeken zijn gekozen met dezelfde
+     eisen als de vier (geen puck die op zichzelf lijkt na een slag draaien,
+     ruim uit elkaar), maar de tafel houdt ze vooral uit elkaar aan hun stráál:
+     34 mm tegen 18 mm is geen twijfelgeval. Dat verschil is ook precies wat de
+     tafel toestemming geeft ze op elkaar te laten liggen \u2014 zie `mayOverlap`.
+
+     De maten hieronder zijn de bouwtekening; "Puck herkennen" meet de echte. */
+  {id:"puck-05",angles:[85,131,185,230,275],ringMM:34,verdict:"good",
+   nest:true,nameKey:"duoTheme"},
+  {id:"puck-06",angles:[67,120,165,234,293],ringMM:18,verdict:"good",
+   nest:true,role:"tool",nameKey:"duoTool",color:"#7fb2ff",radiusMM:26}
 ];
 /* Wat hierboven staat is de fabriekswaarde: de vier pucks van de bouwtekening.
    Een puck die je aan de tafel inleest overschrijft de driehoek van één van
@@ -667,6 +705,29 @@ const tplRing=t=>(t&&Number.isFinite(t.ringMM)&&t.ringMM>0)?t.ringMM:CFG.ringRad
 /* Hoe breed een puck op het glas ligt: bij een driehoek de langste zijde, bij
    een ring de diameter. Deze maat bepaalt het zoekraster in `recognise`. */
 const tplSpanMM=t=>isRing(t)?2*tplRing(t):tplLongest(t);
+/* Hoe een puck heet en welke kleur hij draagt. Bij de vier van de bouwtekening
+   is dat zijn oordeel; een gereedschapspuck heeft geen oordeel en zegt het zelf. */
+const tplName =t=>t?.nameKey?tr(t.nameKey):vName(t.verdict);
+/* Wat er op de schijf zelf staat. In een lijst wil je "Duo · thema" lezen —
+   daar kies je een puck uit — maar op tafel wil je zien wélke soort hij nu
+   vastlegt, want dat is wat de binnenpuck eraan verzet. */
+const puckFaceName=t=>!t?.nest?tplName(t)
+  // Op de schijf leest de buitenste helft zijn soort en de binnenste een korte
+  // naam: "Duo · gereedschap" is breder dan het schijfje waar het op moet.
+  :isToolPuck(t)?tr("duoToolFace"):vName(t.verdict);
+const tplColor=t=>t?.color||vColor(t.verdict);
+const isToolPuck=t=>t?.role==="tool";
+/* De schijf van deze puck in millimeter. De kleine puck van het duo is smaller
+   dan de vier van de bouwtekening; zou hij met dezelfde maat getekend worden,
+   dan lag zijn zwarte band over de ring van zijn eigen buitenpuck heen. */
+const tplRadiusMM=t=>(t&&Number.isFinite(t.radiusMM)&&t.radiusMM>0)?t.radiusMM:CFG.puckRadiusMM;
+const puckPX=t=>tplRadiusMM(t?.tpl||t)*pxPerMM;
+/* Twee schijven kunnen niet op elkaar liggen \u2014 behalve als ze dat met opzet
+   doen. Het duo is \u00e9\u00e9n voorwerp: een kleine puck die in een grote ring valt,
+   dus met hetzelfde middelpunt. Alleen dan mag de spookregel wijken, en alleen
+   als hun stralen zo ver uit elkaar liggen dat de tafel ze niet kan verwarren. */
+const mayOverlap=(a,b)=>!!(a&&b&&a.nest&&b.nest&&a.id!==b.id&&isRing(a)&&isRing(b)&&
+  Math.abs(tplRing(a)-tplRing(b))>Math.max(tplRing(a),tplRing(b))*0.3);
 const maxTplSpan=()=>activeTemplates().reduce((m,t)=>Math.max(m,tplSpanMM(t)),CFG.longestSideMM);
 /* Wat er van een sjabloon op schijf gaat, welke vorm het ook heeft. De velden
    van de andere vorm staan er als null bij: zo is aan het bestand te zien dat
@@ -1302,7 +1363,16 @@ const mapMovable = () => !mapLocked && !pinMoveMode && !drag && !learn.open && !
 
 /* Topmost simulated puck under a screen point — a generous, finger-sized hit area. */
 function simPuckAt(x,y){
-  return simPucks.slice().reverse().find(s=>Math.hypot(s.x-x,s.y-y)<CFG.puckRadiusMM*pxPerMM);
+  /* De kleinste die past wint. Bij het duo liggen twee sleepkopieën op
+     elkaar; zonder deze regel pakte je altijd de grote en was de binnenpuck
+     op een laptop niet los te trekken. */
+  let best=null;
+  for(const sp of simPucks){
+    const R=puckPX(sp);
+    if(Math.hypot(sp.x-x,sp.y-y)>=R) continue;
+    if(!best||R<puckPX(best)) best=sp;
+  }
+  return best;
 }
 function setSimPuckPosition(puck,x,y){
   puck.x=x; puck.y=y;
@@ -1517,12 +1587,15 @@ const trays=()=>[...document.querySelectorAll<HTMLElement>(".tray")];
 function renderTray(){
   for(const box of trays()){
     box.innerHTML="";
-    templates.forEach(tpl=>{
+    /* Het duo is één voorwerp met twee helften; in de balk staat het dan ook
+       als één puck. Slepen legt ze allebei neer, in elkaar, precies zoals je
+       ze in het echt van tafel pakt. */
+    templates.filter(tpl=>!isToolPuck(tpl)).forEach(tpl=>{
       const d=document.createElement("div");
       d.className="traypuck"; d.dataset.id=tpl.id;
-      d.style.borderColor=vColor(tpl.verdict);
-      d.style.color=vColor(tpl.verdict);
-      d.textContent=vName(tpl.verdict);
+      d.style.borderColor=tplColor(tpl);
+      d.style.color=tplColor(tpl);
+      d.textContent=tplName(tpl);
       box.appendChild(d);
     });
   }
@@ -1579,6 +1652,14 @@ function endTrayDrag(e){
   // is -- er mogen er twee van dezelfde liggen -- maar de herkenning moet de
   // contactpunten van twee pucks wel uit elkaar kunnen houden.
   simPucks.push({tpl,uid:++simSeq,x,y,lng:ll.lng,lat:ll.lat,rot:Math.random()*Math.PI*2});
+  /* De wederhelft van het duo komt mee, op dezelfde plek: het is één voorwerp.
+     Uit elkaar trekken doe je daarna op de kaart — dat is precies het gebaar
+     dat op de tafel de afstand meet. */
+  if(tpl.nest) for(const other of templates){
+    if(!other.nest||other===tpl) continue;
+    simPucks.push({tpl:other,uid:++simSeq,x,y,lng:ll.lng,lat:ll.lat,
+                   rot:Math.random()*Math.PI*2});
+  }
   markTray();
 }
 trays().forEach(t=>t.addEventListener("pointerdown",onTrayDown));
@@ -1887,7 +1968,8 @@ function recognise(points,tpls?){
   const used=new Set(),out=[];
   for(const c of cands){
     if(c.idx.some(i=>used.has(i))) continue;
-    if(out.some(o=>Math.hypot(o.x-c.d.cx,o.y-c.d.cy)<sep)) continue;
+    // Behalve voor het duo: die twee horen op elkaar te liggen.
+    if(out.some(o=>Math.hypot(o.x-c.d.cx,o.y-c.d.cy)<sep&&!mayOverlap(o.tpl,c.tpl))) continue;
     c.idx.forEach(i=>used.add(i));
     out.push({tpl:c.tpl,conf:c.conf,x:c.d.cx,y:c.d.cy,
               angle:c.d.ring?c.d.angle
@@ -1905,7 +1987,7 @@ function recognise(points,tpls?){
   // sjablonen mee en wil alleen ingelezen pucks van het glas aftrekken.
   for(const t of (tpls?[]:tracks.values())){
     if(!isRing(t.tpl)) continue;
-    if(out.some(o=>Math.hypot(o.x-t.x,o.y-t.y)<sep)) continue;
+    if(out.some(o=>Math.hypot(o.x-t.x,o.y-t.y)<sep&&!mayOverlap(o.tpl,t.tpl))) continue;
     const want=tplRing(t.tpl)*pxPerMM, bij=[];
     for(let i=0;i<points.length;i++){
       if(used.has(i)) continue;
@@ -1942,6 +2024,14 @@ if(QS.has("test")) window.__puck={describeRing,matchRing,recognise,padsFor,gapsO
                                   // Voor de rooktest: waar een optie op de ring ligt.
                                   topics:()=>topics(),ringStart:n=>ringStart(n),
                                   ringPX:()=>CFG.ringPX,
+                                  /* Het duo: staat meten aan, hoe ver liggen de
+                                     twee helften uit elkaar, en wat staat er op
+                                     de ring van elke puck die er ligt. */
+                                  duo:()=>({meten:duoMeasure,meters:duoMeters()}),
+                                  ringen:()=>[...tracks.values()].map(t=>({
+                                    id:t.tpl.id,open:!!t.ring,
+                                    items:ringItems(t).map(i=>i.key),
+                                    labels:ringItems(t).map(i=>i.label)})),
                                   // En of de themaring van een puck openstaat.
                                   ringOpen:()=>[...tracks.values()].map(t=>!!t.ring),
                                   // En waar de kaart staat, zodat de test kan
@@ -1985,7 +2075,7 @@ function startTrack(d,now){
            measuredAngle:d.angle,filteredAngle:d.angle,lastRawAngle:d.angle,
            angleOrigin:d.angle,rawOrigin:d.angle,
            frames:0,state:"candidate",buf:[],
-           conf:d.conf,anchorX:d.x,anchorY:d.y,armed:true,flash:0,
+           conf:d.conf,anchorX:d.x,anchorY:d.y,armed:!isToolPuck(d.tpl),flash:0,
            // Om een liggende puck staat niets: de thema's komen pas als je
            // het kijkgat aantikt (`ring`). `tapIdx`/`tapT0` houden het
            // oplichten van de laatst aangetikte optie bij.
@@ -2028,6 +2118,10 @@ function track(dets,now){
       if(forDet.has(d)) continue;
       for(const t of tracks.values()){
         if(taken.has(t)||(zelfdeSoort&&t.tpl.id!==d.tpl.id)) continue;
+        // De ronde die de soort negeert gaat uit van "twee schijven kunnen
+        // niet op elkaar liggen". Voor het duo klopt dat niet, en zonder deze
+        // regel eet de buitenring de meting van zijn eigen binnenpuck op.
+        if(!zelfdeSoort&&mayOverlap(t.tpl,d.tpl)) continue;
         const gap=Math.hypot(t.x-d.x,t.y-d.y);
         if(gap<=reach) pairs.push({d,t,gap});
       }
@@ -2069,7 +2163,7 @@ function track(dets,now){
         t.angleOrigin=d.angle; t.rawOrigin=d.angle;
         t.measuredAngle=d.angle; t.filteredAngle=d.angle;
         t.lastRawAngle=d.angle; t.angle=d.angle; t.zoomRot=d.angle; t.zoomCarry=0;
-        t.ring=false; t.topicIdx=0; t.pinId=null; t.armed=true;
+        t.ring=false; t.topicIdx=0; t.pinId=null; t.armed=!isToolPuck(t.tpl);
       }
     }else{
       t.tplMismatchId=null; t.tplMismatchFrames=0;
@@ -2096,7 +2190,7 @@ function track(dets,now){
     if(moved>CFG.jitterPX){ t.anchorX=t.x; t.anchorY=t.y; }
     // Een puck die duidelijk verplaatst wordt, wordt een nieuwe bijdrage: opnieuw
     // een thema draaien en opnieuw bevestigen. De vorige markering blijft staan.
-    if(moved>CFG.rearmPX && !t.armed){ t.armed=true; t.pinId=null; }
+    if(moved>CFG.rearmPX && !t.armed && !isToolPuck(t.tpl)){ t.armed=true; t.pinId=null; }
     // Draaien zoomt, schuiven pant. Kiezen gaat met een tik in het kijkgat en
     // daarna op de ring (zie `tryPuckHoleTap` en `tryPuckMenuTap`).
     applyPuckControls(t,now);
@@ -2167,11 +2261,44 @@ const ringIndexOf=(angle,n)=>{
 /* Wat er op de ring staat: de thema's en `Terug`. Eén niveau, dus dit hangt
    niet meer van een menustand af. */
 function ringItems(t){
+  if(isToolPuck(t.tpl)) return toolItems();
   return topics().map(name=>({key:"topic",label:name}))
                  .concat([{key:"back",label:tr("puckBack")}]);
 }
-/* Welke optie als gekozen geldt: het thema van deze puck. */
-function ringChosen(t){ return t.topicIdx; }
+/* Het gereedschap van de binnenste puck. Vijf punten, want meer dan dat leest
+   op een ring om een puck van tien centimeter niet meer. Bewust géén "Alles
+   wissen": aan een tafel met publiek hoort dat achter twee tikken in een menu
+   te zitten en niet onder een halve slag draaien.
+
+   De soort staat hier en niet op de buitenste ring: die is vol met thema's, en
+   soort en thema samen zijn nu precies de twee knoppen van het duo. */
+function toolItems(){
+  const st=cap.state();
+  return [
+    {key:"kind",   label:vName(duoThemeTpl()?.verdict||"good")},
+    {key:"measure",label:tr(duoMeasure?"duoMeasureOff":"duoMeasureOn")},
+    {key:"shot",   label:tr("duoShot")},
+    {key:"rec",    label:tr(st.rec?"duoRecStop":"duoRec")},
+    {key:"back",   label:tr("puckBack")}
+  ];
+}
+/* De buitenste helft van het duo. Zijn oordeel is de soort die het paar
+   vastlegt; de binnenste puck draait hem rond. */
+const duoThemeTpl=()=>templates.find(t=>t.nest&&!isToolPuck(t));
+function cycleDuoVerdict(){
+  const tpl=duoThemeTpl(); if(!tpl) return;
+  const i=VERDICTS.findIndex(v=>v.key===tpl.verdict);
+  tpl.verdict=VERDICTS[(i+1)%VERDICTS.length].key;
+  saveTemplates(); renderTray();
+}
+/* Meten staat aan tot je het uitzet: je legt de twee helften neer, loopt om de
+   tafel heen en leest af. Een lijn die vanzelf verschijnt zodra ze los liggen
+   zou bij elke keer oppakken in beeld springen. */
+let duoMeasure=(()=>{ try{ return localStorage.getItem("pucktable-duo-measure")==="1"; }catch(e){ return false; } })();
+/* Welke optie als gekozen geldt: het thema van deze puck. Op de
+   gereedschapsring staat niets "gekozen" — dat zijn handelingen, geen standen,
+   en een dikke boog om de eerste zou een keuze suggereren die er niet is. */
+function ringChosen(t){ return isToolPuck(t.tpl)?-1:t.topicIdx; }
 const puckTopic=t=>{ const list=topics(); return list[(t.topicIdx||0)%list.length]||list[0]; };
 
 /* Een keuze uit de ring uitvoeren. Alleen hier verandert de stand van een
@@ -2179,6 +2306,23 @@ const puckTopic=t=>{ const list=topics(); return list[(t.topicIdx||0)%list.lengt
 function commitPuckChoice(t,idx){
   const items=ringItems(t), item=items[idx];
   if(!item||item.disabled) return;
+  /* Het gereedschap van de binnenste puck. "Soort" laat de ring openstaan —
+     je draait er een paar keer doorheen tot de juiste er staat — de rest doet
+     zijn ding en ruimt zichzelf op. */
+  if(item.key==="kind"){ cycleDuoVerdict(); return; }
+  if(item.key==="measure"){
+    duoMeasure=!duoMeasure;
+    try{ localStorage.setItem("pucktable-duo-measure",duoMeasure?"1":"0"); }catch(e){}
+    t.ring=false; return;
+  }
+  if(item.key==="shot"){
+    capMsg="";
+    cap.shot().then(b=>saveCap("shot",b))
+              .catch(()=>{ capMsg=taintedSets.has(MV.set)?tr("capTainted"):tr("capFailed"); })
+              .then(paintCapBar);
+    t.ring=false; return;
+  }
+  if(item.key==="rec"){ capMsg=""; cap.toggleRec(); paintCapBar(); t.ring=false; return; }
   if(item.key==="topic"){
     t.topicIdx=idx;
     /* Het thema aantikken is meteen het vastleggen. Er was eerst nog een tik
@@ -2209,12 +2353,12 @@ const puckMenuOuterPX=()=>CFG.ringPX+chipHeight()*1.35+10;
    Binnen de schijf telt niet mee: daar zit het kijkgat. Een puck met een
    dichte ring doet niet mee; om hem heen is de kaart gewoon kaart. */
 function puckMenuHit(x,y){
-  const inner=CFG.puckRadiusMM*pxPerMM+4, outer=puckMenuOuterPX();
+  const outer=puckMenuOuterPX();
   let best=null,bd=Infinity;
   for(const t of tracks.values()){
     if(t.state!=="recognised"||!t.ring) continue;
     const d=Math.hypot(x-t.x,y-t.y);
-    if(d<inner||d>outer||d>=bd) continue;
+    if(d<puckPX(t)+4||d>outer||d>=bd) continue;
     bd=d; best=t;
   }
   if(!best) return null;
@@ -2271,7 +2415,22 @@ function applyPuckControls(t,now){
   t.panT=now;
   // Niet (meer) herkend of de kaart staat vast: alleen bijhouden waar de puck
   // is, zodat hij niet bij het hervatten een hele reis in één beeld inhaalt.
-  if(t.state!=="recognised"||mapLocked){
+  if(t.state!=="recognised"){
+    t.panOX=t.x; t.panOY=t.y; t.zoomRot=t.angle; t.zoomCarry=0; return;
+  }
+  /* Het duo bedient de kaart niet. Draaien haalt zijn eigen menu tevoorschijn
+     en schuiven is meten, geen reizen: zou de kaart meeschuiven zodra je de
+     twee helften uit elkaar trekt, dan loopt de afstand die je meet onder je
+     handen weg. De vier pucks van de bouwtekening blijven de kaart bedienen. */
+  if(t.tpl.nest){
+    t.panOX=t.x; t.panOY=t.y; t.zoomCarry=0;
+    // De drempel telt door: een langzame draai stapelt op tot hij gehaald is.
+    if(Math.abs(t.angle-t.zoomRot)>=CFG.duoOpenDeg*Math.PI/180){
+      t.zoomRot=t.angle; openPuckRing(t);
+    }
+    return;
+  }
+  if(mapLocked){
     t.panOX=t.x; t.panOY=t.y; t.zoomRot=t.angle; t.zoomCarry=0; return;
   }
   const dRot=t.angle-t.zoomRot;
@@ -2317,24 +2476,24 @@ function wasTap(g){
       && Math.abs(g.puck.rot-g.rot0)<0.08;
 }
 function puckTrackAt(x,y){
-  const R=CFG.puckRadiusMM*pxPerMM;
   let best=null,bd=Infinity;
   for(const t of tracks.values()){
     if(t.state==="candidate") continue;
     const d=Math.hypot(t.x-x,t.y-y);
-    if(d<R*1.3&&d<bd){ bd=d; best=t; }
+    if(d<puckPX(t)*1.3&&d<bd){ bd=d; best=t; }
   }
   return best;
 }
 /* De puck waarvan het kijkgat onder dit punt ligt. Bewust krap: alleen het
    gat telt, niet de hele schijf. */
 function puckHoleAt(x,y){
-  const hole=CFG.puckRadiusMM*pxPerMM*PUCK_HOLE;
   let best=null,bd=Infinity;
   for(const t of tracks.values()){
     if(t.state!=="recognised") continue;
     const d=Math.hypot(t.x-x,t.y-y);
-    if(d<hole&&d<bd){ bd=d; best=t; }
+    // De kleine puck van het duo ligt ín de grote: zijn gat is kleiner, dus
+    // wie daar tikt bedoelt hem en niet de ring eromheen.
+    if(d<puckPX(t)*PUCK_HOLE&&d<bd){ bd=d; best=t; }
   }
   return best;
 }
@@ -2349,8 +2508,18 @@ function puckHoleAt(x,y){
 function tryPuckHoleTap(x,y){
   const t=puckHoleAt(x,y);
   if(!t) return false;
-  t.ring=true;
+  openPuckRing(t);
   return true;
+}
+/* Twee ringen om hetzelfde middelpunt zijn niet uit elkaar te tikken: ze
+   liggen op dezelfde straal en dezelfde taartpunten. Bij het duo gaat de ring
+   van de andere helft daarom dicht — tenzij ze al zo ver uit elkaar liggen dat
+   ze elkaar niet meer raken; dan mogen ze allebei openstaan. */
+function openPuckRing(t){
+  t.ring=true;
+  if(!t.tpl.nest) return;
+  for(const o of tracks.values())
+    if(o!==t&&o.tpl.nest&&o.ring&&Math.hypot(o.x-t.x,o.y-t.y)<puckMenuOuterPX()*2) o.ring=false;
 }
 function dropPin(t){
   const ll=MV.unproject(t.x,t.y);
@@ -2419,6 +2588,91 @@ function drawTarget(ctx,x,y,c,R){
    Een lijn van de rand van de puck naar de dichtstbijzijnde rand van het
    venster, met een punt op de puck: het venster zit er zichtbaar aan vast.
    Op het canvas, want het venster zelf klemt alles buiten zijn rand weg. */
+/* ── De meetlijn van het duo ─────────────────────────────────────────
+   Twee helften die in elkaar passen zijn samen één voorwerp; uit elkaar zijn
+   het twee plekken op de kaart. Staat "Meten" aan, dan trekt de tafel er een
+   lijn tussen met de afstand erbij — de meters komen van de kaart, niet van
+   het scherm, dus zoomen verandert het getal niet.
+
+   Liggen ze nog in elkaar, dan valt er niets te meten en staat er alleen een
+   regel dat je ze uit elkaar mag halen. Anders zou er een lijn van nul meter
+   in het hart van het duo hangen. */
+/* Ligt de binnenste helft nog in de buitenste? Dan is het duo één voorwerp en
+   hoort het er ook als één uit te zien: twee schijven met elk een naam, een
+   regel en een vizier op dezelfde plek is een kluwen. De binnenste tekent dan
+   alleen een dun randje in het gat van de andere. */
+function duoTucked(t){
+  if(!t?.tpl?.nest||!isToolPuck(t.tpl)) return false;
+  for(const o of tracks.values()){
+    if(o===t||!o.tpl.nest||isToolPuck(o.tpl)) continue;
+    if(Math.hypot(o.x-t.x,o.y-t.y)<puckPX(o)*0.8) return true;
+  }
+  return false;
+}
+function duoPair(){
+  let a=null,b=null;
+  for(const t of tracks.values()){
+    if(!t.tpl.nest||t.state!=="recognised") continue;
+    if(isToolPuck(t.tpl)) b=t; else a=t;
+  }
+  return (a&&b)?{a,b}:null;
+}
+/* De afstand tussen de twee helften in meters, of null als er niets te meten
+   valt. Over de kaart gerekend, niet over het scherm: zoomen verandert het
+   getal dus niet. */
+function duoMeters(){
+  const pair=duoPair(); if(!pair) return null;
+  const {a,b}=pair;
+  if(Math.hypot(b.x-a.x,b.y-a.y)<puckPX(a)*0.8) return null;
+  const p=MV.unproject(a.x,a.y), q=MV.unproject(b.x,b.y);
+  return metersBetween(p.lat,p.lng,q.lat,q.lng);
+}
+function drawDuoMeasure(ctx,now){
+  if(!duoMeasure) return;
+  const pair=duoPair(); if(!pair) return;
+  const {a,b}=pair;
+  const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
+  const c="#7fb2ff";
+  ctx.save();
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  if(d<puckPX(a)*0.8){
+    // Nog in elkaar: één regel onder het duo, geen lijn.
+    ctx.font="600 "+CHIP.font.toFixed(1)+"px "+CHIP_FAMILY;
+    ctx.fillStyle=c+"cc";
+    ctx.fillText(tr("duoApart"),a.x,a.y+puckPX(a)+chipHeight());
+    ctx.restore(); return;
+  }
+  const ux=dx/d, uy=dy/d;
+  // Van rand tot rand, niet van hart tot hart: de lijn hoort niet over de
+  // vizieren te lopen waar je juist op mikt.
+  const x0=a.x+ux*puckPX(a), y0=a.y+uy*puckPX(a);
+  const x1=b.x-ux*puckPX(b), y1=b.y-uy*puckPX(b);
+  ctx.lineCap="round";
+  ctx.strokeStyle="rgba(9,12,17,.6)"; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  ctx.strokeStyle=c; ctx.lineWidth=2;
+  ctx.setLineDash([9,7]); ctx.lineDashOffset=-now/60;
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  ctx.setLineDash([]); ctx.lineDashOffset=0;
+  // Dwarsstreepjes aan beide einden, zodat de lijn een maatlat is en geen
+  // verbinding zoals die tussen een venster en zijn puck.
+  for(const [px,py] of [[x0,y0],[x1,y1]]){
+    ctx.beginPath();
+    ctx.moveTo(px-uy*9,py+ux*9); ctx.lineTo(px+uy*9,py-ux*9);
+    ctx.stroke();
+  }
+  const m=duoMeters();
+  if(m==null){ ctx.restore(); return; }
+  const label=m<1000?Math.round(m)+" m":(m/1000).toFixed(m<10000?2:1)+" km";
+  const mx=(x0+x1)/2, my=(y0+y1)/2;
+  ctx.font="700 "+CHIP.font.toFixed(1)+"px "+CHIP_FAMILY;
+  const w=Math.ceil(ctx.measureText(label).width)+CHIP.padX*2, h=chipHeight();
+  ctx.beginPath(); ctx.roundRect(mx-w/2,my-h/2,w,h,Math.min(CHIP.radius,h/2));
+  ctx.fillStyle="rgba(9,12,17,.94)"; ctx.fill();
+  ctx.strokeStyle=c; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle="#ffffff"; ctx.fillText(label,mx,my+.5);
+  ctx.restore();
+}
 function drawNoteTether(ctx,pucks){
   for(const v of openNotes()) drawOneTether(ctx,pucks,v);
 }
@@ -2431,7 +2685,7 @@ function drawOneTether(ctx,pucks,v){
   // Dichtstbijzijnde punt op de rand van het venster: klemmen volstaat.
   const px=Math.max(r.left,Math.min(r.right,t.x)), py=Math.max(r.top,Math.min(r.bottom,t.y));
   const dx=px-t.x, dy=py-t.y, d=Math.hypot(dx,dy);
-  const R=CFG.puckRadiusMM*pxPerMM;
+  const R=puckPX(t);
   if(d<=R+8) return;                            // venster ligt tegen de puck aan
   const ux=dx/d, uy=dy/d, c=vColor(pin.verdict);
   ctx.save(); ctx.lineCap="round";
@@ -2453,6 +2707,9 @@ function drawPuckKnowledgeRelations(ctx,pucks){
   ctx.save();
   for(const puck of pucks){
     if(puck.state!=="recognised"&&puck.state!=="incomplete") continue;
+    // Een gereedschapspuck legt niets vast en heeft dus ook geen thema waar
+    // de graaf iets bij kan zoeken.
+    if(isToolPuck(puck.tpl)) continue;
     const ll=MV.unproject(puck.x,puck.y);
     const topic=puckTopic(puck);
     /* `nearby()` rekent een haversine over alle knopen in de graaf. Dat voor
@@ -2467,7 +2724,7 @@ function drawPuckKnowledgeRelations(ctx,pucks){
       puck.kgRelations=nearby(ll.lat,ll.lng,{theme:topic,limit:3,radiusM:1200});
     }
     const relations=puck.kgRelations||[];
-    const color=vColor(puck.tpl.verdict);
+    const color=tplColor(puck.tpl);
 
     for(const relation of relations){
       const target=MV.project(relation.node.lon,relation.node.lat);
@@ -3394,8 +3651,10 @@ function frame(){
       ctx.strokeStyle="#e8edf4"; ctx.lineWidth=1.5; ctx.stroke(); }
   }
 
+  drawDuoMeasure(ctx,now);
+
   for(const t of pucks){
-    const c=vColor(t.tpl.verdict), R=CFG.puckRadiusMM*pxPerMM;
+    const c=tplColor(t.tpl), R=puckPX(t);
     const items=ringItems(t), n=items.length;
     const chosen=ringChosen(t), glow=puckTapGlow(t,now);
     syncPlacedPinTopic(t);
@@ -3475,6 +3734,14 @@ function frame(){
     // De puck is een ring, geen schijf: in het hart zit een kijkgat, zodat de
     // kaart onder het vizier zichtbaar blijft. Je ziet dus precies waar je
     // aanwijst terwijl je richt, in plaats van erop te moeten gokken.
+    if(duoTucked(t)){
+      // Ingeschoven: alleen een randje, zodat te zien is dát hij er is en waar
+      // je hem moet draaien. De rest van het beeld is van zijn buitenhelft.
+      ctx.strokeStyle=c; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.arc(t.x,t.y,R-1.5,0,Math.PI*2); ctx.stroke();
+      ctx.restore();
+      continue;
+    }
     const hole=R*PUCK_HOLE;
     ctx.fillStyle="rgba(9,12,17,.94)";
     ctx.beginPath();
@@ -3498,7 +3765,7 @@ function frame(){
     // dus met zijn straal en niet met de bedieningsschaal.
     const nameSize=Math.max(12,R*0.17), lineSize=Math.max(9,R*0.115);
     ctx.textAlign="center"; ctx.fillStyle=c; ctx.font="600 "+nameSize.toFixed(1)+"px "+CHIP_FAMILY;
-    ctx.fillText(vName(t.tpl.verdict),t.x,t.y-band+nameSize*0.34);
+    ctx.fillText(puckFaceName(t.tpl),t.x,t.y-band+nameSize*0.34);
     // Beide regels staan in de onderste helft van de band, niet in het gat:
     // in het gat ligt de kaart en het vizier, en daar is geen tekst leesbaar.
     ctx.font="500 "+lineSize.toFixed(1)+"px "+CHIP_FAMILY; ctx.fillStyle="rgba(232,237,244,.62)";
@@ -3509,8 +3776,9 @@ function frame(){
     // kies je een thema; staat hij dicht, dan wijst de regel naar het kijkgat
     // (of meldt dat deze puck zijn markering al heeft). Twee regels onder
     // elkaar is in die smalle band te druk.
-    ctx.fillText(t.ring?tr("puckPickTopic")
-                       :(t.armed?tr(tableUi()?"confirmTouch":"confirmMouse"):tr("placed")),
+    ctx.fillText(t.ring?tr(isToolPuck(t.tpl)?"puckPickTool":"puckPickTopic")
+                 :t.tpl.nest?tr("duoTurn")
+                 :(t.armed?tr(tableUi()?"confirmTouch":"confirmMouse"):tr("placed")),
                  t.x,t.y+band+bandH*0.12);
     ctx.restore();
   }
@@ -4870,8 +5138,8 @@ function renderLearn(){
       return;
     }
     body.innerHTML=iso+`<p class="learn-which">${tr("recogWhich")}</p>`+templates.map(t=>
-      `<button class="learn-pick" data-id="${t.id}" style="--c:${vColor(t.verdict)}">
-         <b>${vName(t.verdict)}</b>
+      `<button class="learn-pick" data-id="${t.id}" style="--c:${tplColor(t)}">
+         <b>${tplName(t)}</b>
          <span>${t.id} · ${tplSummary(t)} · ${learnStamp(t)}</span>
        </button>`).join("");
     [...body.querySelectorAll<HTMLElement>(".learn-pick")].forEach(b=>b.onclick=()=>assignLearn(b.dataset.id));
@@ -4952,10 +5220,10 @@ el("btnExport").onclick=()=>download("puck-config.json",
 function buildSheet(){
   el("sheetGrid").innerHTML=activeTemplates().map(t=>{
     const span=tplSpanMM(t), pads=padsFor(t), S=150, sc=(S*0.34)/span*2;
-    const pts=pads.map(p=>({x:S/2+p.x*sc,y:S/2+p.y*sc})),c=vColor(t.verdict);
-    return `<div class="sheetcard"><h3 style="color:${c}">${t.id} · ${vName(t.verdict)}</h3>
+    const pts=pads.map(p=>({x:S/2+p.x*sc,y:S/2+p.y*sc})),c=tplColor(t);
+    return `<div class="sheetcard"><h3 style="color:${c}">${t.id} · ${tplName(t)}</h3>
       <svg width="100%" viewBox="0 0 ${S} ${S}">
-        <circle cx="${S/2}" cy="${S/2}" r="${CFG.puckRadiusMM*sc}" fill="none" stroke="#2c3846"/>
+        <circle cx="${S/2}" cy="${S/2}" r="${tplRadiusMM(t)*sc}" fill="none" stroke="#2c3846"/>
         ${isRing(t)
           ? `<circle cx="${S/2}" cy="${S/2}" r="${(tplRing(t)*sc).toFixed(1)}" fill="none" stroke="${c}" stroke-dasharray="3 3"/>`
           : `<polygon points="${pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')}" fill="none" stroke="${c}" stroke-dasharray="3 3"/>`}
