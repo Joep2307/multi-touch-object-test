@@ -140,6 +140,11 @@ const L = {
        laptopHint:"Sleep, klik Kiezen aan en klik dan het thema — daarmee ligt de markering vast.",
        puckBack:"Terug", puckPickTopic:"Kies een thema",
        duoTheme:"Duo", duoTool:"Duo · gereedschap", duoToolFace:"Gereedschap",
+       recogHoldDuo:"Duo gezien — twee driehoeken om hetzelfde midden. Even stil houden…",
+       recogMeasuredDuo:(o,i)=>`Gemeten: het duo. Buitenste helft ${o} mm, binnenste ${i} mm.`,
+       recogWhichDuo:"Beide helften in één keer bewaren:",
+       recogPickDuo:"Duo · buitenste en binnenste",
+       recogSavedDuo:(o,i)=>`Duo bewaard — buitenste ${o} mm, binnenste ${i} mm. De tafel herkent ze nu allebei, in elkaar én los.`,
        duoTurn:"Draai · of tik het gat aan", puckPickTool:"Kies gereedschap",
        duoMeasureOn:"Meten aan", duoMeasureOff:"Meten uit",
        duoShot:"Foto", duoRec:"Opname", duoRecStop:"Opname stoppen",
@@ -346,6 +351,11 @@ const L = {
        laptopHint:"Drag, click Select and then the theme — that places the mark.",
        puckBack:"Back", puckPickTopic:"Pick a theme",
        duoTheme:"Duo", duoTool:"Duo · tools", duoToolFace:"Tools",
+       recogHoldDuo:"Duo seen — two triangles around the same centre. Hold still…",
+       recogMeasuredDuo:(o,i)=>`Measured: the duo. Outer half ${o} mm, inner ${i} mm.`,
+       recogWhichDuo:"Save both halves at once:",
+       recogPickDuo:"Duo · outer and inner",
+       recogSavedDuo:(o,i)=>`Duo saved — outer ${o} mm, inner ${i} mm. The table now recognises both, nested and apart.`,
        duoTurn:"Turn · or tap the hole", puckPickTool:"Pick a tool",
        duoMeasureOn:"Measure on", duoMeasureOff:"Measure off",
        duoShot:"Photo", duoRec:"Record", duoRecStop:"Stop recording",
@@ -624,8 +634,7 @@ const topics=()=>(kg.useThemes&&kg.themes.length?kg.themes:L[lang].topics);
    draait rechtsom. Dat geldt voor de sjablonen én voor de meting, en die twee
    worden alleen met elkaar vergeleken — spiegelen valt zo nergens tussenuit. */
 const isRing=t=>Array.isArray(t?.angles)&&t.angles.length===5;
-const cloneTpl=t=>({...t,...(isRing(t)?{angles:[...t.angles]}:{ratios:[...t.ratios]}),
-  ...(Array.isArray(t.duoRatios)?{duoRatios:[...t.duoRatios]}:{})});
+const cloneTpl=t=>({...t,...(isRing(t)?{angles:[...t.angles]}:{ratios:[...t.ratios]})});
 /* Rond de nul moet dit twee keer hetzelfde antwoord geven. Een pootje vlak
    rechts van het midden komt uit op 359,999… graden; die waarde nog een keer
    door dezelfde som halen levert in drijvende komma 0 op. En `gapsOf`
@@ -664,10 +673,9 @@ export type Tpl = {
      hoort geen oordeel te heten \u2014 en `radiusMM` is zijn schijf, want de kleine
      puck van het paar is niet zo groot als de vier van de bouwtekening. */
   role?:"tool"; nest?:boolean; nameKey?:string; color?:string; radiusMM?:number;
-  /* Alleen het fysieke duo: de vaste driepuntscontacten staan los van het
-     vijfpunts-identiteitssjabloon, zodat losse normale pucks nooit per ongeluk
-     als één helft van het duo worden gelezen. */
-  duoRatios?:number[]; duoLongestMM?:number;
+  /* Alleen in het geheugen: het duo is deze sessie als paar gezien, dus de
+     maten hieronder zijn gemeten en niet meer die van de bouwtekening. */
+  duoSeen?:boolean;
 };
 let templates:Tpl[]=[
   {id:"puck-01",angles:[54,124,206,250,306],ringMM:34,verdict:"good"},
@@ -688,11 +696,10 @@ let templates:Tpl[]=[
      tafel toestemming geeft ze op elkaar te laten liggen \u2014 zie `mayOverlap`.
 
      De maten hieronder zijn de bouwtekening; "Puck herkennen" meet de echte. */
-  {id:"puck-05",angles:[85,131,185,230,275],ringMM:34,verdict:"good",
-   nest:true,nameKey:"duoTheme",duoRatios:[0.68,0.91],duoLongestMM:62},
-  {id:"puck-06",angles:[67,120,165,234,293],ringMM:18,verdict:"good",
-   nest:true,role:"tool",nameKey:"duoTool",color:"#7fb2ff",radiusMM:26,
-   duoRatios:[0.60,0.82],duoLongestMM:30}
+  {id:"puck-05",ratios:[0.68,0.91],longestMM:62,verdict:"good",
+   nest:true,nameKey:"duoTheme"},
+  {id:"puck-06",ratios:[0.60,0.82],longestMM:30,verdict:"good",
+   nest:true,role:"tool",nameKey:"duoTool",color:"#7fb2ff",radiusMM:26}
 ];
 /* Wat hierboven staat is de fabriekswaarde: de vier pucks van de bouwtekening.
    Een puck die je aan de tafel inleest overschrijft de driehoek van één van
@@ -710,8 +717,7 @@ const tplLongest=t=>(t&&Number.isFinite(t.longestMM)&&t.longestMM>0)?t.longestMM
 const tplRing=t=>(t&&Number.isFinite(t.ringMM)&&t.ringMM>0)?t.ringMM:CFG.ringRadiusMM;
 /* Hoe breed een puck op het glas ligt: bij een driehoek de langste zijde, bij
    een ring de diameter. Deze maat bepaalt het zoekraster in `recognise`. */
-const tplSpanMM=t=>t?.nest&&Number.isFinite(t.duoLongestMM)
-  ?t.duoLongestMM:isRing(t)?2*tplRing(t):tplLongest(t);
+const tplSpanMM=t=>isRing(t)?2*tplRing(t):tplLongest(t);
 /* Hoe een puck heet en welke kleur hij draagt. Bij de vier van de bouwtekening
    is dat zijn oordeel; een gereedschapspuck heeft geen oordeel en zegt het zelf. */
 const tplName =t=>t?.nameKey?tr(t.nameKey):vName(t.verdict);
@@ -776,10 +782,10 @@ function restoreTemplates(){
   if(!Array.isArray(saved)) return;
   for(const sv of saved){
     const tpl=templates.find(t=>t.id===sv?.id); if(!tpl) continue;
-    /* De eerste versie van het duo had vijf punten per helft. Een automatisch
-       opgeslagen fabriekssjabloon daarvan mag de nieuwe driepuntsvorm niet na
-       een update terugzetten. Alleen een echt ingelezen vorm heeft learnedAt. */
-    if(tpl.nest&&typeof sv.learnedAt!=="string"){
+    /* Het duo is een paar driehoeken. Een oude opslag uit de eerste versie —
+       toen het nog vijf pootjes per helft had — mag die vorm niet terugzetten;
+       de soort die op de buitenste helft stond blijft wél staan. */
+    if(tpl.nest&&!Array.isArray(sv.ratios)){
       if(!isToolPuck(tpl)&&VERDICTS.some(v=>v.key===sv.verdict)) tpl.verdict=sv.verdict;
       continue;
     }
@@ -793,6 +799,7 @@ function resetTemplates(){
     /* Eerst alle vormvelden weg: een puck die als driehoek is ingelezen moet
        weer de ring van de bouwtekening worden, niet allebei tegelijk. */
     delete t.ratios; delete t.longestMM; delete t.angles; delete t.ringMM; delete t.learnedAt;
+    delete t.duoSeen;
     Object.assign(t,cloneTpl(f));
   }
   try{ localStorage.removeItem(TPL_KEY); }catch(e){}
@@ -1224,14 +1231,6 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
    liggen ze op de cirkel om het middelpunt; bij een driehoek wordt hij eerst om
    zijn zwaartepunt gelegd, want dát is bij een driehoek het hart van de puck. */
 function padsFor(tpl,k=1){
-  if(tpl?.nest&&Array.isArray(tpl.duoRatios)&&tpl.duoRatios.length===2){
-    const Lm=tpl.duoLongestMM*k;
-    const [r1,r2]=tpl.duoRatios,a=r1*Lm,b=r2*Lm,c=Lm;
-    const rx=(c*c+b*b-a*a)/(2*c), ry=Math.sqrt(Math.max(0,b*b-rx*rx));
-    const pts=[{x:0,y:0},{x:c,y:0},{x:rx,y:ry}];
-    const cx=(pts[0].x+pts[1].x+pts[2].x)/3, cy=(pts[0].y+pts[1].y+pts[2].y)/3;
-    return pts.map(p=>({x:p.x-cx,y:p.y-cy}));
-  }
   if(isRing(tpl)){
     const R=tplRing(tpl)*k;
     return [...tpl.angles].map(norm360).sort((a,b)=>a-b)
@@ -1836,46 +1835,53 @@ function noteRingDiag(d,gemeten){
             mm:d.radius/pxPerMM, spread:d.spread,
             lijst:gemeten.map(g=>({naam:g.tpl.name||g.tpl.id, err:g.m.err}))};
 }
-/* De fysieke duo-puck heeft geen vijf pootjes per helft maar twee driehoeken:
-   drie buiten en drie in het losse middendeel. Hun exacte verhoudingen mogen
-   later met "Puck herkennen" worden ingelezen, maar de combinatie zelf is al
-   ondubbelzinnig: zes punten vallen uiteen in een grote en kleine driehoek met
-   vrijwel hetzelfde midden. Zo werkt het duo meteen, ook vóór het inmeten. */
-function nestedTriangleCandidates(points,list){
+/* ── Het duo zonder inmeten ──────────────────────────────────────────
+   De twee helften zijn gewone driehoeken en worden dus gewoon door de
+   driehoekslus herkend — zodra hun maten kloppen. Vóór "Puck herkennen" staan
+   daar nog de waarden van de bouwtekening, en die zijn een gok.
+
+   Deze noodingang overbrugt dat. Hij kijkt niet naar verhoudingen maar naar de
+   vorm van het paar: een grote en een kleine driehoek om hetzelfde midden is
+   het duo en niets anders. Wat hij meet zet hij meteen in de sjablonen, zodat
+   de gewone lus de twee daarna elk apart kan volgen — ook als je ze uit elkaar
+   trekt. Op schijf komt er niets: dit is een startzetje, geen meting.
+
+   Zodra het duo écht is ingelezen (`learnedAt`) is deze ingang uit. Dan zijn de
+   sjablonen beter dan wat hij eruit kan halen.
+
+   Hij zoekt in hooguit acht punten: met het duo op een verder leeg glas zijn
+   het er zes, en één losse vinger erbij mag het niet breken. Meer dan dat is
+   een tafel waar iets anders aan de hand is — dan eerst inmeten. */
+function duoBootstrap(points,list){
   const duo=list.filter(t=>t.nest);
-  if(points.length!==6||duo.length!==2) return [];
-  const sorted=[...duo].sort((a,b)=>tplSpanMM(b)-tplSpanMM(a));
-  const outerTpl=sorted[0],innerTpl=sorted[1];
-  const expected=tplSpanMM(innerTpl)/tplSpanMM(outerTpl);
-  const all=[0,1,2,3,4,5];
+  if(duo.length!==2||duo.some(t=>t.learnedAt)) return [];
+  if(points.length<6||points.length>8) return [];
+  const buiten=duo.find(t=>!isToolPuck(t)), binnen=duo.find(t=>isToolPuck(t));
+  if(!buiten||!binnen) return [];
   let best=null;
-  /* Elke verdeling komt één keer langs doordat punt nul altijd in groep A zit:
-     C(5,2) = tien mogelijkheden, dus dit kost per beeld vrijwel niets. */
-  for(let i=1;i<5;i++) for(let j=i+1;j<6;j++){
-    const ai=[0,i,j],bi=all.filter(k=>!ai.includes(k));
-    const da=describe(points[ai[0]],points[ai[1]],points[ai[2]]);
-    const db=describe(points[bi[0]],points[bi[1]],points[bi[2]]);
-    if(!da||!db||da.ratios[0]<0.32||db.ratios[0]<0.32) continue;
-    const outer=da.longest>=db.longest?{d:da,idx:ai}:{d:db,idx:bi};
-    const inner=da.longest>=db.longest?{d:db,idx:bi}:{d:da,idx:ai};
-    const ratio=inner.d.longest/outer.d.longest;
-    if(ratio<0.20||ratio>0.72) continue;
-    const centre=Math.hypot(outer.d.cx-inner.d.cx,outer.d.cy-inner.d.cy);
-    if(centre>outer.d.longest*0.28) continue;
-    const score=centre/outer.d.longest+Math.abs(ratio-expected)*0.25;
-    if(!best||score<best.score) best={outer,inner,score};
-  }
+  const kies=(start,cur)=>{
+    if(cur.length===6){
+      const split=splitDuo(cur.map(i=>points[i]));
+      if(split&&(!best||split.score<best.score)) best={...split,idx:[...cur]};
+      return;
+    }
+    for(let i=start;i<points.length;i++){ cur.push(i); kies(i+1,cur); cur.pop(); }
+  };
+  kies(0,[]);
   if(!best) return [];
-  /* Onthoud de werkelijk gemeten vorm zolang de tafel draait. Zodra de twee
-     helften uit elkaar worden getrokken, kan elk drietal daardoor zelfstandig
-     gevolgd blijven worden zonder dat de gebruiker eerst hoeft te kalibreren. */
-  outerTpl.duoRatios=[...best.outer.d.ratios];
-  outerTpl.duoLongestMM=best.outer.d.longest/pxPerMM;
-  innerTpl.duoRatios=[...best.inner.d.ratios];
-  innerTpl.duoLongestMM=best.inner.d.longest/pxPerMM;
-  const candidate=(tpl,part)=>({tpl,errN:-1,idx:part.idx,d:part.d,
-    conf:Math.max(0.75,1-best.score)});
-  return [candidate(outerTpl,best.outer),candidate(innerTpl,best.inner)];
+  // Wat hij ziet wordt meteen de maat, zodat de gewone lus het overneemt.
+  const zet=(tpl,d)=>{
+    tpl.ratios=[d.ratios[0],d.ratios[1]];
+    tpl.longestMM=d.longest/pxPerMM;
+    tpl.duoSeen=true;
+    delete tpl.angles; delete tpl.ringMM;
+  };
+  zet(buiten,best.groot); zet(binnen,best.klein);
+  // `splitDuo` telt binnen het zestal; terug naar de nummers van het glas.
+  const echt=g=>g.map(i=>best.idx[i]);
+  const kandidaat=(tpl,d,idx)=>({tpl,errN:0,idx,d,conf:0.8});
+  return [kandidaat(buiten,best.groot,echt(best.gi)),
+          kandidaat(binnen,best.klein,echt(best.ki))];
 }
 function recognise(points,tpls?){
   if(debugMode) ringDiag=null;
@@ -1883,8 +1889,16 @@ function recognise(points,tpls?){
   /* Twee soorten pucks, twee zoektochten over dezelfde punten: driehoeken uit
      drietallen, ringen uit vijftallen op één cirkel. Ze komen daarna in dezelfde
      bak kandidaten en strijden om dezelfde contactpunten. */
-  const tris=list.filter(t=>!isRing(t)), rings=list.filter(isRing);
-  const duoTris=list.filter(t=>t.nest&&Array.isArray(t.duoRatios));
+  /* De maten van het duo zijn af fabriek een gok, en een gok van 62 mm met een
+     ruime tolerantie past op van alles — onder meer op drie pootjes van een
+     ringpuck waarvan het vierde even wegviel, en dan raakt die puck zijn
+     identiteit kwijt. Het duo doet daarom pas mee in deze lus als zijn vorm
+     ergens vandaan komt: ingelezen met "Puck herkennen" (`learnedAt`), of
+     gemeten door `duoBootstrap` toen het paar in elkaar op tafel lag
+     (`duoSeen`). Tot die tijd is de noodingang de enige die het duo aanwijst,
+     en die kijkt naar de vorm van het páár en kan zich dus niet vergissen. */
+  const tris=list.filter(t=>!isRing(t)&&!(t.nest&&!t.learnedAt&&!t.duoSeen));
+  const rings=list.filter(isRing);
   const cands=[],maxSpan=maxTplSpan()*pxPerMM*1.45;
   // Welke soorten er al liggen: die krijgen wat meer speelruimte (zie hieronder).
   const onTable=new Set([...tracks.values()].map(t=>t.tpl.id));
@@ -1926,19 +1940,6 @@ function recognise(points,tpls?){
         const sizeErr=Math.abs(d.longest-want)/want;
         if(sizeErr>(tracked?0.50:0.42)) continue;
         cands.push({tpl,errN:err/errLimit,idx:[i,j,k],d,conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
-      }
-      /* Een losgetrokken helft van het duo blijft een driepuntsvorm, terwijl
-         het gewone identiteitssjabloon bewust een ring blijft. Vergelijk hem
-         daarom apart met de vorm die bij het inschuiven is waargenomen. */
-      for(const tpl of duoTris){
-        const err=Math.hypot(d.ratios[0]-tpl.duoRatios[0],d.ratios[1]-tpl.duoRatios[1]);
-        const tracked=onTable.has(tpl.id), errLimit=tracked?0.08:0.055;
-        if(err>errLimit) continue;
-        const want=tpl.duoLongestMM*pxPerMM;
-        const sizeErr=Math.abs(d.longest-want)/want;
-        if(sizeErr>(tracked?0.28:0.18)) continue;
-        cands.push({tpl,errN:err/errLimit,idx:[i,j,k],d,
-                    conf:Math.max(0,1-err/errLimit*0.7-sizeErr*0.6)});
       }
     }
     }
@@ -2023,7 +2024,6 @@ function recognise(points,tpls?){
       }
     }
   }
-  cands.push(...nestedTriangleCandidates(points,list));
   /* Hetzelfde sjabloon mag meerdere keren gekozen worden: twee mensen met
      allebei een Probleem-puck is een gewone tafel. Wat een kandidaat nog wél
      uitsluit:
@@ -2037,6 +2037,7 @@ function recognise(points,tpls?){
      voortzet wint van een spookdriehoek met een net iets kleinere fout. Zonder
      dat wisselde bij twee pucks naast elkaar per beeldje welke van de twee
      "de beste" was en knipperden ze om beurten weg. */
+  cands.push(...duoBootstrap(points,list));
   const sep=puckSepPX();
   const continues=c=>[...tracks.values()].some(t=>t.tpl.id===c.tpl.id&&
         Math.hypot(t.x-c.d.cx,t.y-c.d.cy)<sep);
@@ -5007,7 +5008,8 @@ const tplSummary=t=>isRing(t)
   ? `${gapText(t.angles)}° · straal ${tplRing(t).toFixed(1)} mm`
   : `${t.ratios[0].toFixed(3)} / ${t.ratios[1].toFixed(3)} · ${tplLongest(t).toFixed(1)} mm`;
 const LEARN_HOLD_MS=900, LEARN_STILL_PX=9, LEARN_MIN_SAMPLES=12;
-const learn={open:false,phase:"wait",samples:[],t0:0,m:null,tplId:null,clash:null,note:"",moved:false};
+const learn={open:false,phase:"wait",samples:[],t0:0,m:null,tplId:null,clash:null,
+             note:"",moved:false,duoSaved:false};
 
 /* Alleen wat de tafel écht gemeten heeft telt als "bekend". Een fabrieks-
    driehoek die toevallig lijkt op de puck die je nu neerlegt mag je meting niet
@@ -5040,7 +5042,7 @@ function closeLearn(){ learn.open=false; el("learn").style.display="none"; }
 function restartLearn(clearFirst=false){
   learn.phase=(clearFirst&&learnPoints().length)?"clear":"wait";
   learn.samples=[]; learn.m=null;
-  learn.tplId=null; learn.clash=null; learn.moved=false;
+  learn.tplId=null; learn.clash=null; learn.moved=false; learn.duoSaved=false;
   setLearnBar(0); renderLearn();
 }
 /* "Er ligt er al een die ik ken" -- zonder dat lijkt het alsof de tafel de
@@ -5052,6 +5054,37 @@ function learnKnownNote(){
      weten waarom. Dan zegt de kaart het maar zelf. */
   const n=learnedTemplates().length;
   return n?tr("recogNoneKnownSeen",n):"";
+}
+/* Zes contactpunten die uiteenvallen in een grote en een kleine driehoek met
+   vrijwel hetzelfde midden: dat is het duo, in elkaar geschoven. Punt nul zit
+   altijd in groep A, dus elke verdeling komt precies één keer langs — tien
+   stuks, dat kost per beeldje niets.
+
+   Dit is er omdat het meetvenster anders alleen 3 of 5 punten aanneemt: met
+   het duo op het glas stond je naar "zes contactpunten" te kijken zonder dat er
+   ooit iets gebeurde. */
+function splitDuo(pts){
+  if(pts.length!==6) return null;
+  let best=null;
+  for(let i=1;i<5;i++) for(let j=i+1;j<6;j++){
+    const ai=[0,i,j], bi=[0,1,2,3,4,5].filter(k=>!ai.includes(k));
+    const da=describe(pts[ai[0]],pts[ai[1]],pts[ai[2]]);
+    const db=describe(pts[bi[0]],pts[bi[1]],pts[bi[2]]);
+    if(!da||!db) continue;
+    const aGroot=da.longest>=db.longest;
+    const groot=aGroot?da:db, klein=aGroot?db:da;
+    const gi=aGroot?ai:bi, ki=aGroot?bi:ai;
+    // De binnenste past in het gat van de buitenste: kleiner, maar niet zó
+    // klein dat het een trillend contactpunt kan zijn.
+    const verhouding=klein.longest/groot.longest;
+    if(verhouding<0.18||verhouding>0.78) continue;
+    // En ze delen hun midden; anders liggen het gewoon twee pucks naast elkaar.
+    const midden=Math.hypot(groot.cx-klein.cx,groot.cy-klein.cy);
+    if(midden>groot.longest*0.30) continue;
+    const score=midden/groot.longest;
+    if(!best||score<best.score) best={groot,klein,score,gi,ki};
+  }
+  return best;
 }
 function setLearnBar(f){ el("learnBar").style.width=(Math.max(0,Math.min(1,f))*100).toFixed(1)+"%"; }
 
@@ -5070,10 +5103,35 @@ function updateLearn(now){
     if(!pts.length){ learn.phase="wait"; renderLearn(); }
     return;
   }
-  if(pts.length!==3&&pts.length!==5){
+  /* Zes punten kunnen het duo zijn: twee driehoeken om hetzelfde midden.
+     Vallen ze niet zo uiteen, dan is het gewoon te veel op het glas. */
+  const duo=splitDuo(pts);
+  if(pts.length!==3&&pts.length!==5&&!duo){
     if(learn.phase!=="wait"){ learn.phase="wait"; renderLearn(); }
     learn.samples=[]; learn.moved=false; setLearnBar(0);
     st.innerHTML=tr("recogWait",pts.length)+learnKnownNote();
+    return;
+  }
+  if(duo){
+    const size=duo.groot.longest;
+    const last=learn.samples[learn.samples.length-1];
+    if(last && (!last.duo ||
+                Math.hypot(duo.groot.cx-last.cx,duo.groot.cy-last.cy)>LEARN_STILL_PX ||
+                Math.abs(size-last.size)>LEARN_STILL_PX)){
+      learn.samples=[]; learn.moved=true;
+    }
+    if(!learn.samples.length) learn.t0=now;
+    learn.samples.push({duo:true,size,cx:duo.groot.cx,cy:duo.groot.cy,
+      o0:duo.groot.ratios[0],o1:duo.groot.ratios[1],osize:duo.groot.longest,
+      i0:duo.klein.ratios[0],i1:duo.klein.ratios[1],isize:duo.klein.longest});
+    if(learn.phase!=="hold"){ learn.phase="hold"; learn.note=""; renderLearn(); }
+    const bezig=now-learn.t0;
+    setLearnBar(bezig/LEARN_HOLD_MS);
+    st.innerHTML=learn.moved&&bezig<250?tr("recogMoved"):tr("recogHoldDuo");
+    if(bezig>=LEARN_HOLD_MS && learn.samples.length>=LEARN_MIN_SAMPLES){
+      learn.m=learnMedian();
+      learn.phase="done"; learn.moved=false; setLearnBar(1); renderLearn();
+    }
     return;
   }
   /* Vijf punten is een gedrukte puck, drie een driehoek van tape. Wat er ligt
@@ -5124,6 +5182,9 @@ function learnMedian(){
   const S=learn.samples;
   const med=(f:(s:any)=>number)=>{ const a=S.map(f).sort((x,y)=>x-y); return a[a.length>>1]; };
   const size=med(s=>s.size);
+  if(S[0].duo) return {duo:true,
+    o:{r0:med(s=>s.o0),r1:med(s=>s.o1),longest:med(s=>s.osize)},
+    i:{r0:med(s=>s.i0),r1:med(s=>s.i1),longest:med(s=>s.isize)}};
   if(!S[0].ring) return {ring:false,r0:med(s=>s.r0),r1:med(s=>s.r1),longest:size};
   const base=S[0].angles, wrap=a=>((a+180)%360+360)%360-180;
   const cols=[[],[],[],[],[]];
@@ -5183,6 +5244,14 @@ function renderLearn(){
      plaats van terug te zetten naar de bouwtekening. */
   el("learnIntro").textContent=tr(puckMode()?"recogIntroOwn":"recogIntro");
   el("btnLearnReset").textContent=tr(puckMode()?"recogResetOwn":"recogReset");
+  if(learn.phase==="saved"&&learn.duoSaved){
+    const buiten=templates.find(t=>t.nest&&!isToolPuck(t));
+    const binnen=templates.find(t=>t.nest&&isToolPuck(t));
+    st.innerHTML=tr("recogSavedDuo",tplLongest(buiten).toFixed(1),tplLongest(binnen).toFixed(1));
+    body.innerHTML=`<div class="row"><button class="primary" id="btnLearnAgain">${tr("recogAgain")}</button></div>`;
+    el("btnLearnAgain").onclick=()=>restartLearn(true);
+    return;
+  }
   if(learn.phase==="saved"){
     const tpl=activeTemplates().find(t=>t.id===learn.tplId);
     if(!tpl){ restartLearn(); return; }
@@ -5193,6 +5262,18 @@ function renderLearn(){
                 +(learn.clash?tr("recogClash",learn.clash):"");
     body.innerHTML=`<div class="row"><button class="primary" id="btnLearnAgain">${tr("recogAgain")}</button></div>`;
     el("btnLearnAgain").onclick=()=>restartLearn(true);
+    return;
+  }
+  if(learn.phase==="done"&&learn.m.duo){
+    /* Eén knop, want het duo is één voorwerp: allebei de helften tegelijk. */
+    st.innerHTML=tr("recogMeasuredDuo",
+      (learn.m.o.longest/pxPerMM).toFixed(1),(learn.m.i.longest/pxPerMM).toFixed(1));
+    body.innerHTML=`<p class="learn-which">${tr("recogWhichDuo")}</p>
+      <button class="learn-pick" id="btnLearnDuo" style="--c:#7fb2ff">
+        <b>${tr("recogPickDuo")}</b>
+        <span>${tr("duoTheme")} + ${tr("duoTool")}</span>
+      </button>`;
+    el("btnLearnDuo").onclick=assignDuo;
     return;
   }
   if(learn.phase==="done"){
@@ -5258,6 +5339,26 @@ function shapeClash(t,shape){
     return matchRing({angles:a,gaps:gapsOf(a)},t).err<CFG.ringToleranceDeg*1.5;
   }
   return Math.hypot(t.ratios[0]-shape.ratios[0],t.ratios[1]-shape.ratios[1])<0.12;
+}
+/* Het duo wordt in één keer bewaard: twee driehoeken uit dezelfde meting, met
+   dezelfde datum. Los inmeten kan ook — leg één helft op het glas en kies hem
+   uit de lijst — maar samen is één handeling en scheelt de vraag welke helft
+   je nu in je hand had. */
+function assignDuo(){
+  if(!learn.m?.duo) return;
+  const buiten=templates.find(t=>t.nest&&!isToolPuck(t));
+  const binnen=templates.find(t=>t.nest&&isToolPuck(t));
+  if(!buiten||!binnen) return;
+  const vorm=m=>({ratios:[+m.r0.toFixed(3),+m.r1.toFixed(3)],
+                  longestMM:+(m.longest/pxPerMM).toFixed(1)});
+  applyShape(buiten,vorm(learn.m.o));
+  applyShape(binnen,vorm(learn.m.i));
+  const nu=new Date().toISOString();
+  buiten.learnedAt=nu; binnen.learnedAt=nu;
+  saveTemplates();
+  learn.tplId=buiten.id; learn.clash=null; learn.duoSaved=true; learn.phase="saved";
+  renderLearn(); renderTray();
+  if(el("sheet").style.display==="block") buildSheet();
 }
 function assignLearn(id){
   const tpl=templates.find(t=>t.id===id);
