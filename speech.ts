@@ -136,7 +136,14 @@ export const sttWorks = () => stt.mode === "backend" || stt.mode === "browser";
    Bewust segmenten en geen volledige tekst: de markering blijft de bron van
    waarheid, zodat iemand die halverwege een zin verbetert dat niet bij de
    volgende brok kwijtraakt. */
-export async function startTalk({ lang = "nl", onSegment, onPartial, onError, onAudio } = {}) {
+export type TalkOpties = {
+  lang?: string;
+  onSegment?: (tekst: string) => void;
+  onPartial?: (tekst: string) => void;
+  onError?: (sleutel: string) => void;
+  onAudio?: (geluid: Blob) => void;
+};
+export async function startTalk({ lang = "nl", onSegment, onPartial, onError, onAudio }: TalkOpties = {}) {
   const say = {
     segment: onSegment || (() => {}),
     partial: onPartial || (() => {}),

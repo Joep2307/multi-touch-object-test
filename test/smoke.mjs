@@ -17,14 +17,34 @@
 import { chromium } from "playwright";
 import http from "node:http";
 import fs from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+
+/* De tafel is TypeScript; een browser leest alleen JavaScript. Daarom zet
+ * `tsc` de bronbestanden eerst om naar de werkmap. Dat is met opzet niet de
+ * echte build: `vite build` heeft binaries nodig die niet overal draaien,
+ * terwijl `tsc` zelf JavaScript is en dus altijd werkt. Wat de browser hier
+ * te zien krijgt is dezelfde code, alleen zonder de types. */
+function bouwNaar(work) {
+  const tsc = path.join(root, "node_modules", "typescript", "bin", "tsc");
+  const r = spawnSync(process.execPath,
+    [tsc, "-p", path.join(root, "tsconfig.json"),
+     "--noEmit", "false", "--outDir", work, "--rootDir", root],
+    { encoding: "utf8" });
+  if (r.status !== 0) {
+    console.error("tsc kreeg de tafel niet omgezet:\n" + (r.stdout || "") + (r.stderr || ""));
+    process.exit(2);
+  }
+}
+
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "pucktable-smoke-"));
-for (const name of ["index.html", "app.js", "kg.js", "speech.js", "styles.css"])
-  fs.copyFileSync(path.join(root, name), path.join(work, name));
+for (const naam of ["index.html", "styles.css"])
+  fs.copyFileSync(path.join(root, naam), path.join(work, naam));
+bouwNaar(work);
 fs.cpSync(path.join(root, "public"), path.join(work, "public"), { recursive: true });
 fs.cpSync(path.join(root, "public", "fixtures"), path.join(work, "fixtures"), { recursive: true });
 fs.writeFileSync(path.join(work, "biblio-stub.js"),
@@ -32,10 +52,12 @@ fs.writeFileSync(path.join(work, "biblio-stub.js"),
   `export default {defaultClient};\n`);
 {
   const page = fs.readFileSync(path.join(work, "index.html"), "utf8");
-  const tag = '<script type="module" src="./app.js"></script>';
-  if (!page.includes(tag)) { console.error("index.html laadt app.js niet zoals verwacht"); process.exit(2); }
+  // Wat in index.html staat, en waar het in de werkmap door vervangen wordt.
+  const tag = '<script type="module" src="./app.ts"></script>';
+  const tagJs = '<script type="module" src="./app.js"></script>';
+  if (!page.includes(tag)) { console.error("index.html laadt app.ts niet zoals verwacht"); process.exit(2); }
   fs.writeFileSync(path.join(work, "index.html"), page.replace(tag,
-    '<script type="importmap">{"imports":{"@biblio":"./biblio-stub.js"}}</script>\n' + tag));
+    '<script type="importmap">{"imports":{"@biblio":"./biblio-stub.js"}}</script>\n' + tagJs));
 }
 
 const TYPES = {".html":"text/html", ".js":"text/javascript", ".css":"text/css",

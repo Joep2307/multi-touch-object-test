@@ -439,7 +439,13 @@ export function buildQuestion({ title, description, topic, verdictName, place, n
    binnenkomen. Zonder backend (of zonder Ollama erachter) valt de client
    terug op fixtures/chat.txt — dan is het antwoord een voorbeeldantwoord,
    geen echte analyse. `onSources` krijgt de fragmenten waar het op steunt. */
-export async function ask(question, { onToken, onSources, signal } = {}) {
+export type AskOpties = {
+  /* Krijgt de tekst zoals hij tot nu toe is — niet alleen het nieuwe stukje. */
+  onToken?: (tekstTotNu: string) => void;
+  onSources?: (fragmenten: any[]) => void;
+  signal?: AbortSignal;
+};
+export async function ask(question, { onToken, onSources, signal }: AskOpties = {}) {
   if (!kg.client) throw new Error("kennisgraaf nog niet geladen");
   let text = "";
   for await (const ev of kg.client.chat(question, [], signal)) {

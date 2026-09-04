@@ -1,0 +1,43 @@
+{
+  /* De tafel is sinds 4 sep 2026 TypeScript. Dit bestand is de enige plek die
+     zegt hoe streng dat is. De overzetting gaat in stappen: eerst alles laten
+     omzetten zonder te klagen, daarna de duimschroeven aandraaien
+     (noImplicitAny, dan strictNullChecks). Staat er een vlag op false met een
+     briefje erbij, dan is dat een stap die nog moet komen — geen keuze. */
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    /* "bundler" is de stand die past bij Vite: importeren mag zonder extensie,
+       en `from "./kg.js"` in een .ts-bestand vindt gewoon kg.ts. Daardoor
+       hoefden de importregels in app.ts niet te veranderen. */
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    /* De tafel draait in de browser; node-types horen hier niet
+       (test/*.mjs en vite.config.js staan dan ook niet in "include"). */
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      /* Zelfde afspraak als de alias in vite.config.js — daar voor het
+         draaien, hier voor het controleren. Verandert de ene, verander de
+         andere mee. */
+      "@biblio": ["./vendor/sturnia-node/api/index"]
+    },
+    /* Vite compileert per bestand, dus TypeScript-trucs die het hele
+       programma nodig hebben (const enum, namespaces) mogen niet. */
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    /* Controleren doen we hier; het omzetten doet Vite. De rooktest zet dit
+       tijdelijk uit om echte .js-bestanden te krijgen (zie test/smoke.mjs). */
+    "noEmit": true,
+    /* --- Stap voor stap strenger. Hier staat waar we nu zijn. --- */
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    /* Deze mogen wél al aan: ze vinden echte fouten en kosten weinig. */
+    "noImplicitThis": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": false
+  },
+  "include": ["globals.d.ts", "app.ts", "kg.ts", "speech.ts", "vendor/**/*.ts"]
+}

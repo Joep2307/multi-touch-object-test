@@ -605,7 +605,19 @@ function gapsOf(angles){
    14° per gat uit elkaar liggen — ruim boven de ruis van een pootje van 2 mm.
    De pijl wijst in het midden van het grootste gat, zodat er geen pootje voor
    staat; hoek 0 is die pijl. */
-let templates=[
+/* Wat een puck voor de tafel is. Twee vormen in één type: een ring van vijf
+   pootjes (`angles` + `ringMM`) of een driehoek van tape (`ratios` +
+   `longestMM`). Welke van de twee het is verandert zodra je hem opnieuw
+   inleest, dus staan ze er allebei als "mag ontbreken" in — precies zoals
+   `applyShape` en `resetTemplates` ermee omgaan. `learnedAt` is er alleen
+   als hij ooit is ingelezen; zonder die datum is het de bouwtekening. */
+export type Tpl = {
+  id:string; verdict:string;
+  angles?:number[];  ringMM?:number;      // ring
+  ratios?:number[];  longestMM?:number;   // driehoek
+  learnedAt?:string;
+};
+let templates:Tpl[]=[
   {id:"puck-01",angles:[54,124,206,250,306],ringMM:34,verdict:"good"},
   {id:"puck-02",angles:[56,100,168,218,304],ringMM:34,verdict:"bad"},
   {id:"puck-03",angles:[52,120,166,210,308],ringMM:34,verdict:"talk"},
@@ -689,7 +701,7 @@ function resetTemplates(){
    worden. Twee pucks mogen dezelfde soort hebben — twee mensen met allebei een
    Probleem-puck is een gewone tafel, geen fout. */
 const OWN_KEY="pucktable-own-pucks";
-let ownPucks=[], ownSeq=0;
+let ownPucks:Tpl[]=[], ownSeq=0;
 function saveOwnPucks(){
   try{ localStorage.setItem(OWN_KEY,JSON.stringify(ownPucks.map(tplWire))); }catch(e){}
 }
@@ -741,7 +753,16 @@ const activeTemplates=()=>puckMode()?ownPucks:templates;
 let simMode=true, debugMode=false, tolerance=CFG.tolerance, pxPerMM=4, mapLocked=false;
 let pinMoveMode=false, pinDrag=null;
 const pins=[];
-const el=id=>document.getElementById(id);
+/* `el("x")` geeft standaard een HTMLElement. Heb je een veld, knop of canvas
+   nodig, zeg dat er dan bij: `el<HTMLInputElement>("sess").value`. Zo klopt
+   het type op de plek waar je het gebruikt, in plaats van overal. */
+const el=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
+/* `e.target` is voor TypeScript niet meer dan een EventTarget; dat het aan
+   deze tafel altijd een element is, weet alleen de pagina. Die ene zin staat
+   daarom hier, en niet op twintig plekken. `doelVeld` is dezelfde afspraak
+   voor een invoerveld, waar het om `.value` gaat. */
+const doel=(e:Event)=>e.target as HTMLElement;
+const doelVeld=(e:Event)=>e.target as HTMLInputElement;
 
 /* ═══════════════════════════════════════════════════════════════
    2. MAP — slippy tiles drawn straight onto the canvas.
@@ -792,6 +813,9 @@ const storedNorth=(()=>{
   catch(e){ return 0; }
 })();
 const MV = {
+  /* Wordt een paar regels verderop ingevuld met de echte functie; hij staat
+     hier zodat het type van MV compleet is. */
+  setNorth:(_degrees?:number)=>{},
   lng:4.7759, lat:51.5866, zoom:14, set:"osm", north:((storedNorth%360)+360)%360,
   world(){ return 256*Math.pow(2,this.zoom); },
   wx(lng){ return (lng+180)/360*this.world(); },
@@ -801,8 +825,10 @@ const MV = {
   latAt(y){ const n=Math.PI-2*Math.PI*y/this.world();
             return 180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))); },
   projectRaw(lng,lat){ return {x:this.wx(lng)-this.wx(this.lng)+W/2, y:this.wy(lat)-this.wy(this.lat)+H/2}; },
-  rotatePoint(x,y,degrees=this.north){
-    const a=degrees*Math.PI/180,c=Math.cos(a),s=Math.sin(a),dx=x-W/2,dy=y-H/2;
+  rotatePoint(x,y,degrees?:number){
+    /* Zonder hoek: de stand van de kaart zelf. Dat stond eerst als
+       standaardwaarde in de kop, maar daar bestaat `this` nog niet. */
+    const a=(degrees===undefined?this.north:degrees)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),dx=x-W/2,dy=y-H/2;
     return {x:W/2+dx*c-dy*s,y:H/2+dx*s+dy*c};
   },
   project(lng,lat){ const p=this.projectRaw(lng,lat); return this.rotatePoint(p.x,p.y); },
@@ -816,7 +842,7 @@ const MV = {
     const cx=this.wx(this.lng)-mapDx, cy=this.wy(this.lat)-mapDy;
     this.lng=this.lngAt(cx); this.lat=Math.max(-85,Math.min(85,this.latAt(cy)));
   },
-  zoomBy(dz,ax,ay){
+  zoomBy(dz:number,ax?:number,ay?:number){
     ax=ax===undefined?W/2:ax; ay=ay===undefined?H/2:ay;
     const z=Math.max(3,Math.min(19,this.zoom+dz));
     if(z===this.zoom) return;
@@ -840,7 +866,12 @@ function setNorth(degrees=0){
 MV.setNorth=setNorth;
 window.setNorth=setNorth;
 window.MV = MV;   // handy for debugging from the console
-const tileCache=new Map(); let tilesTried=0, tilesFailed=0, tileRevision=0, tileRefreshTimer=null;
+/* De tafel plakt zelf drie dingen op een tegelbeeld: of hij binnen is (`ok`),
+   of hij mislukte (`bad`) en wanneer (`badAt`, voor de wachttijd voor een
+   nieuwe poging). Vandaar een eigen naam voor zo'n beeld. */
+type TileImg = HTMLImageElement & { ok?:boolean; bad?:boolean; badAt?:number };
+const newTile=()=>new Image() as TileImg;
+const tileCache=new Map<string,TileImg>(); let tilesTried=0, tilesFailed=0, tileRevision=0, tileRefreshTimer=null;
 function tileChanged(){
   if(tileRefreshTimer) return;
   tileRefreshTimer=setTimeout(()=>{tileRevision++;tileRefreshTimer=null;},120);
@@ -863,7 +894,7 @@ function getTile(z,x,y){
     const src=set.url.replace("{s}","abc"[(x+y)%3])
                      .replace("{z}",z).replace("{x}",x).replace("{y}",y);
     const setName=MV.set, cors=!taintedSets.has(setName);
-    img=new Image(); img.ok=false;
+    img=newTile(); img.ok=false;
     if(cors) img.crossOrigin="anonymous";
     img.onload=()=>{img.ok=true;tileChanged();};
     img.onerror=()=>{
@@ -871,7 +902,7 @@ function getTile(z,x,y){
         // Tweede kans zonder CORS. Een verse Image, want dezelfde src
         // opnieuw zetten haalt de browser niet altijd opnieuw op.
         taintedSets.add(setName);
-        const retry=new Image(); retry.ok=false;
+        const retry=newTile(); retry.ok=false;
         retry.onload=()=>{retry.ok=true;tileChanged();};
         retry.onerror=()=>{retry.bad=true;retry.badAt=performance.now();tilesFailed++;tileChanged();};
         retry.src=src;
@@ -964,7 +995,7 @@ addEventListener("keydown",e=>{
   if(!resetKey||e.code!==resetKey||e.repeat) return;
   // Een knop die een gewone typetoets stuurt mag niet afgaan terwijl iemand
   // een bijdrage schrijft. Functietoetsen zijn altijd de knop.
-  const t=e.target;
+  const t=doel(e);
   if(!/^F\d+$/.test(e.code) && t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA")) return;
   e.preventDefault();
   if(!resetHeldAt) resetHeldAt=performance.now();
@@ -1107,7 +1138,8 @@ function describe(p1,p2,p3){
   const anchor=long.o; let P=long.a,Q=long.b;
   if(dist(Q,anchor)<dist(P,anchor)){const t=P;P=Q;Q=t;}
   const cross=(Q.x-P.x)*(anchor.y-P.y)-(Q.y-P.y)*(anchor.x-P.x);
-  return {ratios:[e[0].d/long.d,e[1].d/long.d],longest:long.d,anchor,
+  return {ring:false as const,
+          ratios:[e[0].d/long.d,e[1].d/long.d],longest:long.d,anchor,
           chir:cross>=0?1:-1,cx:(p1.x+p2.x+p3.x)/3,cy:(p1.y+p2.y+p3.y)/3};
 }
 /* ── De ringpuck ───────────────────────────────────────────────
@@ -1145,7 +1177,7 @@ function describeRing(pts){
   const fit=fitCircle(pts); if(!fit||fit.r<1) return null;
   const angles=pts.map(p=>norm360(Math.atan2(p.y-fit.cy,p.x-fit.cx)*180/Math.PI))
                   .sort((a,b)=>a-b);
-  return {ring:true,cx:fit.cx,cy:fit.cy,radius:fit.r,spread:fit.spread,
+  return {ring:true as const,cx:fit.cx,cy:fit.cy,radius:fit.r,spread:fit.spread,
           angles,gaps:gapsOf(angles)};
 }
 const gapErr=(a,b)=>{ let s=0; for(let i=0;i<a.length;i++) s+=Math.abs(a[i]-b[i]); return s/a.length; };
@@ -1454,7 +1486,7 @@ const simPucks=[];
 /* Eén balk per zijde van de tafel, allemaal met dezelfde inhoud. Vandaar
    klassen in plaats van ids: het aantal balken mag veranderen zonder dat de
    code het hoeft te weten. */
-const trays=()=>[...document.querySelectorAll(".tray")];
+const trays=()=>[...document.querySelectorAll<HTMLElement>(".tray")];
 function renderTray(){
   for(const box of trays()){
     box.innerHTML="";
@@ -1473,7 +1505,7 @@ function renderTray(){
    een gewone tafel, geen fout. Hij laat alleen zien wat er ligt, met een
    telling zodra het er meer dan één van een soort zijn. */
 function markTray(){
-  [...document.querySelectorAll(".traypuck")].forEach(d=>
+  [...document.querySelectorAll<HTMLElement>(".traypuck")].forEach(d=>
     d.classList.toggle("on-table",simPucks.some(s=>s.tpl.id===d.dataset.id)));
 }
 /* Deselecteren: take every puck off the table and forget the live tracks.
@@ -1510,7 +1542,7 @@ function endTrayDrag(e){
   let x=e.clientX, y=e.clientY;
   // Alleen panelen die er ook echt liggen: een gesloten menu of venster heeft
   // een lege rect op 0,0 en zou anders de hele linkerbovenhoek blokkeren.
-  const panels=[...document.querySelectorAll(".panel")]
+  const panels=[...document.querySelectorAll<HTMLElement>(".panel")]
     .filter(p=>p.getBoundingClientRect().width>0), M=CFG.ringPX+24;
   const buried=()=>panels.some(p=>{const r=p.getBoundingClientRect();
     return x>=r.left-M&&x<=r.right+M&&y>=r.top-M&&y<=r.bottom+M;});
@@ -1577,7 +1609,7 @@ function syncSimPucksToMap(){
 }
 let drag=null;
 addEventListener("mousedown",e=>{
-  if(e.target.closest(".panel")||e.target.closest("#sheet")||e.target.closest("#learn")) return;
+  if(doel(e).closest(".panel")||doel(e).closest("#sheet")||doel(e).closest("#learn")) return;
   if(pinMoveMode){
     e.preventDefault();
     const pin=pinAt(e.clientX,e.clientY);
@@ -1671,7 +1703,7 @@ function noteRingDiag(d,gemeten){
             mm:d.radius/pxPerMM, spread:d.spread,
             lijst:gemeten.map(g=>({naam:g.tpl.name||g.tpl.id, err:g.m.err}))};
 }
-function recognise(points,tpls){
+function recognise(points,tpls?){
   if(debugMode) ringDiag=null;
   const list=tpls||activeTemplates();
   /* Twee soorten pucks, twee zoektochten over dezelfde punten: driehoeken uit
@@ -1931,6 +1963,9 @@ function startTrack(d,now){
            // het kijkgat aantikt (`ring`). `tapIdx`/`tapT0` houden het
            // oplichten van de laatst aangetikte optie bij.
            ring:false,topicIdx:0,tapIdx:-1,tapT0:0,
+           // Gevuld zodra de puck een markering heeft gezet, of zodra hij
+           // er een terugkrijgt uit `puckMemory`.
+           pinId:null as string|null,
            // Waar hij ging liggen is het ijkpunt van het schuiven, en de hoek
            // waaronder hij ging liggen is het nulpunt van het zoomen.
            panOX:d.x,panOY:d.y,panT:0,zoomRot:d.angle,zoomCarry:0};
@@ -2455,7 +2490,7 @@ const DEMO_PINS=[
 let storageFull=false, pinsRevision=0;
 function save(){
   pinsRevision++;
-  try{ localStorage.setItem("pucktable-"+el("sess").value,JSON.stringify(pins)); storageFull=false; }
+  try{ localStorage.setItem("pucktable-"+el<HTMLInputElement>("sess").value,JSON.stringify(pins)); storageFull=false; }
   catch(e){ storageFull=true; }
 }
 /* Tijdens het typen hoeft niet elke aanslag naar de opslag. */
@@ -2481,7 +2516,7 @@ function cleanPin(p){
 function restore(){
   pins.length=0;
   try{
-    const session=el("sess").value;
+    const session=el<HTMLInputElement>("sess").value;
     const sessionKey="pucktable-"+session;
     const demoKey="pucktable-demo-pins-v1";
     const raw=localStorage.getItem(sessionKey);
@@ -2521,7 +2556,7 @@ function doubleTap(id){
   return dbl;
 }
 addEventListener("pointerdown",e=>{
-  if(e.target.closest(".panel")||e.target.closest("#learn")||puckTouches.length||pinMoveMode||learn.open) return;
+  if(doel(e).closest(".panel")||doel(e).closest("#learn")||puckTouches.length||pinMoveMode||learn.open) return;
   tapStart={x:e.clientX,y:e.clientY,t:performance.now()};
 });
 addEventListener("pointerup",e=>{
@@ -2590,16 +2625,16 @@ addEventListener("pointerup",e=>{
    kloon waarvan elke id een "-b" krijgt, zodat ids uniek blijven. Alles wat de
    opmaak nodig heeft hangt daarom aan klassen (`.note`, `.talk-btn`, …), niet
    aan ids; de ids zijn er alleen nog voor JS en voor de rooktest. */
-function cloneWithSuffix(node,suffix){
-  const c=node.cloneNode(true);
+function cloneWithSuffix(node:HTMLElement,suffix:string){
+  const c=node.cloneNode(true) as HTMLElement;
   const fix=n=>{ if(n.id) n.id+=suffix; if(n.htmlFor) n.htmlFor+=suffix; };
-  fix(c); c.querySelectorAll("[id],label[for]").forEach(fix);
+  fix(c); c.querySelectorAll<HTMLElement>("[id],label[for]").forEach(fix);
   return c;
 }
 const noteViews=[];
 /* Een onderdeel van dít venster. Zonder achtervoegsel is het de voorkant, dus
    `notePart(voorkant,"noteTitle")` is gewoon `#noteTitle`. */
-const notePart=(v,id)=>document.getElementById(id+v.suffix);
+const notePart=<T extends HTMLElement=HTMLElement>(v,id:string)=>document.getElementById(id+v.suffix) as T;
 const noteViewOf=node=>noteViews.find(v=>v.el.contains(node))||null;
 const openNotes=()=>noteViews.filter(v=>v.pin);
 const noteViewFor=pin=>noteViews.find(v=>v.pin===pin)||null;
@@ -2618,7 +2653,7 @@ function buildNoteViews(){
 /* Elke knop in het venster hoort bij dít venster. Vandaar hier en niet één
    keer op een id: er zijn er twee van alles. */
 function wireNote(v){
-  const q=id=>notePart(v,id);
+  const q=<T extends HTMLElement=HTMLElement>(id:string)=>notePart<T>(v,id);
   q("noteFlip").onclick=()=>flipNote(v.pin);
   q("noteSave").onclick=()=>{
     const pin=v.pin;
@@ -2639,11 +2674,11 @@ function wireNote(v){
     q(id).onclick=()=>{ if(talkRunning(v.pin)) return; v.talkLang=keuze; renderTalkLang(v); };
   q("talkClear").onclick=()=>{
     if(!v.pin) return;
-    v.pin.transcript=""; q("talkText").value=""; q("talkClear").style.display="none"; save();
+    v.pin.transcript=""; q<HTMLTextAreaElement>("talkText").value=""; q("talkClear").style.display="none"; save();
   };
-  q("talkText").addEventListener("input",()=>{
+  q<HTMLTextAreaElement>("talkText").addEventListener("input",()=>{
     if(!v.pin) return;
-    v.pin.transcript=q("talkText").value; saveSoon();
+    v.pin.transcript=q<HTMLTextAreaElement>("talkText").value; saveSoon();
   });
   q("talkAudio").onclick=saveTalkAudio;
   // Elk venster kijkt naar zijn eigen hoogte: groeit het antwoord, dan schuift
@@ -2657,22 +2692,22 @@ buildNoteViews();
    dit moment al bewaard; overslaan kan hem dus nooit ongedaan maken. */
 function showContactFollowup(v,pin){
   const c=pin.contact||{};
-  notePart(v,"contactName").value=c.name||"";
-  notePart(v,"contactEmail").value=c.email||"";
-  notePart(v,"contactPhone").value=c.phone||"";
-  notePart(v,"contactConsent").checked=c.consent===true;
+  notePart<HTMLInputElement>(v,"contactName").value=c.name||"";
+  notePart<HTMLInputElement>(v,"contactEmail").value=c.email||"";
+  notePart<HTMLInputElement>(v,"contactPhone").value=c.phone||"";
+  notePart<HTMLInputElement>(v,"contactConsent").checked=c.consent===true;
   const status=notePart(v,"contactStatus");
   status.textContent=""; status.classList.remove("saved");
   v.el.classList.add("contact-step");
   positionNote(v);
-  notePart(v,"contactName").focus();
+  notePart<HTMLInputElement>(v,"contactName").focus();
 }
 function saveContactFollowup(v){
   if(!v.pin) return;
-  const name=notePart(v,"contactName").value.trim();
-  const email=notePart(v,"contactEmail").value.trim();
-  const phone=notePart(v,"contactPhone").value.trim();
-  const consent=notePart(v,"contactConsent").checked;
+  const name=notePart<HTMLInputElement>(v,"contactName").value.trim();
+  const email=notePart<HTMLInputElement>(v,"contactEmail").value.trim();
+  const phone=notePart<HTMLInputElement>(v,"contactPhone").value.trim();
+  const consent=notePart<HTMLInputElement>(v,"contactConsent").checked;
   const status=notePart(v,"contactStatus");
   status.classList.remove("saved");
   if(!email&&!phone){ status.textContent=tr("contactNeedDetail"); return; }
@@ -2739,7 +2774,7 @@ const flipFor=(pin,y)=>
 /* Van kant wisselen is nu verhuizen: elke kant heeft zijn eigen venster, dus
    de markering gaat naar het venster aan de overkant (met zijn toetsenbord).
    Een lopende opname loopt door -- het is dezelfde markering. */
-function flipNote(pin,x,y){
+function flipNote(pin,x?:number,y?:number){
   if(!pin||!sidesActive()) return;
   const v=noteViewFor(pin);
   const ax=v?(+v.el.dataset.anchorX||innerWidth/2):(x??innerWidth/2);
@@ -2790,8 +2825,8 @@ function openNote(pin,x,y,fromPuck=false){
   n.classList.remove("opening");
   if(fromPuck){ void n.offsetWidth; n.classList.add("opening"); }
   notePart(v,"noteHead").textContent=vName(pin.verdict)+" · "+pin.topic;
-  notePart(v,"noteTitle").value=pin.title||"";
-  notePart(v,"noteText").value=pin.description||pin.note||"";
+  notePart<HTMLInputElement>(v,"noteTitle").value=pin.title||"";
+  notePart<HTMLTextAreaElement>(v,"noteText").value=pin.description||pin.note||"";
   /* Een nieuw gesprek begint bij de taal van de tafel. De keuze hoort bij dit
      venster zolang het openstaat en wordt niet bewaard: de volgende groep aan
      tafel hoort niet ineens in het Engels te worden uitgeschreven. */
@@ -2799,7 +2834,7 @@ function openNote(pin,x,y,fromPuck=false){
   renderTalk(v);
   if(!talkRunning(pin)) checkTalk(v);
   fillNoteKnowledge(v,pin);
-  notePart(v,"noteTitle").focus();
+  notePart<HTMLInputElement>(v,"noteTitle").focus();
   return v;
 }
 
@@ -3026,7 +3061,7 @@ function stopTalkClock(){
 }
 
 function renderTalk(v){
-  const pin=v.pin, box=notePart(v,"talkText");
+  const pin=v.pin, box=notePart<HTMLTextAreaElement>(v,"talkText");
   box.value=talkTextOf(pin);
   notePart(v,"talkPartial").textContent="";
   notePart(v,"talkClear").style.display=box.value?"":"none";
@@ -3064,7 +3099,7 @@ function renderTalkLang(v){
   box.classList.toggle("locked",rec);
   notePart(v,"talkLangAuto").style.display=talkAutoOk()?"":"none";
   for(const [id,keuze] of talkLangKnoppen()){
-    const b=notePart(v,id), mine=nu===keuze;
+    const b=notePart<HTMLButtonElement>(v,id), mine=nu===keuze;
     b.classList.toggle("on",mine);
     b.setAttribute("aria-pressed",String(mine));
     b.disabled=rec;
@@ -3098,7 +3133,7 @@ function appendTalk(pin,text){
   pin.transcript=had?had+" "+t:t;
   const v=noteViewFor(pin);
   if(v){
-    const box=notePart(v,"talkText");
+    const box=notePart<HTMLTextAreaElement>(v,"talkText");
     box.value=pin.transcript;
     box.scrollTop=box.scrollHeight;
     notePart(v,"talkClear").style.display="";
@@ -3184,7 +3219,7 @@ function saveTalkAudio(){
   const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
   const a=document.createElement("a");
   a.href=URL.createObjectURL(talkAudioBlob);
-  a.download=(el("sess").value||"tafel")+"-gesprek-"+stamp+
+  a.download=(el<HTMLInputElement>("sess").value||"tafel")+"-gesprek-"+stamp+
              (talkAudioBlob.type.includes("mp4")?".m4a":".webm");
   a.click();
 }
@@ -3192,7 +3227,7 @@ function saveTalkAudio(){
 /* ═══════════════════════════════════════════════════════════════
    5. FRAME
    ═══════════════════════════════════════════════════════════════ */
-const cv=el("c"), ctx=cv.getContext("2d");
+const cv=el<HTMLCanvasElement>("c"), ctx=cv.getContext("2d");
 const mapLayer=document.createElement("canvas"), mapCtx=mapLayer.getContext("2d");
 /* Een ruime rand laat het bestaande kaartbeeld een flink stuk reizen voordat
    er nieuwe tegels opgebouwd hoeven te worden. 384 px blijft ook op de NUC
@@ -3508,7 +3543,7 @@ function renderRecent(){
      <div class="meta">${vName(p.verdict)} · ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)} · ${p.t.slice(11,16)}</div></div>
      <span class="del" data-id="${p.id}">✕</span></div>`).join("")
     :`<p class="empty">${tr("noMarks")}</p>`;
-  [...box.querySelectorAll(".del")].forEach(b=>b.onclick=()=>{
+  [...box.querySelectorAll<HTMLElement>(".del")].forEach(b=>b.onclick=()=>{
     const i=pins.findIndex(p=>p.id===b.dataset.id); if(i>=0){pins.splice(i,1);save();renderAnalytics();}
   });
 }
@@ -3685,7 +3720,7 @@ function keyboardSideFor(target){
   return "a";
 }
 const keyboardLabel=key=>({shift:"⇧",backspace:"⌫",space:tr("keySpace"),enter:tr("keyEnter"),close:tr("keyClose")})[key]||key;
-function renderKeyboard(kb){
+function renderKeyboard(kb?){
   if(!kb){ for(const k of keyboards) renderKeyboard(k); return; }
   kbPart(kb,"keyboardKeys").innerHTML=KEY_ROWS.map(row=>`<div class="keyboard-row">${row.map(key=>{
     const wide=["shift","backspace","enter","close"].includes(key)?" key-wide":"";
@@ -3696,7 +3731,7 @@ function renderKeyboard(kb){
   }).join("")}</div>`).join("");
 }
 function keyboardFields(){
-  return [...document.querySelectorAll('input[type="text"],input:not([type]),textarea')];
+  return [...document.querySelectorAll<HTMLElement>('input[type="text"],input:not([type]),textarea')];
 }
 function refreshKeyboardFields(){
   keyboardFields().forEach(field=>{
@@ -3775,7 +3810,7 @@ function wireKeyboard(kb){
     if(key==="enter"){
       const v=noteViewOf(kb.target);
       if(kb.target.tagName==="TEXTAREA") insertKeyboardText(kb,"\n");
-      else if(v&&kb.target===notePart(v,"noteTitle")){ notePart(v,"noteText").focus(); }
+      else if(v&&kb.target===notePart<HTMLInputElement>(v,"noteTitle")){ notePart<HTMLTextAreaElement>(v,"noteText").focus(); }
       else{
         kb.target.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
         kb.target.dispatchEvent(new Event("change",{bubbles:true}));
@@ -3788,13 +3823,13 @@ function wireKeyboard(kb){
   });
 }
 buildKeyboards();
-addEventListener("focusin",e=>{if(e.target.classList?.contains("touch-type")) showKeyboard(e.target);});
+addEventListener("focusin",e=>{if(doel(e).classList?.contains("touch-type")) showKeyboard(doel(e));});
 
 /* Twee regels tekst gaan over de balk onderaan, en die is er in de puckstand
    niet. Ze staan hier bij elkaar omdat zowel het wisselen van stand als het
    wisselen van taal ze opnieuw moet zetten. */
 function refreshModeTexts(){
-  [...document.querySelectorAll(".puck-hint")].forEach(h=>
+  [...document.querySelectorAll<HTMLElement>(".puck-hint")].forEach(h=>
     h.textContent=uiMode==="laptop"?tr("laptopHint"):tr("touchHint"));
   el("sidesHint").textContent=tr(puckMode()?"sidesHintPuck":"sidesHint");
 }
@@ -3848,13 +3883,13 @@ el("themeDark").onclick=()=>applyColorTheme("dark");
 /* Alle hoofdonderdelen van het menu zijn compacte accordeons. Ze beginnen
    dicht, zodat het menu ook op een kleiner tafelbeeld volledig te overzien
    is. De knop en aria-expanded blijven samen de toestand vertellen. */
-document.querySelectorAll("#menu .menu-sec>.accordion-head").forEach(head=>{
+document.querySelectorAll<HTMLElement>("#menu .menu-sec>.accordion-head").forEach(head=>{
   head.onclick=()=>{
     const section=head.parentElement;
     const collapsed=section.classList.toggle("collapsed");
     head.setAttribute("aria-expanded",String(!collapsed));
     if(!collapsed){
-      document.querySelectorAll(`#menu .menu-sec[data-view="${section.dataset.view}"]`).forEach(other=>{
+      document.querySelectorAll<HTMLElement>(`#menu .menu-sec[data-view="${section.dataset.view}"]`).forEach(other=>{
         if(other===section) return;
         other.classList.add("collapsed");
         other.querySelector(":scope>.accordion-head")?.setAttribute("aria-expanded","false");
@@ -3870,8 +3905,8 @@ function applyScale(){
   document.documentElement.style.setProperty("--ui-scale",String(uiScale));
   el("scaleVal").textContent=Math.round(uiScale*100)+"%";
   const i=UI_SCALES.indexOf(uiScale);
-  el("btnScaleDown").disabled=i<=0;
-  el("btnScaleUp").disabled=i>=UI_SCALES.length-1;
+  el<HTMLButtonElement>("btnScaleDown").disabled=i<=0;
+  el<HTMLButtonElement>("btnScaleUp").disabled=i>=UI_SCALES.length-1;
   readChip();
   try{localStorage.setItem("pucktable-ui-scale-"+uiMode,String(uiScale));}catch(e){}
   // Een open venster hangt aan een punt op de kaart; dat punt verschuift niet
@@ -3885,8 +3920,8 @@ function stepScale(step){
   uiScale=UI_SCALES[Math.max(0,Math.min(UI_SCALES.length-1,(i<0?2:i)+step))];
   applyScale();
 }
-el("btnScaleDown").onclick=()=>stepScale(-1);
-el("btnScaleUp").onclick=()=>stepScale(1);
+el<HTMLButtonElement>("btnScaleDown").onclick=()=>stepScale(-1);
+el<HTMLButtonElement>("btnScaleUp").onclick=()=>stepScale(1);
 
 /* ── Panelen verslepen ────────────────────────────────────────────────
    Aan een tafel staat iedereen ergens anders, en een paneel dat voor de een
@@ -4066,10 +4101,10 @@ el("modeLaptop").onclick=()=>{applyMode("laptop");reorientMenu();};
 el("modePuck").onclick=()=>{applyMode("puck");reorientMenu();};
 /* De toevoegknop staat op de plek van de verdwenen balk, aan beide zijden van
    de tafel. Vandaar een klasse en geen id. */
-[...document.querySelectorAll(".btn-add-puck")].forEach(b=>b.onclick=openLearn);
-el("btnSim").onclick=e=>{simMode=!simMode;e.target.classList.toggle("on",simMode);};
-el("btnDebug").onclick=e=>{debugMode=!debugMode;e.target.classList.toggle("on",debugMode);};
-[...document.querySelectorAll(".btn-clear")].forEach(b=>b.onclick=()=>clearPucks(true));
+[...document.querySelectorAll<HTMLElement>(".btn-add-puck")].forEach(b=>b.onclick=openLearn);
+el("btnSim").onclick=e=>{simMode=!simMode;doel(e).classList.toggle("on",simMode);};
+el("btnDebug").onclick=e=>{debugMode=!debugMode;doel(e).classList.toggle("on",debugMode);};
+[...document.querySelectorAll<HTMLElement>(".btn-clear")].forEach(b=>b.onclick=()=>clearPucks(true));
 
 /* ── Kennisgraaf ───────────────────────────────────────────────── */
 function openKgInfo(node,x,y){
@@ -4140,13 +4175,13 @@ function openDocument(id,title){
   const url=fileUrl(id);
   if(!url) return;
   el("documentViewerTitle").textContent=title||tr("document");
-  el("documentViewerFrame").src=url;
+  el<HTMLIFrameElement>("documentViewerFrame").src=url;
   el("documentViewer").classList.add("open");
   el("closeDocumentViewer").focus();
 }
 function closeDocumentViewer(){
   el("documentViewer").classList.remove("open");
-  el("documentViewerFrame").src="about:blank";
+  el<HTMLIFrameElement>("documentViewerFrame").src="about:blank";
 }
 el("closeDocumentViewer").onclick=closeDocumentViewer;
 el("documentViewer").addEventListener("pointerdown",e=>{ if(e.target===el("documentViewer")) closeDocumentViewer(); });
@@ -4187,12 +4222,12 @@ el("btnKgThemes").onclick=async()=>{
    in CFG staat en schrijven er live overheen: wat je hier goed zet, zet je
    daarna in CFG zodat de tafel er morgen ook zo bij staat. */
 document.body.classList.toggle("dev",DEV);
-el("tol").value=String(CFG.tolerance);
+el<HTMLInputElement>("tol").value=String(CFG.tolerance);
 el("tolVal").textContent=CFG.tolerance.toFixed(3);
-el("diag").value=String(CFG.screenDiagIn);
+el<HTMLInputElement>("diag").value=String(CFG.screenDiagIn);
 el("btnSim").classList.toggle("on",simMode);
-el("tol").oninput=e=>{CFG.tolerance=tolerance=parseFloat(e.target.value);el("tolVal").textContent=tolerance.toFixed(3);};
-el("diag").oninput=e=>{const v=parseFloat(e.target.value); if(Number.isFinite(v)&&v>0) CFG.screenDiagIn=v; resize();};
+el<HTMLInputElement>("tol").oninput=e=>{CFG.tolerance=tolerance=parseFloat(doelVeld(e).value);el("tolVal").textContent=tolerance.toFixed(3);};
+el<HTMLInputElement>("diag").oninput=e=>{const v=parseFloat(doelVeld(e).value); if(Number.isFinite(v)&&v>0) CFG.screenDiagIn=v; resize();};
 /* ── Twee zijden ────────────────────────────────────────────────────────
    Een tafel ligt plat en mensen staan er omheen; wat voor de één rechtop
    staat, staat voor de ander op zijn kop. De kaart laten we met rust — dat
@@ -4220,8 +4255,8 @@ applySides();
 const flippedFor=y=>sidesActive() && y<innerHeight/2;
 
 
-el("tiles").onchange=e=>{
-  MV.set=e.target.value; tileCache.clear();
+el<HTMLSelectElement>("tiles").onchange=e=>{
+  MV.set=doelVeld(e).value; tileCache.clear();
   tilesTried=0; tilesFailed=0;                 // de melding gaat over dít beeld
   el("bakeHint").textContent=tr("bakeHint");
   markLayerMenu();
@@ -4237,8 +4272,8 @@ function layerButton(option){
   b.type="button"; b.className="layer"; b.dataset.set=option.value;
   b.textContent=option.dataset.i18n?tr(option.dataset.i18n):option.textContent;
   b.onclick=()=>{
-    el("tiles").value=option.value;
-    el("tiles").dispatchEvent(new Event("change"));
+    el<HTMLSelectElement>("tiles").value=option.value;
+    el<HTMLSelectElement>("tiles").dispatchEvent(new Event("change"));
     closeLayers();
   };
   return b;
@@ -4278,7 +4313,9 @@ function buildLayerMenu(){
   mapHead.className="eyebrow layer-basemap-head"; mapHead.textContent=tr("basemap");
   box.appendChild(mapHead);
 
-  for(const child of el("tiles").children){
+  /* Een <select> met <optgroup>: allebei hebben ze `label` en `dataset`,
+     dus dat is wat we hier lezen. */
+  for(const child of [...el<HTMLSelectElement>("tiles").children] as (HTMLOptGroupElement|HTMLOptionElement)[]){
     if(child.tagName==="OPTGROUP"){
       const h=document.createElement("p");
       h.className="eyebrow layer-group-head"; h.textContent=tr(child.dataset.i18nLabel||"")||child.label;
@@ -4289,7 +4326,7 @@ function buildLayerMenu(){
   markLayerMenu();
 }
 function markLayerMenu(){
-  [...el("layersMenu").querySelectorAll(".layer[data-set]")]
+  [...el("layersMenu").querySelectorAll<HTMLElement>(".layer[data-set]")]
     .forEach(b=>b.classList.toggle("on",b.dataset.set===MV.set));
   const g=el("btnGaps");
   if(g){ g.classList.toggle("on",kg.gaps); g.setAttribute("aria-pressed",String(kg.gaps)); }
@@ -4366,10 +4403,10 @@ el("menuClose").onclick=closeMenu;
 // Het menu blijft open wanneer iemand daarnaast op de kaart werkt. Sluiten
 // gebeurt bewust via het kruisje, dezelfde menuknop of Escape.
 buildLayerMenu();
-el("sess").onchange=restore;
+el<HTMLInputElement>("sess").onchange=restore;
 el("zIn").onclick=()=>MV.zoomBy(1);
 el("zOut").onclick=()=>MV.zoomBy(-1);
-[...document.querySelectorAll("[data-go]")].forEach(b=>b.onclick=()=>{
+[...document.querySelectorAll<HTMLElement>("[data-go]")].forEach(b=>b.onclick=()=>{
   const [la,lo,z]=b.dataset.go.split(",").map(Number);
   MV.lat=la; MV.lng=lo; MV.zoom=z;
 });
@@ -4380,7 +4417,7 @@ el("zOut").onclick=()=>MV.zoomBy(-1);
    er aan de hand is, en er zit een wachttijd op. */
 el("search").onkeydown=async e=>{
   if(e.key!=="Enter") return;
-  const q=e.target.value.trim(), hint=el("searchHint");
+  const q=doelVeld(e).value.trim(), hint=el("searchHint");
   if(!q){ hint.textContent=""; return; }
   hint.textContent=tr("searchBusy");
   try{
@@ -4399,8 +4436,8 @@ el("search").onkeydown=async e=>{
    de optionele contactstap; de bijdrage zelf stond daarvoor al veilig. */
 function noteToPin(v){
   const pin=v?.pin; if(!pin) return;
-  pin.title=notePart(v,"noteTitle").value.trim();
-  pin.description=notePart(v,"noteText").value.trim();
+  pin.title=notePart<HTMLInputElement>(v,"noteTitle").value.trim();
+  pin.description=notePart<HTMLTextAreaElement>(v,"noteText").value.trim();
   pin.note=pin.description;  // keep older exports and saved sessions compatible
 }
 /* De knoppen in de vensters worden per venster aangesloten; zie `wireNote`. */
@@ -4437,7 +4474,7 @@ function download(name,text,type){
   const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click();
 }
-el("btnGeo").onclick=()=>download(el("sess").value+".geojson",JSON.stringify({
+el("btnGeo").onclick=()=>download(el<HTMLInputElement>("sess").value+".geojson",JSON.stringify({
   type:"FeatureCollection",
   features:pins.map(p=>({type:"Feature",geometry:{type:"Point",coordinates:[p.lng,p.lat]},
     properties:{verdict:p.verdict,topic:p.topic,title:p.title||"",description:p.description||p.note||"",
@@ -4446,7 +4483,7 @@ el("btnGeo").onclick=()=>download(el("sess").value+".geojson",JSON.stringify({
                 contact_consent_at:p.contact?.consentAt||""}}))
 },null,2),"application/geo+json");
 const csvCell=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
-el("btnCsv").onclick=()=>download(el("sess").value+".csv",
+el("btnCsv").onclick=()=>download(el<HTMLInputElement>("sess").value+".csv",
   "lat,lng,verdict,topic,title,description,gesprek,time,contact_name,contact_email,contact_phone,contact_consent_at\n"+pins.map(p=>
     [p.lat,p.lng,p.verdict,p.topic,csvCell(p.title),csvCell(p.description||p.note),
      csvCell(p.transcript),p.t,csvCell(p.contact?.name),csvCell(p.contact?.email),
@@ -4547,15 +4584,20 @@ function updateLearn(now){
   /* Vijf punten is een gedrukte puck, drie een driehoek van tape. Wat er ligt
      bepaalt dus zelf welke vorm er wordt opgeslagen. */
   const ring=pts.length===5;
-  const d=ring?describeRing(pts):describe(pts[0],pts[1],pts[2]);
+  /* Twee metingen met verschillende velden. Ze staan hier bewust als twee
+     aparte namen en niet als één `d` met een vlaggetje: zo hoeft niemand —
+     TypeScript noch de lezer — uit te zoeken welke helft er bedoeld wordt. */
+  const meetRing = ring ? describeRing(pts) : null;
+  const meetTri  = ring ? null : describe(pts[0],pts[1],pts[2]);
+  const d = meetRing || meetTri;      // alleen voor wat ze delen: cx en cy
   if(!d) return;
   // Vijf punten die niet op één cirkel liggen zijn vingers, geen puck.
-  if(ring&&d.spread>0.20){
+  if(meetRing&&meetRing.spread>0.20){
     learn.samples=[]; setLearnBar(0);
     st.innerHTML=tr("recogWait",pts.length)+learnKnownNote();
     return;
   }
-  const size=ring?d.radius:d.longest;
+  const size=meetRing?meetRing.radius:meetTri.longest;
   const last=learn.samples[learn.samples.length-1];
   if(last && (last.ring!==ring ||
               Math.hypot(d.cx-last.cx,d.cy-last.cy)>LEARN_STILL_PX ||
@@ -4565,9 +4607,9 @@ function updateLearn(now){
   if(!learn.samples.length) learn.t0=now;
   /* De hoeken gaan meteen om naar hoeken vanaf de pijl. Op het scherm wijst de
      pijl naar boven en dat is −90°, dus er komt 90 bij. */
-  learn.samples.push(ring
-    ? {ring:true,angles:d.angles.map(a=>norm360(a+90)),size,cx:d.cx,cy:d.cy}
-    : {ring:false,r0:d.ratios[0],r1:d.ratios[1],size,cx:d.cx,cy:d.cy});
+  learn.samples.push(meetRing
+    ? {ring:true,angles:meetRing.angles.map(a=>norm360(a+90)),size,cx:d.cx,cy:d.cy}
+    : {ring:false,r0:meetTri.ratios[0],r1:meetTri.ratios[1],size,cx:d.cx,cy:d.cy});
   if(learn.phase!=="hold"){ learn.phase="hold"; learn.note=""; renderLearn(); }
   const held=now-learn.t0;
   setLearnBar(held/LEARN_HOLD_MS);
@@ -4585,7 +4627,7 @@ function updateLearn(now){
    opzichte van dat eerste beeldje, zodat 359° en 1° buren blijven. */
 function learnMedian(){
   const S=learn.samples;
-  const med=f=>{ const a=S.map(f).sort((x,y)=>x-y); return a[a.length>>1]; };
+  const med=(f:(s:any)=>number)=>{ const a=S.map(f).sort((x,y)=>x-y); return a[a.length>>1]; };
   const size=med(s=>s.size);
   if(!S[0].ring) return {ring:false,r0:med(s=>s.r0),r1:med(s=>s.r1),longest:size};
   const base=S[0].angles, wrap=a=>((a+180)%360+360)%360-180;
@@ -4625,7 +4667,7 @@ const nearlyIsosceles=(r0,r1)=>Math.abs(r0-r1)<0.06||(1-r1)<0.06;
 function learnStamp(t){
   if(!t.learnedAt) return tr("recogFactory");
   const d=new Date(t.learnedAt);
-  return tr("recogLearned",isNaN(d)?"":d.toLocaleDateString(L[lang].locale,{day:"numeric",month:"short"}));
+  return tr("recogLearned",isNaN(d.getTime())?"":d.toLocaleDateString(L[lang].locale,{day:"numeric",month:"short"}));
 }
 /* In de puckstand is er geen balk meer die laat zien welke pucks de tafel kent.
    Dat overzicht staat daarom hier, met een kruisje per puck: inlezen en
@@ -4678,7 +4720,7 @@ function renderLearn(){
            <b>${vName(v.key)}</b>
            <span>${tr("recogKindCount",ownPucks.filter(t=>t.verdict===v.key).length)}</span>
          </button>`).join("");
-      [...body.querySelectorAll(".learn-pick")].forEach(b=>b.onclick=()=>addLearnedPuck(b.dataset.verdict));
+      [...body.querySelectorAll<HTMLElement>(".learn-pick")].forEach(b=>b.onclick=()=>addLearnedPuck(b.dataset.verdict));
       return;
     }
     body.innerHTML=iso+`<p class="learn-which">${tr("recogWhich")}</p>`+templates.map(t=>
@@ -4686,7 +4728,7 @@ function renderLearn(){
          <b>${vName(t.verdict)}</b>
          <span>${t.id} · ${tplSummary(t)} · ${learnStamp(t)}</span>
        </button>`).join("");
-    [...body.querySelectorAll(".learn-pick")].forEach(b=>b.onclick=()=>assignLearn(b.dataset.id));
+    [...body.querySelectorAll<HTMLElement>(".learn-pick")].forEach(b=>b.onclick=()=>assignLearn(b.dataset.id));
     return;
   }
   if(learn.phase==="clear"){
@@ -4697,7 +4739,7 @@ function renderLearn(){
     return;
   }
   body.innerHTML=(learn.note?`<p class="hint">${learn.note}</p>`:"")+(puckMode()?ownPuckList():"");
-  [...body.querySelectorAll(".own-del")].forEach(b=>b.onclick=()=>{
+  [...body.querySelectorAll<HTMLElement>(".own-del")].forEach(b=>b.onclick=()=>{
     removeOwnPuck(b.dataset.id); learn.note=tr("recogRemoved"); renderLearn(); });
   if(learn.phase==="wait") st.innerHTML=tr("recogWait",learnPoints().length)+learnKnownNote();
 }
@@ -4813,7 +4855,7 @@ addEventListener("drop",e=>{
   img.onload=()=>{
     const nw=MV.unproject(0,0), se=MV.unproject(W,H);
     bgImage={img,west:nw.lng,north:nw.lat,east:se.lng,south:se.lat};
-    MV.set="none"; el("tiles").value="none";
+    MV.set="none"; el<HTMLSelectElement>("tiles").value="none";
   };
   img.src=URL.createObjectURL(f);
 });
@@ -4853,7 +4895,7 @@ function bakeMap(){
   const scale=Math.min(1,3072/cv.width);
   const off=document.createElement("canvas");
   off.width=Math.round(cv.width*scale); off.height=Math.round(cv.height*scale);
-  off.getContext("2d").drawImage(cv,0,0,off.width,off.height);
+  off.getContext("2d")!.drawImage(cv,0,0,off.width,off.height);
   let data;
   try{ data=off.toDataURL("image/jpeg",0.9); }
   catch(err){
@@ -4915,12 +4957,12 @@ function applyLang(){
   document.title=tr("docTitle");
   setKgLang(lang);
 
-  document.querySelectorAll("[data-i18n]").forEach(n=>{ n.textContent=tr(n.dataset.i18n); });
-  document.querySelectorAll("[data-i18n-html]").forEach(n=>{ n.innerHTML=tr(n.dataset.i18nHtml); });
-  document.querySelectorAll("[data-i18n-ph]").forEach(n=>{ n.placeholder=tr(n.dataset.i18nPh); });
-  document.querySelectorAll("[data-i18n-aria]").forEach(n=>{ n.setAttribute("aria-label",tr(n.dataset.i18nAria)); });
-  document.querySelectorAll("[data-i18n-title]").forEach(n=>{ n.title=tr(n.dataset.i18nTitle); });
-  document.querySelectorAll("[data-i18n-label]").forEach(n=>{ n.label=tr(n.dataset.i18nLabel); });
+  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach(n=>{ n.textContent=tr(n.dataset.i18n); });
+  document.querySelectorAll<HTMLElement>("[data-i18n-html]").forEach(n=>{ n.innerHTML=tr(n.dataset.i18nHtml); });
+  document.querySelectorAll<HTMLInputElement>("[data-i18n-ph]").forEach(n=>{ n.placeholder=tr(n.dataset.i18nPh); });
+  document.querySelectorAll<HTMLElement>("[data-i18n-aria]").forEach(n=>{ n.setAttribute("aria-label",tr(n.dataset.i18nAria)); });
+  document.querySelectorAll<HTMLElement>("[data-i18n-title]").forEach(n=>{ n.title=tr(n.dataset.i18nTitle); });
+  document.querySelectorAll<HTMLOptionElement>("[data-i18n-label]").forEach(n=>{ n.label=tr(n.dataset.i18nLabel); });
 
   ["langNl","langEn"].forEach(id=>{
     const mine=id==="langNl"?lang==="nl":lang==="en";
@@ -4979,7 +5021,7 @@ applyColorTheme(colorTheme); resize(); restore(); restoreBasemap(); applyScale()
    Zo is te zien of een verversing de nieuwe versie heeft opgepikt. De tijd
    van wijzigen komt uit de Last-Modified-header van de bestanden; levert de
    server die niet, dan valt hij terug op document.lastModified. */
-const STAMP_FILES=["./index.html","./app.js","./styles.css","./kg.js"];
+const STAMP_FILES=["./index.html","./app.ts","./styles.css","./kg.ts"];
 function stampDate(d){
   return d.toLocaleString(tr("locale"),{day:"2-digit",month:"2-digit",year:"numeric",
                                    hour:"2-digit",minute:"2-digit"});
@@ -4987,7 +5029,7 @@ function stampDate(d){
 async function showBuildStamp(){
   // Eén stempel per puckbalk (de tafel heeft er twee), plus een eventueel
   // los #buildStamp-element. Vandaar een selector in plaats van één id.
-  const nodes=[...document.querySelectorAll(".build-stamp, #buildStamp")];
+  const nodes=[...document.querySelectorAll<HTMLElement>(".build-stamp, #buildStamp")];
   if(!nodes.length) return;
   const loaded=new Date();
   let newest=new Date(document.lastModified);
