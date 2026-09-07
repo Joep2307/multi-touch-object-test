@@ -1,0 +1,55 @@
+# Huisstijl van de participatietafel: 4 spaties, 79 kolommen.
+#
+# https://editorconfig.org — elke redelijke editor leest dit vanzelf, dus
+# staat het hier en niet alleen in .vscode/. Prettier leest het níét; die
+# heeft dezelfde getallen los staan in prettier.config.mjs.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+max_line_length = 79
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# De bestanden van vóór deze afspraak. Ze staan vol met uitgelijnde
+# blokken en dichte eenregelaars die door een herformattering onleesbaar
+# worden, dus houden ze hun eigen inspringing tot ze uit zichzelf aan de
+# beurt zijn. Nieuwe bestanden volgen [*] hierboven. Zie ook
+# .prettierignore, dat dezelfde lijst aanhoudt.
+[{exe/index.html,src/i18n/L.ts}]
+indent_size = 2
+max_line_length = off
+
+[src/test/smoke.ts]
+indent_size = 2
+max_line_length = off
+
+# Rust heeft zijn eigen rustfmt-conventie.
+[*.rs]
+indent_size = 4
+max_line_length = 100
+
+[vendor/**]
+indent_size = 2
+max_line_length = off
+
+# Twee spaties aan het eind van een regel is in Markdown een regelafbreking.
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+[*.{json,jsonc,yml,yaml,cff}]
+indent_size = 2
+
+[*.py]
+indent_size = 4
+max_line_length = 88
+
+[*.sh]
+indent_size = 2
+
+[Makefile]
+indent_style = tab

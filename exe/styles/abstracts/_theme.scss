@@ -1,0 +1,27 @@
+/* ── Licht thema ────────────────────────────────────────────────────────
+   Het lichte thema staat als data-theme="light" op de <html>. De meeste
+   onderdelen volgen vanzelf, want ze zijn in tokens geschreven; wat een
+   eigen half-doorzichtige laag heeft (de analyse, het toetsenbord, de
+   kennisvensters) moet met de hand mee.
+
+   Die uitzonderingen stonden als één lang blok onderaan de opmaak. Wie een
+   onderdeel aanpaste zag daar niet dat er ver verderop in het bestand nog
+   een lichte tegenhanger lag. Met deze mixin schrijft elk onderdeel zijn
+   lichte kant op naast zijn donkere regel:
+
+       .talk-status {
+           color: fade($ink, 0.45);
+           @include light {
+               color: fade($ink-light, 0.5);
+           }
+       }
+
+   De selector wordt `:root[data-theme="light"] .talk-status` — altijd
+   specifieker dan de regel eromheen, dus de volgorde in het bestand doet
+   er niet toe. Gebruik hem binnen een regel; op het hoogste niveau is er
+   geen `&` om aan vast te maken. */
+@mixin light {
+    :root[data-theme="light"] & {
+        @content;
+    }
+}

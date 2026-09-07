@@ -1,0 +1,223 @@
+@use "../abstracts" as *;
+
+.dock {
+    left: 50%;
+    width: 415px;
+    padding: 15px 17px 16px;
+}
+
+#puckDock {
+    bottom: 18px;
+    transform: translateX(-50%);
+}
+
+/* De bovenste balk staat 180° gedraaid: alles erin — tekst, knop, pucks —
+   leest daarmee rechtop voor wie aan de overkant van de tafel staat. */
+#puckDockTop {
+    top: 18px;
+    transform: translateX(-50%) rotate(180deg);
+    display: none;
+}
+
+body.two-sided #puckDockTop {
+    display: block;
+}
+
+body.controls-flipped {
+    #puckDock {
+        left: 18px;
+        top: 50%;
+        right: auto;
+        bottom: auto;
+        transform-origin: 0 0;
+        transform: rotate(90deg) translate(-50%, -100%);
+    }
+
+    #puckDockTop {
+        left: calc(100vw - 18px);
+        top: 50%;
+        right: auto;
+        bottom: auto;
+        transform-origin: 0 0;
+        transform: rotate(-90deg) translate(-50%, -100%);
+    }
+}
+
+/* Twee zijden slaat op een tafel waar mensen omheen staan. Op een laptop is
+   er maar één kijkrichting, dus daar bestaat de keuze niet eens. */
+body:not(.mode-touch) {
+    #sidesRow,
+    #sidesHint {
+        display: none;
+    }
+}
+
+/* Kleine regel onder de puckbalk: wanneer deze versie is gebouwd. Bedoeld
+   om even te controleren, niet om te lezen — vandaar klein en gedempt. */
+.build-stamp {
+    margin: 9px 0 0;
+    text-align: center;
+    font-size: var(--text-3xs);
+    line-height: 1.3;
+    color: var(--ink-dim);
+    opacity: 0.62;
+    font-family: var(--mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.puck-dock-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 10px;
+
+    .hint {
+        margin: 0;
+        line-height: 1.35;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .btn-clear {
+        flex: none;
+        width: auto;
+        padding: 8px 11px;
+        font-size: var(--text-2xs);
+    }
+
+    #btnClear {
+        flex: none;
+        width: auto;
+        padding: 7px 9px;
+        font-size: var(--text-3xs);
+    }
+}
+
+#trayPucks {
+    gap: 10px;
+}
+
+#puckDock #trayPucks {
+    justify-content: center;
+    margin: 0;
+    flex-wrap: nowrap;
+}
+
+.traypuck {
+    width: 66px;
+    height: 66px;
+    flex: none;
+    border-radius: 50%;
+    background: fade(#090c11, 0.94);
+    border: 2px solid var(--line);
+    color: var(--ink);
+    cursor: grab;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-3xs);
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.05;
+    padding: 3px;
+    transition:
+        transform 0.12s,
+        opacity 0.12s;
+
+    @include light {
+        background: fade(#ffffff, 0.96);
+    }
+
+    &:hover {
+        transform: scale(1.07);
+    }
+
+    &:active {
+        cursor: grabbing;
+    }
+
+    /* De balk blokkeert niets meer (zie markTray): van elke soort mogen er
+       meerdere op tafel. Wat er ligt is alleen wat gedempt. */
+    &.on-table {
+        opacity: 0.55;
+    }
+}
+
+#zoom {
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+
+    button {
+        width: 56px;
+        height: 56px;
+        min-height: 0;
+        font-size: var(--text);
+        flex: none;
+        padding: 0;
+    }
+}
+
+body.controls-flipped #zoom {
+    left: 50%;
+    top: calc(100vh - 18px);
+    right: auto;
+    bottom: auto;
+    transform-origin: 0 0;
+    transform: rotate(90deg) translate(-100%, -50%);
+}
+
+/* ── Puckstand ──────────────────────────────────────────────────────────
+   De balk onderaan is er niet meer: geen sleepkopieen, geen
+   deselecteerknop, want er staat niets meer in de weg dat je zelf hebt
+   neergelegd. Wat blijft is het paneel zelf, gekrompen tot een toevoegknop
+   — zo houdt het dezelfde plek, dezelfde spiegeling bij twee zijden en
+   dezelfde draai bij gedraaide bediening als de balk die het vervangt. */
+.dock-add {
+    display: none;
+    margin: 0;
+
+    button {
+        width: 100%;
+    }
+}
+
+body.mode-puck {
+    .dock .puck-dock-head,
+    .dock .tray {
+        display: none;
+    }
+
+    .dock-add {
+        display: flex;
+    }
+
+    .dock {
+        width: auto;
+        min-width: 150px;
+        padding: 10px 12px 11px;
+    }
+}
+
+body:not(.mode-puck) .puck-mode-hint {
+    display: none;
+}
+
+@include narrow {
+    #puckDock {
+        bottom: 8px;
+        width: min(370px, calc(100vw - 16px));
+    }
+
+    .puck-dock-head .hint {
+        display: none;
+    }
+}

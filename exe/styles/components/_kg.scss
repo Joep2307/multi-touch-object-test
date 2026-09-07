@@ -1,0 +1,221 @@
+@use "../abstracts" as *;
+
+/* ── Kennisgraaf ────────────────────────────────────────────────────────
+   Het leesvenster bij een aangetikt punt uit coco-biblio. Bewust soberder
+   dan .note — dit is bestaande kennis, geen bijdrage. */
+#kgInfo {
+    position: fixed;
+    z-index: 19;
+    display: none;
+    width: 375px;
+    padding: 15px 16px 14px;
+    border-left: 2px solid $graph;
+    /* Het leesvenster draait met dezelfde regel mee als de rest. */
+    transform: rotate(var(--kg-flip, 0deg));
+    transform-origin: 50% 50%;
+
+    .kg-title {
+        margin: 4px 0 12px;
+        font: 600 var(--text-sm) / 1.35 var(--display);
+        color: $ink;
+
+        @include light {
+            color: var(--ink);
+        }
+    }
+}
+
+#kgInfoBody {
+    margin-bottom: 12px;
+}
+
+/* ── Kennisgraaf in het notitievenster ──────────────────────────────────
+   Wat er over deze plek bekend is, en het antwoord dat coco-biblio's
+   RAG-chat eruit trekt. */
+.kg-block {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid fade($ink, 0.12);
+
+    @include light {
+        border-top-color: fade($ink-light, 0.12);
+    }
+
+    .eyebrow {
+        margin: 0 0 8px;
+    }
+}
+
+.note-nearby {
+    margin-bottom: 10px;
+
+    .empty {
+        margin: 0;
+        font: 400 var(--text-2xs) / 1.4 var(--display);
+        color: fade($ink, 0.45);
+
+        @include light {
+            color: fade($ink-light, 0.48);
+        }
+    }
+}
+
+.note-matches {
+    margin-bottom: 10px;
+}
+
+/* Een titel die ergens heen leidt moet er ook zo uitzien. */
+.kg-near {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 4px 6px;
+    margin: 0 -6px;
+    border-radius: 6px;
+    font: 400 var(--text-2xs) / 1.35 var(--display);
+    color: fade($ink, 0.78);
+    border-bottom: 1px solid fade($ink, 0.06);
+    cursor: pointer;
+    transition: background 0.12s;
+
+    @include light {
+        color: fade($ink-light, 0.78);
+        border-bottom-color: fade($ink-light, 0.08);
+    }
+
+    &:last-child {
+        border-bottom: 0;
+    }
+
+    &:hover {
+        background: fade($graph, 0.1);
+    }
+
+    /* Een document dat óók het thema van de puck draagt staat bovenaan én
+       krijgt de themakleur, zodat de relevantie zichtbaar is en niet
+       alleen een kwestie van volgorde. */
+    &.match {
+        color: $ink;
+
+        @include light {
+            color: var(--ink);
+        }
+
+        .kg-near-label::before {
+            content: "● ";
+            color: $graph;
+            font-size: var(--text-3xs);
+            vertical-align: 2px;
+        }
+    }
+}
+
+.kg-near-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kg-near-dist {
+    flex: none;
+    font-size: var(--text-3xs);
+    color: fade($ink, 0.4);
+
+    @include light {
+        color: fade($ink-light, 0.48);
+    }
+}
+
+.kg-quote {
+    margin: 2px 0 8px;
+    padding: 8px 10px;
+    border-left: 2px solid fade($graph, 0.5);
+    background: fade($graph, 0.06);
+    border-radius: 0 8px 8px 0;
+    font: 400 var(--text-2xs) / 1.5 var(--display);
+    color: fade($ink, 0.82);
+
+    @include light {
+        color: fade($ink-light, 0.82);
+        background: fade($accent-light, 0.07);
+    }
+
+    .src {
+        display: block;
+        margin-top: 5px;
+        font: 400 var(--text-3xs) / 1.4 var(--display);
+        color: fade($ink, 0.4);
+
+        @include light {
+            color: fade($ink-light, 0.48);
+        }
+    }
+}
+
+/* Het antwoord houdt één hoogte aan. Terwijl het model doorschrijft zou
+   het venster anders bij elk woord groeien en onder de vinger vandaan
+   schuiven; nu blijft de knop op zijn plek en scrolt de tekst binnen dit
+   kader. */
+.note-answer {
+    display: none;
+    margin-top: 10px;
+    padding: 10px 11px;
+    border-radius: 8px;
+    background: fade($graph, 0.09);
+    font: 400 var(--text-2xs) / 1.5 var(--display);
+    color: $ink;
+    white-space: pre-wrap;
+    height: var(--answer-h, 196px);
+    overflow-y: auto;
+    touch-action: none;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+
+    @include light {
+        color: var(--ink);
+    }
+
+    &::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        border-radius: 3px;
+        background: fade($ink, 0.22);
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .kg-h {
+        display: inline-block;
+        margin-top: 6px;
+        color: #fff;
+        font-weight: 700;
+
+        @include light {
+            color: var(--ink);
+        }
+    }
+
+    .kg-li::before {
+        content: "• ";
+        color: fade($graph, 0.8);
+    }
+}
+
+.note-sources {
+    display: none;
+    margin-top: 7px;
+    font: 400 var(--text-3xs) / 1.4 var(--display);
+    letter-spacing: 0.01em;
+    color: fade($ink, 0.4);
+
+    @include light {
+        color: fade($ink-light, 0.48);
+    }
+}

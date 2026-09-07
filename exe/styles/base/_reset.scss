@@ -1,0 +1,46 @@
+@use "../abstracts" as *;
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+    overscroll-behavior: none;
+}
+
+/* width/height must be pinned to the viewport: <canvas> is a replaced
+   element, so without them its CSS box takes the pixel size of the backing
+   store (innerWidth*dpr) and on a Retina screen it renders at 2x, spilling
+   off the bottom-right — which also throws every clientX/clientY hit-test
+   and the zoom anchor off by the device pixel ratio. */
+#c {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+
+    body.moving-dots & {
+        cursor: grab;
+    }
+
+    body.dragging-dot & {
+        cursor: grabbing;
+    }
+}
+
+@include reduced-motion {
+    * {
+        transition: none !important;
+    }
+}

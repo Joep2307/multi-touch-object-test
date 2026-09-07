@@ -1,0 +1,80 @@
+@use "../abstracts" as *;
+
+/* ── De tokens ──────────────────────────────────────────────────────────
+   Custom properties, geen Sass-variabelen: de browser leest ze opnieuw
+   zodra data-theme wisselt, en src/render/readChip.ts leest --chip-* en
+   --text-2xs uit om het ringmenu op de puck even groot te maken als de
+   knoppen in de panelen. Als Sass-variabele zou daar niets meer van over
+   zijn na het compileren. */
+:root {
+    --bg: #{$bg};
+    --surface: #{$surface};
+    --line: #1c232d;
+    --ink: #{$ink};
+    --ink-dim: #7f8b9b;
+    --accent: #{$accent};
+    --panel: #{fade($surface, 0.9)};
+    --subtle: #{fade($bg, 0.65)};
+    --control: #151b24;
+    --control-hover: #19212c;
+    --selected: #253044;
+    --overlay: #{fade($backdrop, 0.88)};
+    --shadow: #{fade(#000000, 0.42)};
+    --good: #{$good};
+    --bad: #{$bad};
+    --talk: #c48cff;
+    --idea: #{$idea};
+    --warn: #{$idea};
+    --display: "Space Grotesk", system-ui, -apple-system, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    /* ── Typemaat, tafel-eerst ──────────────────────────────────────
+       Deze waarden gelden voor de tafel: iemand die stáát, op zo'n
+       80 cm, onder een hoek. Dat is de plek waar dit ding zijn werk
+       doet, dus dat is de maat waarin het geschreven staat. De laptop
+       is het uitzonderingsgeval en krimpt met `--ui-scale` (zie
+       src/ui/defaultUiScale.ts, die zet hem op 0,8 zodra de
+       laptopstand aan gaat). Vroeger stond het andersom: laptopmaten
+       in de basis en overal `.mode-touch`-regels die alles weer omhoog
+       duwden. Dan is het toeval welk onderdeel wel en niet is
+       meegegroeid. */
+    --text-3xs: 12px; /* bouwstempel, coordinaten, meta */
+    --text-2xs: 15px; /* hints, labels, chips */
+    --text-xs: 17px;
+    --text-sm: 19px;
+    --text: 20px; /* basis: invoer, kopjes */
+    --text-lg: 26px;
+    --text-xl: 34px;
+    --tap: 56px; /* kleinste raakvlak van een knop of veld */
+    --tap-sm: 46px; /* vierkante knoppen met een pictogram */
+
+    /* ── Eén chipvorm ───────────────────────────────────────────────
+       Een label op de ring om de puck en een knop in een paneel zijn
+       hetzelfde ding: een woord waar je op kunt kiezen. Ze zagen er
+       alleen niet zo uit, want het ene wordt op het canvas getekend en
+       het andere is een <button>. Deze drie waarden gelden voor
+       allebei — readChip() leest ze uit voor de ring, zodat er één
+       maat is. */
+    --chip-radius: 16px;
+    --chip-pad-y: 14px;
+    --chip-pad-x: 18px;
+}
+
+/* Het lichte thema verzet de tokens; wat daarmee niet meekomt staat bij
+   het onderdeel zelf, achter de light()-mixin. */
+:root[data-theme="light"] {
+    --bg: #e8edf3;
+    --surface: #ffffff;
+    --line: #cbd5e1;
+    --ink: #{$ink-light};
+    --ink-dim: #657184;
+    --accent: #{$accent-light};
+    --panel: #{fade(#ffffff, 0.92)};
+    --subtle: #{fade(#ebf0f6, 0.78)};
+    --control: #edf2f7;
+    --control-hover: #e3eaf2;
+    --selected: #dce8fb;
+    --overlay: #{fade(#e0e7ef, 0.9)};
+    --shadow: #{fade(#1f2d3d, 0.18)};
+    --warn: #9a6500;
+}

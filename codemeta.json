@@ -1,0 +1,61 @@
+{
+  "@context": "https://w3id.org/codemeta/3.0",
+  "@type": "SoftwareSourceCode",
+  "name": "Puck-tafel — multi-touch participatietafel",
+  "description": "Een multi-touch participatietafel waarop fysieke pucks markeringen op een kaart plaatsen. Elke puck wordt herkend aan de driehoek van zijn drie contactpunten op het glas; wie hem neerlegt legt een bijdrage vast op die plek — een oordeel, een toelichting en het gesprek dat eromheen gevoerd wordt. Onder de kaart ligt de kennisgraaf van coco-biblio.",
+  "identifier": "puck-table",
+  "version": "0.1.0",
+  "dateModified": "2026-09-04",
+  "codeRepository": "https://github.com/Joep2307/multi-touch-object-test",
+  "programmingLanguage": [
+    {
+      "@type": "ComputerLanguage",
+      "name": "JavaScript"
+    },
+    {
+      "@type": "ComputerLanguage",
+      "name": "Python"
+    }
+  ],
+  "runtimePlatform": ["Node.js 22+", "Chromium"],
+  "operatingSystem": ["Linux", "macOS"],
+  "applicationCategory": "Civic participation",
+  "developmentStatus": "wip",
+  "inLanguage": ["nl", "en"],
+  "keywords": [
+    "participatie",
+    "multi-touch",
+    "tangible user interface",
+    "fiducial marker",
+    "knowledge graph",
+    "Breda"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Joep",
+      "familyName": "Groenteman",
+      "email": "info@starling.studio"
+    }
+  ],
+  "maintainer": {
+    "@type": "Person",
+    "givenName": "Joep",
+    "familyName": "Groenteman",
+    "email": "info@starling.studio"
+  },
+  "softwareRequirements": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "coco-biblio",
+      "description": "De backend die de kennisgraaf en de documenten levert. Optioneel: zonder backend valt de tafel terug op public/fixtures/."
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "whisper-uitschrijfdienst",
+      "description": "De dienst die het gesprek aan tafel uitschrijft, zie deploy/TRANSCRIPTIE.md. Optioneel."
+    }
+  ],
+  "buildInstructions": "https://github.com/Joep2307/multi-touch-object-test#readme",
+  "readme": "https://github.com/Joep2307/multi-touch-object-test#readme"
+}

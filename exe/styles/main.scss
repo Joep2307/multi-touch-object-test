@@ -1,0 +1,35 @@
+/* ── De opmaak van de tafel ─────────────────────────────────────────────
+   Dit bestand bevat zelf geen enkele regel; het bepaalt alleen de
+   volgorde. Dat is niet vrijblijvend: waar twee regels even zwaar wegen
+   wint in CSS de laatste, dus `.row` moet na de rijen staan die hem
+   invullen en `.note` na `.panel` waar hij op voortbouwt. Wie een partial
+   verplaatst, verplaatst dus ook gedrag.
+
+   abstracts/ komt er niet in voor: dat zijn namen, geen CSS. Elke partial
+   haalt ze zelf op met `@use "../abstracts" as *`.
+
+   base/     de bodem: tokens, reset, tekst, de drie bouwstenen, formulier.
+   layout/   wat er zweeft: het paneel zelf, het menu, de balken.
+   components/ elk venster en elk blok met een eigen verhaal. */
+
+@use "base/tokens";
+@use "base/reset";
+@use "base/typography";
+@use "base/blocks";
+@use "base/controls";
+
+@use "layout/panel";
+@use "layout/menu";
+@use "layout/dock";
+
+@use "components/flag";
+@use "components/pins";
+@use "components/note";
+@use "components/keyboard";
+@use "components/sheet";
+@use "components/kg";
+@use "components/talk";
+@use "components/layers";
+@use "components/analytics";
+@use "components/document-viewer";
+@use "components/learn";

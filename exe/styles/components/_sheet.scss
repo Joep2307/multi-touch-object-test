@@ -1,0 +1,95 @@
+@use "../abstracts" as *;
+
+/* Het bouwtekening-vel: de maten van de pucks, om na te meten. */
+#sheet {
+    position: fixed;
+    inset: 0;
+    background: fade($backdrop, 0.9);
+    z-index: 50;
+    display: none;
+    overflow: auto;
+    padding: 40px 20px;
+
+    @include light {
+        background: var(--overlay);
+    }
+
+    .inner {
+        position: relative;
+        max-width: 920px;
+        margin: 0 auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 34px;
+    }
+
+    h2 {
+        font-size: var(--text-lg);
+        margin: 0 0 6px;
+        letter-spacing: -0.02em;
+    }
+
+    p {
+        font-size: var(--text-xs);
+        line-height: 1.6;
+        color: var(--ink-dim);
+        max-width: 62ch;
+    }
+}
+
+.sheetgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 22px;
+    margin-top: 26px;
+}
+
+.sheetcard {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+
+    h3 {
+        font-size: var(--text-xs);
+        margin: 0 0 10px;
+        font-family: var(--mono);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--mono);
+        font-size: var(--text-2xs);
+    }
+
+    td {
+        padding: 3px 0;
+        color: var(--ink-dim);
+
+        &:first-child {
+            color: var(--ink);
+        }
+    }
+}
+
+#closeSheet {
+    max-width: 160px;
+    margin-top: 26px;
+}
+
+/* Het vel is langer dan het scherm, dus de sluitknop onderaan is bij vier
+   pucks al niet meer in beeld. Dit kruisje blijft meescrollen bovenin. */
+#closeSheetTop {
+    position: sticky;
+    top: 0;
+    float: right;
+    width: 52px;
+    height: 52px;
+    min-height: 0;
+    padding: 0;
+    font-size: var(--text-lg);
+    line-height: 1;
+    border-radius: 10px;
+    z-index: 1;
+}

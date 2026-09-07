@@ -1,0 +1,76 @@
+{
+  // ── Huisstijl: 79 kolommen, 4 spaties ──────────────────────────────
+  // .editorconfig is de bron; deze regels zijn wat VS Code er zelf van
+  // moet maken (de liniaal, en de opmaak bij opslaan).
+  "editor.rulers": [79],
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": true,
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+
+  // ── Opmaak ─────────────────────────────────────────────────────────
+  // Prettier bij opslaan, met .prettierignore als grens: de bestanden van
+  // vóór de 79/4-afspraak staan daarin en blijven dus met rust, ook als je
+  // ze hier opent en opslaat.
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "prettier.requireConfig": true,
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[jsonc]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.wordWrap": "on"
+  },
+  "[python]": { "editor.tabSize": 4, "editor.formatOnSave": false },
+
+  // ── ESLint ─────────────────────────────────────────────────────────
+  // Alleen echte fouten, geen stijl (zie eslint.config.js). Wat vanzelf te
+  // herstellen is gaat mee bij het opslaan.
+  "eslint.useFlatConfig": true,
+  "eslint.validate": ["javascript"],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // ── Spelling ───────────────────────────────────────────────────────
+  // Twee talen tegelijk: de code is Engels, het commentaar Nederlands.
+  // De projectwoorden staan in project-words.txt, niet hier — dan deelt
+  // iedereen dezelfde lijst en groeit dit bestand niet vol.
+  "cSpell.language": "nl,en",
+  "cSpell.import": ["${workspaceFolder}/cspell.config.js"],
+
+  // ── Wat je niet hoeft te zien ──────────────────────────────────────
+  "files.exclude": {
+    "**/.DS_Store": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/dist.nieuw": true,
+    "**/dist.oud": true,
+    "**/coverage": true,
+    "**/package-lock.json": true,
+    "Claude outputs": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/coverage/**": true
+  },
+
+  // ── Tests ──────────────────────────────────────────────────────────
+  // De Vitest-verkenner pakt alleen test/unit/ op; de rooktest start een
+  // echte browser en hoort met `npm run smoke` te draaien, niet per
+  // ongeluk bij elke toetsaanslag.
+  "vitest.rootConfig": "./vitest.config.js",
+
+  // De tafel praat Nederlands; laat de editor dat niet "verbeteren".
+  "javascript.preferences.quoteStyle": "double",
+  "javascript.updateImportsOnFileMove.enabled": "always"
+}

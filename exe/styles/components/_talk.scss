@@ -1,0 +1,123 @@
+@use "../abstracts" as *;
+
+/* ── Het gesprek: opnemen en uitschrijven ───────────────────────────────
+   Zelfde toon als de rest van het venster, maar met een eigen
+   scheidingslijn: dit is niet iets wat iemand typt, het is wat de tafel
+   meeschrijft. De knop ademt tijdens het opnemen, zodat je van een meter
+   afstand ziet dat de microfoon aan staat — aan een tafel met publiek is
+   dat geen sier maar een fatsoenskwestie. */
+.talk {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid fade($ink, 0.12);
+
+    @include light {
+        border-top-color: fade($ink-light, 0.12);
+    }
+}
+
+.talk-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+
+    .eyebrow {
+        margin: 0;
+    }
+}
+
+.talk-time {
+    font-size: var(--text-3xs);
+    color: fade($ink, 0.5);
+
+    @include light {
+        color: fade($ink-light, 0.5);
+    }
+}
+
+.talk-btn {
+    &::before {
+        content: "";
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        margin-right: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.5;
+        vertical-align: baseline;
+    }
+
+    &.rec {
+        background: fade($bad, 0.16);
+        border-color: var(--bad);
+        color: #ffd9d6;
+
+        @include light {
+            background: fade(#d6362a, 0.12);
+            color: #8c2b22;
+        }
+
+        &::before {
+            background: var(--bad);
+            opacity: 1;
+            animation: talk-pulse 1.4s ease-in-out infinite;
+        }
+    }
+}
+
+.talk-clear {
+    flex: none;
+    min-width: 0;
+}
+
+.talk-text {
+    min-height: 82px;
+    font-size: var(--text-xs);
+    line-height: 1.5;
+
+    &:disabled {
+        opacity: 1;
+    }
+}
+
+.talk-partial {
+    margin: 6px 0 0;
+    min-height: 1.4em;
+    font: 400 var(--text-2xs) / 1.4 var(--display);
+    color: fade($ink, 0.42);
+    font-style: italic;
+
+    @include light {
+        color: fade($ink-light, 0.5);
+    }
+}
+
+.talk-status {
+    margin: 5px 0 0;
+    font: 400 var(--text-3xs) / 1.45 var(--display);
+    color: fade($ink, 0.45);
+
+    @include light {
+        color: fade($ink-light, 0.5);
+    }
+
+    &.warn {
+        color: var(--warn);
+    }
+}
+
+@keyframes talk-pulse {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.35);
+        opacity: 0.45;
+    }
+}

@@ -1,0 +1,340 @@
+@use "../abstracts" as *;
+
+/* ── Sessie-analyse ─────────────────────────────────────────────────────
+   Een rustig, schermvullend leesmoment na het plaatsen. De kaarten zijn
+   bewust kort en breed genoeg om ook aan een grote tafel van enige afstand
+   te kunnen lezen. */
+.analytics-launch {
+    margin: 12px 0 0;
+}
+
+#analytics {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: none;
+    overflow: hidden;
+    padding: 28px;
+    background: fade($backdrop, 0.88);
+    backdrop-filter: blur(14px);
+    touch-action: none;
+    overscroll-behavior: contain;
+
+    @include light {
+        background: var(--overlay);
+    }
+
+    &.open {
+        display: flex;
+        justify-content: center;
+    }
+
+    &.at-a {
+        align-items: flex-end;
+    }
+
+    &.at-b {
+        align-items: flex-start;
+    }
+
+    &.quarter-turn {
+        align-items: center;
+
+        .analytics-inner {
+            width: min(1040px, calc(100vh - 56px));
+            height: min(1040px, calc(100vw - 56px));
+            max-height: none;
+        }
+    }
+}
+
+.analytics-inner {
+    position: relative;
+    width: min(1040px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    padding: 36px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--surface);
+    transform: rotate(var(--analytics-flip, 0deg));
+    transform-origin: 50% 50%;
+
+    h2 {
+        margin: 0;
+        font-size: var(--text-xl);
+        letter-spacing: -0.035em;
+    }
+}
+
+.analytics-intro {
+    margin: 8px 0 25px;
+    color: var(--ink-dim);
+    font-size: var(--text-sm);
+}
+
+.analytics-actions {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    display: flex;
+    gap: 8px;
+
+    button {
+        width: var(--tap);
+        height: var(--tap);
+        min-height: 0;
+        padding: 0;
+        flex: none;
+        line-height: 1;
+    }
+}
+
+#flipAnalytics {
+    font-size: var(--text);
+}
+
+.analytics-close {
+    font-size: var(--text-lg);
+}
+
+.analytics-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.analytics-kpi {
+    min-height: 100px;
+    padding: 17px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #111720;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    @include light {
+        background: #f1f5f9;
+    }
+
+    b {
+        font: 600 var(--text-xl) / 1 var(--display);
+        font-variant-numeric: tabular-nums;
+        color: #fff;
+
+        @include light {
+            color: var(--ink);
+        }
+    }
+
+    span {
+        font-size: var(--text-2xs);
+        line-height: 1.35;
+        color: var(--ink-dim);
+    }
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.analytics-card {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: fade(#ffffff, 0.018);
+
+    @include light {
+        background: fade($ink-light, 0.018);
+    }
+
+    h3 {
+        margin: 0 0 13px;
+        font-size: var(--text-sm);
+    }
+}
+
+/* Export en wissen onder het overzicht: de knop staat naast de cijfers
+   waarop je hem indrukt, niet in het menu waar je de tafel mee bedient. */
+.analytics-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+}
+
+.analytics-wide {
+    grid-column: 1 / -1;
+}
+
+.analytics-note {
+    margin: -5px 0 13px;
+    color: var(--ink-dim);
+    font-size: var(--text-2xs);
+    line-height: 1.45;
+}
+
+.analytics-bar {
+    padding: 7px 0;
+}
+
+.analytics-bar-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: var(--text-2xs);
+
+    span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    b {
+        font: 600 var(--text-2xs) var(--display);
+        font-variant-numeric: tabular-nums;
+        color: var(--ink-dim);
+    }
+}
+
+.analytics-rail {
+    height: 6px;
+    margin-top: 6px;
+    border-radius: 999px;
+    background: #202936;
+    overflow: hidden;
+
+    @include light {
+        background: #dce4ed;
+    }
+
+    i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        min-width: 2px;
+    }
+}
+
+.analytics-hotspot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 8px;
+    padding: 11px 12px;
+    border: 1px solid fade($idea, 0.38);
+    border-radius: 10px;
+    background: fade($idea, 0.08);
+
+    span {
+        font-size: var(--text-2xs);
+        color: #ffe18b;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+
+        @include light {
+            color: #875800;
+        }
+    }
+
+    b {
+        font: 600 var(--text-2xs) var(--display);
+        font-variant-numeric: tabular-nums;
+        color: #fff;
+
+        @include light {
+            color: var(--ink);
+        }
+    }
+}
+
+.analytics-place {
+    display: flex;
+    width: 100%;
+    padding: 10px 0;
+    text-align: left;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    align-items: baseline;
+    gap: 12px;
+
+    &:last-child {
+        border-bottom: 0;
+    }
+
+    &:hover {
+        background: fade($accent, 0.08);
+    }
+
+    b {
+        flex: none;
+        font: 600 var(--text-2xs) var(--display);
+        font-variant-numeric: tabular-nums;
+        color: $ink-on;
+
+        @include light {
+            color: $ink-on-light;
+        }
+    }
+
+    span {
+        color: var(--ink-dim);
+        font-size: var(--text-2xs);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+.mode-touch {
+    #analytics {
+        padding: 16px;
+
+        &.quarter-turn .analytics-inner {
+            width: min(1040px, calc(100vh - 32px));
+            height: min(1040px, calc(100vw - 32px));
+        }
+    }
+
+    .analytics-inner {
+        padding: 28px 20px;
+    }
+
+    .analytics-kpi {
+        min-height: 110px;
+    }
+}
+
+@include narrow {
+    .analytics-kpis,
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .analytics-wide {
+        grid-column: auto;
+    }
+
+    .analytics-inner {
+        padding: 30px 16px;
+    }
+
+    .analytics-kpi {
+        min-height: 80px;
+    }
+
+    .analytics-actions {
+        right: 10px;
+        top: 10px;
+    }
+}

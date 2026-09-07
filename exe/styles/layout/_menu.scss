@@ -1,0 +1,456 @@
+@use "../abstracts" as *;
+
+/* ── Menu: alles wat niet continu nodig is ──────────────────────────────
+   Een tafel ligt plat en er staan mensen omheen. Elk paneel dat blijft
+   staan ligt dus over de kaart en staat voor de helft van het gezelschap
+   op zijn kop. De teller, de laatste markeringen, de kaartlagen en de
+   instellingen zitten daarom achter één knop. Die knop staat er twee keer,
+   diagonaal tegenover elkaar, zodat beide lange zijden er één binnen
+   handbereik hebben; het menu opent bij de ingedrukte knop en in de
+   leesrichting van die kant. */
+.menu-btn {
+    left: auto;
+    right: auto;
+    width: 66px;
+    height: 66px;
+    padding: 0;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    z-index: 30;
+
+    svg {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    &.on {
+        color: $ink-on;
+        border-color: var(--accent);
+        background: fade($accent, 0.16);
+
+        @include light {
+            color: $ink-on-light;
+            background: fade($accent-light, 0.12);
+        }
+    }
+}
+
+/* Per hoek twee knoppen: links de kaart, rechts de instellingen. Aan kant B
+   staat het paar gespiegeld, zodat het voor wie daar staat — na de halve
+   slag — in dezelfde volgorde ligt als aan kant A. */
+#btnMapA {
+    left: 18px;
+    bottom: 18px;
+}
+
+#btnSetA {
+    left: 100px;
+    bottom: 18px;
+}
+
+#btnMapB {
+    right: 18px;
+    top: 18px;
+    display: none;
+}
+
+#btnSetB {
+    right: 100px;
+    top: 18px;
+    display: none;
+}
+
+body.mode-touch.two-sided {
+    #btnMapB,
+    #btnSetB {
+        display: flex;
+    }
+}
+
+/* Voor wie aan de overkant staat leest de knop — en straks het menu — pas
+   rechtop als hij een halve slag om is. */
+body.two-sided {
+    #btnMapB,
+    #btnSetB {
+        transform: rotate(180deg);
+    }
+}
+
+/* Virtuele kwartslag: onder-links wordt boven-links en boven-rechts wordt
+   onder-rechts. Zo blijven de twee knoppenparen aan een echte tafelrand in
+   plaats van alleen ter plekke zijwaarts te draaien. */
+body.controls-flipped {
+    #btnMapA {
+        left: 18px;
+        top: 18px;
+        right: auto;
+        bottom: auto;
+        transform: rotate(90deg);
+    }
+
+    #btnSetA {
+        left: 18px;
+        top: 100px;
+        right: auto;
+        bottom: auto;
+        transform: rotate(90deg);
+    }
+
+    #btnMapB {
+        left: auto;
+        top: auto;
+        right: 18px;
+        bottom: 18px;
+        transform: rotate(-90deg);
+    }
+
+    #btnSetB {
+        left: auto;
+        top: auto;
+        right: 18px;
+        bottom: 100px;
+        transform: rotate(-90deg);
+    }
+}
+
+#menu {
+    display: none;
+    width: 400px;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    z-index: 31;
+    scrollbar-width: thin;
+    scrollbar-color: #293443 transparent;
+
+    &.open {
+        display: block;
+    }
+
+    &.at-a {
+        left: 18px;
+        bottom: 100px;
+    }
+
+    &.at-b {
+        right: 18px;
+        top: 100px;
+    }
+
+    &.flipped {
+        transform: rotate(180deg);
+        transform-origin: 50% 50%;
+    }
+}
+
+/* `translateY(-100%)` gebeurt vóór de rotatie en gebruikt daardoor de
+   eigen, dynamische menuhoogte. Dat is precies de maat die na 90° de
+   schermbreedte wordt; er zijn dus geen vaste aannames over open
+   accordeons nodig. */
+body.controls-flipped #menu {
+    max-height: calc(100vw - 140px);
+    transform-origin: 0 0;
+
+    &.at-a {
+        left: 100px;
+        top: 18px;
+        right: auto;
+        bottom: auto;
+        transform: rotate(90deg) translateY(-100%);
+    }
+
+    &.at-b {
+        left: calc(100vw - 100px);
+        top: calc(100vh - 18px);
+        right: auto;
+        bottom: auto;
+        transform: rotate(-90deg) translateY(-100%);
+    }
+}
+
+.menu-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+
+    h1 {
+        font-size: var(--text-sm);
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.01em;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Taalknop boven in het menu. Twee vakjes in plaats van één wisselknop:
+   aan een tafel waar iemand langsloopt en even meekijkt moet in één blik
+   te zien zijn welke taal aan staat, niet pas na het indrukken. */
+.lang-switch {
+    display: flex;
+    flex: none;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--subtle);
+
+    button {
+        padding: 7px 13px;
+        min-height: 0;
+        border: 0;
+        background: transparent;
+        color: var(--ink-dim);
+        border-radius: 7px;
+        font-size: var(--text-2xs);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+
+        /* Een vakje is doorzichtig tot je erover gaat. Dat kwam er
+           vroeger via `button:hover` in, omdat die regel toevallig
+           verderop in de opmaak stond; nu de knoppen in base/ vóór het
+           menu komen staat het hier waar het hoort. */
+        &:hover {
+            background: var(--control-hover);
+        }
+
+        &[aria-pressed="true"] {
+            background: var(--selected);
+            color: var(--ink);
+            box-shadow: 0 1px 6px fade(#000000, 0.25);
+        }
+    }
+}
+
+#menuClose {
+    flex: none;
+    width: var(--tap-sm);
+    height: var(--tap-sm);
+    min-height: 0;
+    padding: 0;
+    font-size: var(--text);
+    line-height: 1;
+    border-radius: 9px;
+}
+
+/* De onderdelen vormen rustige, losse blokken. Dat maakt het menu scanbaar
+   zonder dat iedere regel om aandacht vraagt. */
+.menu-sec {
+    margin-top: 7px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: fade($bg, 0.28);
+    overflow: hidden;
+
+    @include light {
+        background: fade(#eef3f8, 0.7);
+    }
+
+    &.collapsed > .accordion-body {
+        display: none;
+    }
+
+    &:not(.collapsed) > .accordion-head {
+        background: fade($accent, 0.075);
+        color: #dbe7ff;
+
+        @include light {
+            background: fade($accent-light, 0.08);
+            color: $ink-on-light;
+        }
+
+        .accordion-chev {
+            transform: rotate(225deg);
+        }
+    }
+}
+
+.menu-head + .menu-sec {
+    margin-top: 0;
+}
+
+/* Eén venster, twee inhouden: de kaartknop toont alleen wat over de kaart
+   gaat, de instellingenknop de rest. Zo staat er nooit een lijst voor je
+   waar je doorheen moet scrollen om bij het andere te komen. */
+#menu {
+    .menu-sec[data-view] {
+        display: none;
+    }
+
+    &.view-map .menu-sec[data-view="map"],
+    &.view-settings .menu-sec[data-view="settings"] {
+        display: block;
+    }
+}
+
+/* De <select> met kaartbeelden is de bron waaruit de knoppenlijst wordt
+   opgebouwd; zichtbaar zou hij dezelfde keuze een tweede keer aanbieden.
+   `label.field` is specifieker dan een losse klasse, dus het label bij de
+   verborgen <select> bleef onderaan het kaartmenu staan als los woord
+   "Kaartbeeld". Vandaar de tweede, zwaardere selector. */
+.src-only,
+label.field.src-only {
+    display: none;
+}
+
+.accordion-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 15px 16px;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    border-radius: 0;
+    font-size: var(--text-sm);
+    font-weight: 650;
+    text-align: left;
+
+    &:hover {
+        border-color: transparent;
+        background: fade(#ffffff, 0.035);
+        color: #fff;
+
+        @include light {
+            background: fade($ink-light, 0.045);
+            color: var(--ink);
+        }
+    }
+
+    &:focus-visible {
+        outline-offset: -3px;
+    }
+}
+
+.accordion-chev {
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-right: 1.5px solid var(--ink-dim);
+    border-bottom: 1.5px solid var(--ink-dim);
+    transform: rotate(45deg);
+    transition: transform 0.18s ease;
+}
+
+.accordion-body {
+    padding: 16px;
+    border-top: 1px solid var(--line);
+}
+
+.menu-subhead {
+    margin: 18px 0 8px;
+
+    &:first-child {
+        margin-top: 0;
+    }
+}
+
+.mode-switch {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--subtle);
+
+    button {
+        padding: 8px 7px;
+        border: 0;
+        background: transparent;
+        color: var(--ink-dim);
+        border-radius: 7px;
+
+        /* Zie .lang-switch: dezelfde reden. */
+        &:hover {
+            background: var(--control-hover);
+        }
+
+        &.active {
+            background: var(--selected);
+            color: var(--ink);
+            box-shadow: 0 1px 6px var(--shadow);
+        }
+    }
+}
+
+.theme-switch {
+    margin-top: -1px;
+
+    button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+    }
+}
+
+.theme-icon {
+    font-size: var(--text-sm);
+    line-height: 1;
+}
+
+/* De maatregelaar. Tussenruimte en marge komen van `.row`, die verderop
+   in de opmaak staat en dus wint; hier blijft alleen wat eigen is. */
+.scale-row {
+    align-items: center;
+
+    button {
+        flex: none;
+        width: 52px;
+        padding: 11px 0;
+        font-size: var(--text-sm);
+        line-height: 1;
+    }
+}
+
+.scale-val {
+    flex: 1;
+    text-align: center;
+    font-size: var(--text-2xs);
+    color: var(--ink-dim);
+}
+
+#btnOrientation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+}
+
+.orientation-icon {
+    font-size: var(--text);
+    line-height: 1;
+    transform: rotate(90deg);
+}
+
+/* Gereedschap voor wie de tafel bouwt of ijkt. Staat er alleen bij als
+   src/boot/ de ontwikkelstand op de <body> heeft gezet (?dev in de URL). */
+.dev-only {
+    display: none;
+
+    /* Het blok begint met een kopje, en dat is het eerste kind van
+       .dev-only — zonder deze regel valt het onder :first-child en plakt
+       "Simulatie" tegen de hint erboven. */
+    > .menu-subhead:first-child {
+        margin-top: 18px;
+    }
+}
+
+body.dev .dev-only {
+    display: block;
+}

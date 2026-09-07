@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // De tafel in een browser, met breekpunten in app.js. Start eerst
+      // `npm run dev` (of de taak "dev" uit tasks.json).
+      "name": "Tafel in Chrome (npm run dev draait al)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5174",
+      "webRoot": "${workspaceFolder}"
+    },
+    {
+      // Eén testbestand, met breekpunten. Vitest draait in dezelfde
+      // node-instantie, dus stoppen op een regel werkt gewoon.
+      "name": "Vitest: dit bestand",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "${relativeFile}"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Vitest: alles",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      // De rooktest met zichtbare browser: PWDEBUG=1 opent Playwright's
+      // inspecteur, zodat je stap voor stap ziet wat de tafel doet.
+      "name": "Rooktest (zichtbaar)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/test/smoke.mjs",
+      "cwd": "${workspaceFolder}",
+      "env": { "PWDEBUG": "1" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

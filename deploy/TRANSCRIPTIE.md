@@ -2,7 +2,7 @@
 
 De tafel heeft sinds vandaag een knop **Gesprek opnemen** in het venster dat bij
 een markering hoort: eerst een plek en een thema, dan praten, en de tekst loopt
-mee. Wie dat werk doet staat niet vast — `speech.js` kiest zelf, in deze
+mee. Wie dat werk doet staat niet vast — `src/speech/` kiest zelf, in deze
 volgorde:
 
 1. **Een uitschrijfdienst op de tafel zelf** (`api/transcribe`). Dit is de
@@ -50,7 +50,7 @@ weg, dan blijft de opname doorlopen en verschijnt er één melding in het venste
 `small` (voor Nederlands is dat de ondergrens voor straatnamen, `base` verzint
 te veel), een server op de standaardbibliotheek, geen framework. Op een NUC
 zonder GPU haalt `small` ongeveer realtime; blijft hij achterlopen, dan is
-`CHUNK_MS` in `speech.js` de knop om aan te draaien — of `PUCK_STT_MODEL=base`.
+`src/speech/CHUNK_MS.ts` de knop om aan te draaien — of `PUCK_STT_MODEL=base`.
 
 Neerzetten op de NUC:
 
@@ -89,7 +89,7 @@ multipart en de foutafhandeling kloppen. Draaien met gewoon `python3`.
 
 De statische server op de NUC is `python3 -m http.server` en kan niets
 doorsturen, dus de dienst draait naast de tafel op zijn eigen poort in plaats
-van op `/api` van dezelfde server. `speech.js` zoekt daarom in deze volgorde:
+van op `/api` van dezelfde server. `src/speech/probeSTT.ts` zoekt daarom in deze volgorde:
 
 1. het adres dat is opgegeven (`?stt=http://…`, of anders het adres van de
    kennisgraaf) — is dat er, dan precies daar en nergens anders;
@@ -102,11 +102,11 @@ machine, open de tafel dan met `?stt=http://<machine>:8770`.
 
 ## Microfoon
 
-- De microfoon bestaat alleen in een *secure context*. `http://localhost` telt
+- De microfoon bestaat alleen in een _secure context_. `http://localhost` telt
   mee — zo opent de kiosk de tafel — maar `http://<ip>:8080` vanaf een andere
   laptop niet. Daar meldt de tafel dat uitschrijven niet kan, en dat klopt.
 - De toestemmingsvraag klikt niemand weg aan een tafel zonder muis. `deploy/
-  kiosk.sh` start chromium daarom met `--use-fake-ui-for-media-stream`; die vlag
+kiosk.sh` start chromium daarom met `--use-fake-ui-for-media-stream`; die vlag
   slaat de vraag over en geeft de echte microfoon door.
 - Eén opname tegelijk, en hij stopt zodra het venster dichtgaat. Een microfoon
   die stilletjes doorluistert bij een gesloten venster is precies wat je aan een

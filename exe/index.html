@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Puck Table — participation map</title>
+<link rel="stylesheet" href="styles/main.scss">
+<script type="module" src="../src/main.ts"></script>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<!-- Two pairs of menu buttons, diagonally opposite each other. At a table
+     that people stand around, any panel that stays put is in the way: it
+     sits over the map and is upside-down for half the group. Everything
+     that isn't needed at every moment therefore lives behind these buttons,
+     and they appear twice so both long sides have them within reach. There
+     are two per corner, because the two things you actually reach for
+     during a session — the map view and the settings — shouldn't sit behind
+     the same tap and the same scroll. Map on the left, settings on the
+     right; mirrored on side B, so the order reads the same for whoever is
+     standing there. -->
+<button class="panel menu-btn" id="btnMapA" type="button" data-side="a" data-view="map"
+        aria-label="Map" data-i18n-aria="mapHead" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/>
+  </svg>
+</button>
+<button class="panel menu-btn" id="btnSetA" type="button" data-side="a" data-view="settings"
+        aria-label="Settings" data-i18n-aria="settings" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+</button>
+
+<button class="panel menu-btn" id="btnMapB" type="button" data-side="b" data-view="map"
+        aria-label="Map" data-i18n-aria="mapHead" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/>
+  </svg>
+</button>
+<button class="panel menu-btn" id="btnSetB" type="button" data-side="b" data-view="settings"
+        aria-label="Settings" data-i18n-aria="settings" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+</button>
+
+<div class="panel" id="menu" role="dialog" aria-label="Menu" data-i18n-aria="menu">
+  <div class="menu-head">
+    <h1 id="menuTitle">Participation table</h1>
+    <!-- Language. The table is set up in places where not everyone reads
+         Dutch; the button sits at the top of the menu so it's immediately
+         visible on opening, without permanently sitting over the map. -->
+    <div class="lang-switch" id="langSwitch" role="group" aria-label="Language / Taal" data-i18n-aria="language">
+      <button id="langEn" type="button" lang="en" aria-pressed="true">EN</button>
+      <button id="langNl" type="button" lang="nl" aria-pressed="false">NL</button>
+    </div>
+    <button id="menuClose" type="button" aria-label="Close" data-i18n-aria="close">&times;</button>
+  </div>
+
+  <!-- ── Map ─────────────────────────────────────────────────────────
+       What you do to the map during a session: which view lies beneath it,
+       locking or panning it, jumping somewhere, saving it offline. -->
+  <div class="menu-sec collapsed" id="layersMenu" data-view="map">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="layersBody">
+      <span data-i18n="layersHead">Layers</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="layersBody" role="region"></div>
+  </div>
+
+  <div class="menu-sec collapsed" id="mapSec" data-view="map">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="mapBody">
+      <span data-i18n="mapHead">Map</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="mapBody" role="region">
+    <p class="eyebrow menu-subhead" data-i18n="mapControlHead">Controls</p>
+    <div class="row"><button id="btnMove" data-i18n="move">Freeze map</button></div>
+    <div class="row"><button id="btnCalm" data-i18n="calm">Mute the map</button></div>
+    <p class="hint" id="calmHint" data-i18n="calmHint" style="margin:0 0 9px">Muted, the map is the background and the marks are the only bright thing on the table.</p>
+    <div class="row"><button id="btnMoveDots" data-i18n="moveDots">Move dots</button></div>
+    <p class="hint" id="dotsHint" data-i18n="dotsHint" style="margin:0 0 9px">Switch on, then drag a dot.</p>
+    <p class="eyebrow menu-subhead" data-i18n="kgHead">Knowledge graph</p>
+    <div class="row"><button id="btnKg" data-i18n="kgShow">Show graph</button></div>
+    <p class="hint" id="kgStatus">off</p>
+
+    <p class="eyebrow menu-subhead" data-i18n="placesHead">Go to</p>
+    <label class="field" for="search" data-i18n="searchPlace">Search for a place</label>
+    <input id="search" placeholder="Breda, Ginneken…" data-i18n-ph="searchPh" autocomplete="off">
+    <p class="hint" id="searchHint" role="status" aria-live="polite"></p>
+    <div class="row" style="margin-top:9px">
+      <button data-go="51.5886,4.7756,15">Centrum</button>
+      <button data-go="51.5975,4.7715,15">Belcrum</button>
+    </div>
+    <div class="row">
+      <button data-go="51.5726,4.7864,15">Ginneken</button>
+      <button data-go="51.6098,4.7813,14">Hoge Vucht</button>
+    </div>
+    <div class="row">
+      <button data-go="51.5866,4.7759,13" data-i18n="allBreda">All of Breda</button>
+    </div>
+    <p class="eyebrow menu-subhead" data-i18n="offlineHead">Offline map</p>
+    <div class="row" style="margin-top:9px">
+      <button id="btnBake" data-i18n="bake">Save map offline</button>
+    </div>
+    <div class="row"><button id="btnUnbake" data-i18n="unbake">Clear saved map</button></div>
+    <p class="hint" id="bakeHint" data-i18n="bakeHint">Press this while online; after that this map view also works offline.</p>
+
+    <!-- Source of truth for the map views: the button list above is built
+         from this. It's kept out of sight itself, otherwise the same choice
+         would appear twice in the same window. -->
+    <label class="field src-only" for="tiles" data-i18n="basemap">Map view</label>
+    <select id="tiles" class="src-only">
+      <optgroup label="General" data-i18n-label="grpGeneral">
+        <option value="osm" selected data-i18n="tileOsm">OpenStreetMap</option>
+        <option value="brt" data-i18n="tileBrt">Topography — PDOK</option>
+        <option value="brtgrijs" data-i18n="tileGrijs">Grey — PDOK</option>
+        <option value="brtpastel" data-i18n="tilePastel">Pastel — PDOK</option>
+      </optgroup>
+      <optgroup label="Theme" data-i18n-label="grpTheme">
+        <option value="groen" data-i18n="tileGroen">Green &amp; elevation</option>
+        <option value="bebouwing" data-i18n="tileBebouwing">Built-up area</option>
+        <option value="verkeer" data-i18n="tileVerkeer">Traffic &amp; cycling</option>
+        <option value="water" data-i18n="tileWater">Water — PDOK</option>
+        <option value="lucht" data-i18n="tileLucht">Aerial photo — PDOK</option>
+      </optgroup>
+      <optgroup label="Other" data-i18n-label="grpOther">
+        <option value="dark" data-i18n="tileDark">Dark (CARTO — API key required)</option>
+        <option value="light" data-i18n="tileLight">Light (CARTO — API key required)</option>
+        <option value="none" data-i18n="tileNone">None — grid only</option>
+      </optgroup>
+    </select>
+    </div>
+  </div>
+
+  <!-- ── Settings ──────────────────────────────────────
+       Only what you configure on the table itself: how the controls are set
+       up and how large they are. The counter and the latest markers used to
+       be here too, but you don't configure anything with those — that's the
+       output, and it now lives in the session analysis. What you calibrate
+       once per setup (screen diagonal, tolerance, the graph's address) lives
+       in CFG in app.js; the tool to calibrate that only appears when the URL
+       contains ?dev. -->
+  <div class="menu-sec collapsed" id="controls" data-view="settings">
+    <button class="accordion-head" id="ctrlHead" type="button" aria-expanded="false" aria-controls="controlsBody">
+      <span data-i18n="settings">Settings</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="controlsBody" role="region">
+      <div class="mode-switch" aria-label="Choose controls" data-i18n-aria="chooseControl">
+        <button id="modeTouch" type="button" data-i18n="touchscreen">Touchscreen</button>
+        <button id="modeLaptop" type="button">Laptop</button>
+        <button id="modePuck" type="button" data-i18n="modePuck">Puck</button>
+      </div>
+      <!-- Only readable in puck mode: that's the mode in which something
+           disappears (the bar), so there's something to explain. -->
+      <p class="hint puck-mode-hint" data-i18n="modePuckHint" style="margin:7px 0 0">The bar at the bottom is gone. The table only recognises pucks you have read in yourself.</p>
+      <p class="eyebrow menu-subhead" data-i18n="appearanceHead">Appearance</p>
+      <div class="mode-switch theme-switch" aria-label="Choose colour mode" data-i18n-aria="chooseTheme">
+        <button id="themeLight" type="button" data-i18n="lightMode">
+          <span class="theme-icon" aria-hidden="true">☀</span> Light
+        </button>
+        <button id="themeDark" type="button" data-i18n="darkMode">
+          <span class="theme-icon" aria-hidden="true">☾</span> Dark
+        </button>
+      </div>
+      <!-- At a table without a keyboard, F11 isn't a button. Fullscreen
+           removes the browser bar; the desktop's own gestures don't go away
+           with it — see deploy/KIOSK.md. -->
+      <div class="row" style="margin:9px 0 0"><button id="btnFullscreen" data-i18n="fullscreen">Full screen</button></div>
+      <div class="row scale-row" id="scaleRow" aria-label="Size of the controls" data-i18n-aria="controlSize">
+        <button id="btnScaleDown" type="button" aria-label="Smaller controls" data-i18n-aria="smaller">&minus;</button>
+        <span class="scale-val mono" id="scaleVal" aria-live="polite">100%</span>
+        <button id="btnScaleUp" type="button" aria-label="Larger controls" data-i18n-aria="larger">+</button>
+      </div>
+      <p class="hint" id="scaleHint" data-i18n="scaleHint" style="margin:7px 0 0">Panels and buttons; the map stays at true size.</p>
+      <div class="row orientation-row" style="margin:9px 0 0">
+        <button id="btnOrientation" type="button" aria-describedby="orientationHint" aria-pressed="false">
+          <span class="orientation-icon" aria-hidden="true">↻</span>
+          <span id="orientationLabel">Rotate controls 90 degrees</span>
+        </button>
+      </div>
+      <p class="hint" id="orientationHint" data-i18n="orientationHint" aria-live="polite" style="margin:7px 0 0">Rotates only the controls, panels, and text; the map stays in place.</p>
+      <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button" data-i18n="twoSides">Two sides</button></div>
+      <p class="hint" id="sidesHint" data-i18n="sidesHint" style="margin:7px 0 0">Puck bar on both sides; panels turn towards whoever opens them.</p>
+
+      <!-- A button beside the table that restarts the session. A USB button
+           like that presents itself as a keyboard and sends one key; which key
+           that is varies per button, so the table reads it out itself. -->
+      <p class="eyebrow menu-subhead" data-i18n="resetHead">Reset button</p>
+      <div class="row"><button id="btnResetKey" data-i18n="resetKey">Set the reset button</button></div>
+      <p class="hint" id="resetKeyHint" aria-live="polite" style="margin:7px 0 0"></p>
+
+      <!-- Only the theme choice lives here: that determines what ends up on
+           the pucks. Whether the graph is visible is a map layer and lives
+           with the map. -->
+      <p class="eyebrow menu-subhead" data-i18n="kgHead">Knowledge graph</p>
+      <div class="row"><button id="btnKgThemes" data-i18n="kgThemes">Themes from graph</button></div>
+      <p class="hint" data-i18n="kgThemesHint">Puck topics then come from the graph instead of the fixed list.</p>
+
+      <!-- Recognition is deliberately not behind ?dev. You do this at the
+           table itself, with the tape still in your hand; adjusting the URL
+           is exactly the action you don't want to have to do then. -->
+      <p class="eyebrow menu-subhead" data-i18n="physicalPucks">Physical pucks</p>
+      <div class="row">
+        <button id="btnRecognise" class="primary" data-i18n="recog">Recognise puck</button>
+        <button id="btnDebug" data-i18n="touchDebug">Touch debug</button>
+      </div>
+      <p class="hint" data-i18n-html="recogHint">Stick three pieces of tape in a triangle, put the puck on the screen and press <b>Recognise puck</b>.</p>
+
+      <!-- Tooling for whoever builds or calibrates the table. At a table with
+           an audience around it, these are only buttons that can break
+           something: one swipe across the tolerance slider and recognition is
+           thrown off. They're therefore only present with ?dev in the URL. -->
+      <div class="dev-only">
+        <p class="eyebrow menu-subhead" data-i18n="simulationHead">Simulation</p>
+        <p class="hint" data-i18n="devNote" style="margin:0 0 9px">Visible because the URL contains ?dev.</p>
+        <div class="row">
+          <button id="btnSim" class="on" data-i18n="simPuck">Simulate puck</button>
+        </div>
+        <label class="field" for="tol"><span data-i18n="tolLabel">Ratio tolerance</span> <span id="tolVal" class="mono">0.060</span></label>
+        <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
+        <label class="field" for="diag" data-i18n="diagLabel">Screen diagonal (inches)</label>
+        <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
+
+        <p class="eyebrow menu-subhead" data-i18n="buildTools">Build tools</p>
+        <div class="row">
+          <button id="btnSheet" data-i18n="sheetBtn">Build drawing</button>
+          <button id="btnExport" data-i18n="exportCfg">Export config</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Session ────────────────────────────────────────────
+       The name determines what it's saved under, so it belongs before the
+       conversation. Reviewing, taking away and clearing sit one tap further
+       in the analysis window: those are things for afterward, and they
+       belong with the overview they're based on. -->
+  <div class="menu-sec collapsed" id="sessionSec" data-view="settings">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="sessionBody">
+      <span data-i18n="sessionHead">Session</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="sessionBody" role="region">
+      <label class="field" for="sess" data-i18n="sessionName">Session name</label>
+      <input id="sess" value="session-01">
+      <div class="row analytics-launch"><button id="btnAnalytics" class="primary" data-i18n="analyticsOpen">Session analytics</button></div>
+      <p class="hint" data-i18n="analyticsHint">The overview, the exports and clearing are together there.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Grounding warning during calibration: three contact points without a
+     recognized puck usually means the pads aren't coupling. Installer
+     language, so only visible in dev mode. -->
+<div class="panel dev-only" id="flag" role="status"></div>
+
+<!-- Two puck bars: one per long side of the table. The top one is
+     upside-down, so it's readable for whoever stands on the opposite
+     side. -->
+<div class="panel dock" id="puckDockTop">
+  <div class="puck-dock-head">
+    <p class="hint puck-hint"></p>
+    <button class="danger btn-clear" data-i18n="deselect">Deselect</button>
+  </div>
+  <div class="tray row"></div>
+  <div class="row dock-add"><button class="primary btn-add-puck" data-i18n="puckAdd">+ Puck</button></div>
+  <p class="build-stamp"></p>
+</div>
+
+<div class="panel dock" id="puckDock">
+  <div class="puck-dock-head">
+    <p class="hint puck-hint"></p>
+    <button class="danger btn-clear" data-i18n="deselect">Deselect</button>
+  </div>
+  <div class="tray row"></div>
+  <div class="row dock-add"><button class="primary btn-add-puck" data-i18n="puckAdd">+ Puck</button></div>
+  <p class="build-stamp"></p>
+</div>
+
+<div class="panel" id="zoom">
+  <button id="zIn">+</button><button id="zOut">−</button>
+</div>
+
+<div class="panel" id="kgInfo">
+  <p class="eyebrow" id="kgInfoType">document</p>
+  <p class="kg-title" id="kgInfoLabel"></p>
+  <div id="kgInfoBody"></div>
+  <div class="row" style="margin-bottom:0">
+    <button id="kgInfoOpen" data-i18n="open">Open</button>
+    <button id="kgInfoClose" data-i18n="close">Close</button>
+  </div>
+</div>
+
+<!-- Documents stay inside the table app: a failed document request can be
+     dismissed without leaving the map or relying on browser history. -->
+<div id="documentViewer" role="dialog" aria-modal="true" aria-labelledby="documentViewerTitle">
+  <div class="document-viewer-inner">
+    <div class="document-viewer-head">
+      <p class="document-viewer-title" id="documentViewerTitle"></p>
+      <button id="closeDocumentViewer" type="button" aria-label="Close" data-i18n-aria="close">&times;</button>
+    </div>
+    <iframe id="documentViewerFrame" title="Document" data-i18n-title="document" referrerpolicy="no-referrer"></iframe>
+  </div>
+</div>
+
+<div class="panel note" id="note">
+  <div class="note-head">
+    <p class="eyebrow" id="noteHead" data-i18n="newNote">New contribution</p>
+    <button type="button" id="noteFlip" class="note-flip" title="To the other side" aria-label="To the other side" data-i18n-title="flipNote" data-i18n-aria="flipNote">⇅</button>
+  </div>
+  <label class="field" for="noteTitle" data-i18n="fTitle">Title</label>
+  <input id="noteTitle" placeholder="Give this contribution a title" data-i18n-ph="titlePh" maxlength="80">
+  <label class="field" for="noteText" data-i18n="fDescription">Description</label>
+  <textarea id="noteText" placeholder="What is going on here?" data-i18n-ph="descPh" rows="4"></textarea>
+
+  <!-- The conversation itself. The button is deliberately below the
+       description: first the group picks a place and a topic, then they
+       start talking. -->
+  <div class="talk">
+    <div class="talk-head">
+      <p class="eyebrow" data-i18n="talkHead">Conversation</p>
+      <span id="talkTime" class="mono talk-time"></span>
+    </div>
+    <div class="row">
+      <button id="talkBtn" class="talk-btn" data-i18n="talkStart">Record conversation</button>
+      <button id="talkClear" class="talk-clear" data-i18n="talkClear">Clear text</button>
+      <button id="talkAudio" class="talk-clear" data-i18n="talkAudio" style="display:none">Save recording</button>
+    </div>
+    <textarea id="talkText" class="talk-text" placeholder="What is said appears here." data-i18n-ph="talkPh" rows="3"></textarea>
+    <p id="talkPartial" class="talk-partial"></p>
+    <p id="talkStatus" class="talk-status"></p>
+  </div>
+
+  <div class="row">
+    <button id="noteDel" class="danger" data-i18n="del">Delete</button>
+    <button id="noteSave" class="primary" data-i18n="saveBtn">Save</button>
+  </div>
+
+  <div class="kg-block">
+    <p class="eyebrow" data-i18n="alreadyKnown">What is already known here</p>
+    <div id="noteNearby" class="note-nearby"><p class="empty" data-i18n="kgLoading">Loading knowledge graph…</p></div>
+    <p class="eyebrow" id="noteMatchHead" data-i18n="aboutWhatYouSay" style="display:none">Relates to what you say</p>
+    <div id="noteMatches" class="note-matches"></div>
+    <div class="row" style="margin-bottom:0">
+      <button id="noteAsk" class="primary" data-i18n="askSolution">Ask for a solution</button>
+    </div>
+    <div id="noteAnswer" class="note-answer"></div>
+    <div id="noteSources" class="note-sources"></div>
+  </div>
+</div>
+
+<div class="panel keyboard" id="keyboard" aria-label="On-screen keyboard" data-i18n-aria="onscreenKeyboard">
+  <div class="keyboard-head">
+    <p class="eyebrow" data-i18n="keyboardHead">Keyboard</p>
+    <span id="keyboardField" class="mono keyboard-field"></span>
+  </div>
+  <div id="keyboardKeys" class="keyboard-keys"></div>
+</div>
+
+<!-- ── Recognize puck ────────────────────────────────────
+     A sheet over the map, but the stickers on the table just keep
+     counting: contact points are read on `window`, not on the map. The
+     card sits at the top so the area beneath it stays free to place the
+     puck, and the triangle is drawn live over it. -->
+<div id="learn" role="dialog" aria-modal="true" aria-labelledby="learnTitle">
+  <svg id="learnPoints" aria-hidden="true"></svg>
+  <div class="learn-card" id="learnCard">
+    <button id="closeLearnTop" aria-label="Close" data-i18n-aria="close">&times;</button>
+    <h2 id="learnTitle" data-i18n="recogTitle">Recognise puck</h2>
+    <p class="learn-intro" id="learnIntro" data-i18n="recogIntro">Put the puck on the open area below and hold it still. As soon as the three pads are read, you pick which puck this is.</p>
+    <p class="learn-status" id="learnStatus" aria-live="polite"></p>
+    <div class="learn-bar" aria-hidden="true"><i id="learnBar"></i></div>
+    <div id="learnBody"></div>
+    <div class="row learn-foot">
+      <button id="btnLearnReset" data-i18n="recogReset">Clear measurements</button>
+      <button id="btnLearnExport" data-i18n="recogExport">Export measurements</button>
+      <button id="closeLearn" data-i18n="close">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="sheet"><div class="inner">
+  <button id="closeSheetTop" aria-label="Close" data-i18n-aria="close">&times;</button>
+  <h2 data-i18n="sheetTitle">Puck build drawing</h2>
+  <p data-i18n="sheetIntro">Pad positions per puck, in millimetres from the centre. Every triangle is scalene and the side ratios lie far enough apart to tell them apart with a few millimetres of measurement error.</p>
+  <div class="sheetgrid" id="sheetGrid"></div>
+  <button id="closeSheet" data-i18n="close">Close</button>
+</div></div>
+
+<!-- A separate viewing window for the session's output. It's deliberately
+     not a permanent dashboard: during the conversation the map stays free,
+     and only during reflection does this overview take over the whole
+     screen. -->
+<div id="analytics" role="dialog" aria-modal="true" aria-label="Puck analytics" data-i18n-aria="analyticsTitle">
+  <div class="analytics-inner">
+    <div class="analytics-actions">
+      <button type="button" id="flipAnalytics" aria-label="Rotate 90 degrees" title="Rotate 90 degrees" data-i18n-aria="rotateQuarter" data-i18n-title="rotateQuarter">↻</button>
+      <button type="button" id="closeAnalytics" class="analytics-close" aria-label="Close" data-i18n-aria="close">&times;</button>
+    </div>
+    <p class="eyebrow" data-i18n="analyticsEyebrow">SESSION OVERVIEW</p>
+    <h2 data-i18n="analyticsTitle">Puck analytics</h2>
+    <p class="analytics-intro" id="analyticsIntro"></p>
+    <div class="analytics-kpis" id="analyticsKpis"></div>
+    <div class="analytics-grid">
+      <section class="analytics-card"><h3 data-i18n="analyticsTypes">What was placed?</h3><div id="analyticsTypes"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsTopics">Which topics?</h3><div id="analyticsTopics"></div></section>
+      <section class="analytics-card analytics-wide"><h3 data-i18n="analyticsPlaces">Where are the pucks?</h3><p class="analytics-note" data-i18n="analyticsPlacesNote">Groups within about 250 metres. The largest groups show where the conversation is concentrated.</p><div id="analyticsPlaces"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsRelations">Relations at the same place</h3><p class="analytics-note" data-i18n="analyticsRelationsNote">Topics placed close together can be discussed together.</p><div id="analyticsRelations"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsQuality">How complete is the input?</h3><div id="analyticsQuality"></div></section>
+      <section class="analytics-card analytics-wide"><h3 data-i18n="recentMarks">Latest markings</h3><div id="recentBody"><p class="empty" data-i18n="noMarks">No markings yet.</p></div></section>
+    </div>
+    <!-- Taking away and cleaning up used to be in the settings, where "Clear
+         everything" was two taps from a running session. Here they sit below
+         the overview on which you base the decision. -->
+    <div class="analytics-footer">
+      <button id="btnGeo" data-i18n="exportGeo">Export GeoJSON</button>
+      <button id="btnCsv" data-i18n="exportCsv">Export CSV</button>
+      <button id="btnWipe" class="danger" data-i18n="wipe">Clear everything</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

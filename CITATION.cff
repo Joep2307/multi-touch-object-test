@@ -1,0 +1,35 @@
+# Hoe je naar deze tafel verwijst.
+#
+# Citation File Format 1.2.0 — https://citation-file-format.github.io
+# GitHub leest dit bestand zelf en zet er een "Cite this repository"-knop
+# bij. Een participatietafel levert onderzoeksmateriaal op (wat er gezegd
+# is, waar, onder welk thema), en dan hoort er te staan waar dat vandaan
+# komt en wie het gemaakt heeft.
+#
+# Bij een nieuwe versie veranderen `version` en `date-released` mee met
+# VERSION en package.json. Zie de opmerking in VERSION.
+cff-version: 1.2.0
+title: "Puck-tafel — multi-touch participatietafel"
+message: "Als je deze software of de gegevens die ermee verzameld zijn gebruikt, verwijs dan naar dit werk."
+type: software
+authors:
+    - family-names: Groenteman
+      given-names: Joep
+      email: info@starling.studio
+repository-code: "https://github.com/Joep2307/multi-touch-object-test"
+abstract: >-
+    Een multi-touch participatietafel waarop fysieke pucks markeringen op een
+    kaart plaatsen. Elke puck wordt herkend aan de driehoek van zijn drie
+    contactpunten op het glas; wie hem neerlegt legt een bijdrage vast op die
+    plek — een oordeel, een toelichting en het gesprek dat eromheen gevoerd
+    wordt. Onder de kaart ligt de kennisgraaf van coco-biblio, zodat de tafel
+    kan laten zien wat er over die plek al bekend is.
+keywords:
+    - participatie
+    - multi-touch
+    - tangible user interface
+    - fiducial marker
+    - knowledge graph
+    - Breda
+version: 0.1.0
+date-released: "2026-09-04"

@@ -1,0 +1,113 @@
+@use "../abstracts" as *;
+
+/* Een knop is de chipvorm uit de tokens: dezelfde hoeken, dezelfde
+   binnenmarge en dezelfde tekstmaat als het label op de ring om een puck.
+   Zie readChip() in src/render/ — die leest dezelfde tokens uit. */
+button {
+    font-family: inherit;
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    color: var(--ink);
+    background: var(--control);
+    border: 1px solid var(--line);
+    border-radius: var(--chip-radius);
+    padding: var(--chip-pad-y) var(--chip-pad-x);
+    min-height: var(--tap);
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+    transition:
+        border-color 0.15s,
+        background 0.15s;
+
+    &:hover {
+        border-color: color-mix(in srgb, var(--line), var(--ink) 18%);
+        background: var(--control-hover);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: default;
+
+        &:hover {
+            border-color: var(--line);
+            background: #151b24;
+
+            @include light {
+                background: var(--control);
+                border-color: var(--line);
+            }
+        }
+    }
+
+    /* Aan: de knop staat niet klaar, hij dóet iets. */
+    &.on {
+        background: fade($accent, 0.16);
+        border-color: var(--accent);
+        color: $ink-on;
+
+        @include light {
+            color: $ink-on-light;
+            background: fade($accent-light, 0.12);
+        }
+    }
+
+    &.primary {
+        background: #236cff;
+        border-color: #4b89ff;
+        color: #fff;
+        font-weight: 700;
+        box-shadow: 0 5px 18px fade(#236cff, 0.3);
+
+        &:hover {
+            background: #3379ff;
+            border-color: #75a5ff;
+        }
+    }
+
+    &.danger.on {
+        background: fade($bad, 0.18);
+        border-color: var(--bad);
+    }
+}
+
+label.field {
+    display: block;
+    font-size: var(--text-2xs);
+    color: var(--ink-dim);
+    margin: 12px 0 5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    background: var(--control);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    color: var(--ink);
+    padding: 11px 14px;
+    font-family: inherit;
+    font-size: var(--text);
+    min-height: var(--tap);
+}
+
+textarea {
+    resize: none;
+    line-height: 1.5;
+    min-height: 110px;
+}
+
+input[type="range"] {
+    padding: 0;
+    accent-color: var(--accent);
+    border: none;
+    background: none;
+}

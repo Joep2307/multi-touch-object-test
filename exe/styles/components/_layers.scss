@@ -1,0 +1,41 @@
+@use "../abstracts" as *;
+
+/* ── Kaartlagen ─────────────────────────────────────────────────────────
+   Als eerste keuze in het menu: het kaartbeeld wisselt vaker dan wat dan
+   ook in de instellingen eronder. */
+#layersMenu {
+    .eyebrow {
+        margin: 16px 0 8px;
+
+        &:first-child {
+            margin-top: 0;
+        }
+    }
+
+    .layer-basemap-head {
+        padding-top: 15px;
+        border-top: 1px solid var(--line);
+    }
+
+    .layer-group-head {
+        margin-top: 13px;
+        color: #a9b4c2;
+        letter-spacing: 0.12em;
+    }
+
+    .hint {
+        font-size: var(--text-3xs);
+        line-height: 1.45;
+    }
+
+    .layer {
+        display: block;
+        width: 100%;
+        text-align: left;
+        margin-bottom: 5px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+}

@@ -1,0 +1,20 @@
+{
+  // Wat je nodig hebt om in deze repo te werken zoals de configuratie het
+  // bedoelt. VS Code biedt ze één keer aan bij het openen van de map.
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "streetsidesoftware.code-spell-checker",
+    "streetsidesoftware.code-spell-checker-dutch",
+    "vitest.explorer",
+    "ms-playwright.playwright"
+  ],
+  // Prettier en ESLint gaan hier over dezelfde bestanden. Laat een derde
+  // formatter er niet ook nog overheen; dat levert per opslag een ander
+  // bestand op, afhankelijk van wie er wint.
+  "unwantedRecommendations": [
+    "hookyqr.beautify",
+    "rvest.vs-code-prettier-eslint"
+  ]
+}

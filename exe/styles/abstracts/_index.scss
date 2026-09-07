@@ -1,0 +1,7 @@
+/* Het gereedschap dat elk onderdeel nodig heeft, achter één naam. Een
+   partial begint met `@use "../abstracts" as *;` en heeft daarmee de
+   kleuren, fade(), light() en de breekpunten. Er komt geen enkele regel
+   CSS uit — dit bestand maakt alleen namen bekend. */
+@forward "breakpoints";
+@forward "palette";
+@forward "theme";

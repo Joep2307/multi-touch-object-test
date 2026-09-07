@@ -1,0 +1,72 @@
+# Wat er van deze repo klopt, elke keer opnieuw.
+#
+# Twee taken, met opzet gescheiden. `check` is snel (lint, opmaak,
+# spelling, typecontrole, eenheidstests) en zegt of de code deugt.
+# `smoke` start een echte Chromium en laat hem door de tafel lopen; die
+# duurt langer en is het antwoord op de enige vraag die telt — doet het
+# ding het nog. De eerste hoeft niet op de tweede te wachten.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Een nieuwe duw naar dezelfde tak maakt de vorige overbodig.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, opmaak, spelling, types en eenheidstests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Opmaak (Prettier)
+        run: npm run format:check
+
+      - name: Spelling (cspell)
+        run: npm run spell
+
+      - name: Typecontrole (tsc)
+        run: npm run typecheck
+
+      - name: Eenheidstests (Vitest)
+        run: npm run test
+
+      - name: De build moet het doen
+        run: npm run build
+
+  smoke:
+    name: Rooktest in Chromium
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Alleen Chromium: de rooktest gebruikt niets anders, en de andere
+      # twee browsers kosten een paar minuten downloaden per keer.
+      - name: Chromium ophalen
+        run: npx playwright install --with-deps chromium
+
+      - name: Rooktest
+        run: npm run smoke

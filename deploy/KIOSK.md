@@ -55,14 +55,14 @@ De browser start meteen met de vlaggen die de rest ook stilhouden:
 
 ### Zwart scherm terwijl alles lijkt te draaien
 
-Zie je `puck-kiosk.service` als *active* maar geeft `pgrep chromium` niets, dan
+Zie je `puck-kiosk.service` als _active_ maar geeft `pgrep chromium` niets, dan
 draait cage met een leeg scherm: de browser is nooit opgekomen. Twee oorzaken,
 allebei een keer voorgekomen:
 
 - **De snap-chromium.** Die mag geen verborgen mappen in je home schrijven,
   dus een `--user-data-dir` onder `~/.config` laat hem meteen afsluiten. Het
   profiel staat daarom op `~/puck-kiosk-profiel`. Draai `sudo ./deploy/kiosk.sh
-  kiosk` opnieuw als je nog de oude dienst hebt, en kijk mee met
+kiosk` opnieuw als je nog de oude dienst hebt, en kijk mee met
   `journalctl -b --no-pager | grep -iE 'chromium|apparmor|DENIED'`.
 - **Een blijven staan `SingletonLock`** van een vorige start:
   `rm -f ~/puck-kiosk-profiel/Singleton*` en `sudo systemctl restart puck-kiosk`.

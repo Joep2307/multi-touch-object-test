@@ -1,0 +1,18 @@
+@use "../abstracts" as *;
+
+/* De aardingswaarschuwing hangt los in beeld, tegenover de zoomknoppen:
+   hij verschijnt terwijl iemand met pucks in de weer is, dus hij mag geen
+   enkele aanraking opvangen. */
+#flag {
+    display: none;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 220px;
+    padding: 11px 13px;
+    font-size: var(--text-2xs);
+    line-height: 1.5;
+    color: var(--warn);
+    pointer-events: none;
+    z-index: 20;
+}

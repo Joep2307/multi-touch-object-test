@@ -1,0 +1,38 @@
+@use "sass:color";
+
+/* ── De kleuren onder de doorzichtigheid ────────────────────────────────
+   De opmaak stond vol met losse `rgba(...)`-drietallen, en het waren er
+   overal dezelfde acht: rgba(232,237,244,.12) ís --ink, rgba(122,162,247,
+   .09) ís de graafkleur, rgba(57,216,164,.72) ís het groen van een puck
+   die gelezen wordt. Als getal uitgeschreven is niet te zien dát het
+   dezelfde kleur is, en een tint bijstellen betekende dertig plekken
+   nalopen.
+
+   Waarom Sass-variabelen en geen custom properties erbij: deze waarden
+   gaan door een doorzichtigheid heen, en `rgba(var(--ink), .12)` bestaat
+   niet in CSS. De tokens in base/_tokens.scss blijven wél custom
+   properties — die leest de browser opnieuw bij het wisselen van thema, en
+   src/render/readChip.ts leest er een paar van uit. Deze variabelen staan
+   dus náást de tokens, niet in plaats ervan; waar een token dezelfde kleur
+   is, is hij eruit opgebouwd. */
+$bg: #07090c;
+$surface: #0e1218;
+$backdrop: #030508;
+$ink: #e8edf4;
+$ink-on: #cfe0ff;
+$accent: #3d7bff;
+$graph: #7aa2f7;
+$good: #39d8a4;
+$bad: #ff5f56;
+$idea: #ffd166;
+
+/* Het lichte thema heeft er twee eigen. */
+$ink-light: #17202d;
+$ink-on-light: #174fae;
+$accent-light: #2868e6;
+
+/* `rgba($kleur, $alpha)` is in Dart Sass op weg naar buiten nu er meer
+   kleurruimten dan sRGB zijn; color.change() doet hetzelfde en blijft. */
+@function fade($color, $alpha) {
+    @return color.change($color, $alpha: $alpha);
+}

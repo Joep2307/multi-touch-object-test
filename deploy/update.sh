@@ -89,7 +89,9 @@ fi
 # doelmap eerst leeg: bouwde hij rechtstreeks in dist/, dan stond de tafel bij
 # de eerste de beste fout op zwart, met publiek eromheen.
 rm -rf dist.nieuw
-npm run build -- --outDir dist.nieuw
+# Vite's root is exe/, dus een outDir is relatief aan díe map: `../dist.nieuw`
+# is de map naast dist/ in de repo. Zie vite.config.ts.
+npm run build -- --outDir ../dist.nieuw
 
 # Zo kun je van buitenaf zien welke build er staat: curl http://<tafel>:8080/version.json
 printf '{"commit":"%s","gebouwd":"%s"}\n' \

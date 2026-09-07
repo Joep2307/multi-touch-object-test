@@ -1,0 +1,20 @@
+[package]
+name = "puck-geometry"
+version = "0.1.0"
+edition = "2021"
+description = "Waar ligt een puck en hoe is hij gedraaid — de driehoeksmeetkunde van de participatietafel, als WebAssembly."
+publish = false
+
+[lib]
+# cdylib is wat de browser laadt; rlib is er zodat `cargo test` op de laptop
+# dezelfde functies aanroept.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

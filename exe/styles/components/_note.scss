@@ -1,0 +1,87 @@
+@use "../abstracts" as *;
+
+/* Het notitievenster hangt aan een markering op de kaart. */
+.note {
+    position: fixed;
+    z-index: 20;
+    display: none;
+    width: 390px;
+    padding: 21px 22px 20px;
+    transform: rotate(var(--flip, 0deg));
+    transform-origin: var(--origin-x, 0) var(--origin-y, 50%);
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+
+    /* Gedraaid draait het venster om zijn eigen midden — anders zou het
+       bij het kantelen van zijn plek af schuiven. */
+    &.flipped {
+        transform-origin: 50% 50%;
+    }
+
+    &.opening {
+        animation: puck-note-out 0.32s cubic-bezier(0.2, 0.85, 0.25, 1.12) both;
+    }
+
+    /* De verbinding met de puck werd hier als ::before-stengel getekend,
+       maar `.note` heeft `overflow-y:auto` en dat klemt ook zijwaarts: die
+       stengel is dus nooit te zien geweest. Hij wordt nu op het canvas
+       getekend, met een punt op de rand van de puck — zie
+       drawNoteTether() in src/render/. Zodra een venster met de hand
+       verplaatst is wijst de stengel niet meer naar zijn markering; dan
+       hoort hij weg. */
+    &.moved::before {
+        display: none;
+    }
+
+    input,
+    textarea {
+        margin-bottom: 2px;
+    }
+
+    .field {
+        margin-top: 10px;
+    }
+}
+
+/* Kop met de draaiknop: één tik zet dit venster (en het toetsenbord) op de
+   kant van wie aan de overkant staat. Alleen zichtbaar als de tafel twee
+   kanten heeft — anders staat er niets om naartoe te draaien. */
+.note-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.note-flip {
+    display: none;
+    flex: none;
+    width: var(--tap-sm);
+    height: var(--tap-sm);
+    min-height: 0;
+    padding: 0;
+    font-size: var(--text);
+    line-height: 1;
+    margin-top: -5px;
+}
+
+body.two-sided .note-flip {
+    display: block;
+}
+
+body.keyboard-open .note {
+    z-index: 45;
+}
+
+@keyframes puck-note-out {
+    from {
+        opacity: 0;
+        transform: rotate(var(--flip, 0deg)) translateX(var(--enter-x, -28px))
+            scale(0.72);
+    }
+
+    to {
+        opacity: 1;
+        transform: rotate(var(--flip, 0deg)) translateX(0) scale(1);
+    }
+}

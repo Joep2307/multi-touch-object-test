@@ -1,0 +1,21 @@
+/* ── Breekpunten ────────────────────────────────────────────────────────
+   Eén grens, en een naam voor wat er aan de andere kant gebeurt: een
+   scherm dat te smal is voor de tafelmaten — een telefoon, of een venster
+   dat iemand klein heeft getrokken. Stond twee keer als los
+   `@media (max-width:700px)` in de opmaak, met de onderdelen van het
+   toetsenbord en die van de analyse elk in hun eigen blok. Nu schrijft elk
+   onderdeel zijn eigen smalle kant op, en staat de grens hier één keer. */
+$narrow: 700px !default;
+
+@mixin narrow {
+    @media (max-width: $narrow) {
+        @content;
+    }
+}
+
+/* Wie bewegende beelden liever niet ziet, krijgt ze niet. */
+@mixin reduced-motion {
+    @media (prefers-reduced-motion: reduce) {
+        @content;
+    }
+}

@@ -1,0 +1,161 @@
+@use "../abstracts" as *;
+
+/* Een paneel ligt op het glas, boven de kaart. Alles wat zweeft — het
+   menu, een notitie, de puckbalk, de zoomknoppen — is er een. */
+.panel {
+    position: fixed;
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    padding: 17px 19px;
+    z-index: 10;
+    /* Zonder schaduw loopt een licht paneel op een lichte kaart over in
+       zijn ondergrond en zweeft er niets. */
+    box-shadow:
+        0 12px 34px var(--shadow),
+        0 2px 6px var(--shadow);
+}
+
+/* ── Grootte van de bediening ───────────────────────────────────────────
+   Eén regelaar voor alle zwevende vensters. `zoom` schaalt maat én
+   plaatsing mee, zodat een venster dat groter wordt niet half van het
+   scherm loopt; de kaart eronder is geen paneel en blijft dus op ware
+   grootte. Het bouwtekening-vel bedekt het hele scherm, dus daar schaalt
+   alleen de kaart-in-het-midden, niet de overlay zelf. */
+.panel,
+#sheet .inner,
+.learn-card {
+    zoom: var(--ui-scale, 1);
+}
+
+/* Scrollen binnen een paneel. De body staat op touch-action:none omdat
+   elke veeg daar een kaartgebaar of een puck is; in een paneel moet een
+   verticale veeg juist gewoon scrollen. overscroll-behavior houdt die veeg
+   binnen het paneel zodra het einde bereikt is.
+
+   Geen `pan-y` maar `none`: het scrollen gebeurt in src/input/, met de
+   vinger die het begon. De browser scrollt namelijk niet meer zodra er nog
+   een contactpunt op het glas ligt, en aan deze tafel ligt er altijd een
+   puck. */
+.note,
+#menu,
+#sheet {
+    touch-action: none;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Een kwartslag verandert ook de tafelrand waar een bediening aan vastzit.
+   Alleen om het eigen midden draaien liet brede vensters buiten beeld
+   vallen. De vaste bediening krijgt daarom bij elk onderdeel zowel een
+   kwartslag als de bijbehorende nieuwe randpositie. Vensters die aan een
+   kaartpunt hangen blijven om hun eigen anker draaien. */
+body.controls-flipped {
+    > .note,
+    > .keyboard,
+    > #kgInfo,
+    .learn-card {
+        rotate: 90deg;
+    }
+}
+
+/* ── Panelen verslepen ──────────────────────────────────────────────────
+   Aan een tafel staat iedereen ergens anders: wat voor de een goed ligt,
+   ligt voor de ander over de kaart. Elk zwevend paneel heeft daarom een
+   greep aan zijn kop. Alleen daar begint het slepen — de rest van het
+   paneel blijft gewoon bedienbaar en een veeg over een lijst blijft een
+   veeg. Panelen zonder kop (de zoomknoppen, het kennisvenster, de
+   hoekknoppen) dragen dezelfde greep in een hoek. */
+.panel-grip {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 24px;
+    margin: -2px 4px -2px -4px;
+    border-radius: 7px;
+    color: fade($ink, 0.34);
+    cursor: grab;
+    touch-action: none;
+
+    &:hover {
+        background: fade($ink, 0.04);
+    }
+
+    /* Zonder kop hangt de greep in de hoek van het paneel zelf. */
+    &.loose {
+        position: absolute;
+        top: 5px;
+        right: 6px;
+        margin: 0;
+        z-index: 2;
+    }
+}
+
+/* Aan een tafel wordt met vingers gesleept: dan mag de greep groter. */
+.mode-touch .panel-grip {
+    width: 34px;
+    height: 38px;
+    border-radius: 10px;
+}
+
+/* De zoomknoppen staan in een kolom: daar past de greep als eerste rij. */
+#zoom .panel-grip {
+    width: 100%;
+    height: 14px;
+    margin: 0;
+}
+
+.panel {
+    &.dragging {
+        border-color: fade($accent, 0.5);
+
+        .panel-grip {
+            cursor: grabbing;
+            color: $ink-on;
+            background: fade($accent, 0.18);
+        }
+
+        .drag-head {
+            cursor: grabbing;
+        }
+    }
+
+    /* In de buurt van de beginplek laat het paneel al zien dat het daar
+       bij loslaten terug in valt. Buiten die zone blijft het precies staan
+       waar het is losgelaten. */
+    &.panel-draggable:not(.dragging) {
+        transition: translate 0.2s cubic-bezier(0.2, 0.85, 0.25, 1.12);
+    }
+
+    &.snap-home {
+        border-color: fade($good, 0.72);
+        box-shadow: 0 0 0 3px fade($good, 0.12);
+    }
+}
+
+/* De kop vangt de sleep op, dus daar mag een veeg geen scroll of
+   kaartgebaar meer worden. */
+.drag-head {
+    touch-action: none;
+    cursor: grab;
+}
+
+/* De lichte greep staat hier bewust apart en als laatste, niet naast zijn
+   donkere regel zoals overal elders. `:root[data-theme="light"] .panel-grip`
+   weegt even zwaar als `.panel.dragging .panel-grip`, dus beslist de
+   volgorde. Achteraan zetten houdt de greep tijdens het slepen donker, en
+   dat is de leesbare kant: op de lichtblauwe sleepvulling verdwijnt het
+   ijsblauw van het donkere thema. */
+:root[data-theme="light"] {
+    .panel-grip {
+        color: fade($ink-light, 0.34);
+
+        &:hover {
+            color: fade($ink-light, 0.7);
+            background: fade($ink-light, 0.07);
+        }
+    }
+}

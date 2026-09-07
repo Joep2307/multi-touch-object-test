@@ -1,0 +1,25 @@
+# Wat Prettier met rust laat.
+
+node_modules/
+dist/
+dist.nieuw/
+dist.oud/
+coverage/
+exe/public/fixtures/
+package-lock.json
+src/wasm/
+src/puck/geometry/*.wasm
+
+# Overgenomen uit sturnia-node: die repo bepaalt hoe dit eruitziet, niet wij.
+vendor/
+
+# De bestanden van vóór de 79/4-afspraak. Ze zijn met de hand uitgelijnd —
+# de panelen in de HTML, en de taaltabel met zijn twee kolommen Nederlands en
+# Engels naast elkaar — en een herformattering maakt daar gehusselde regels
+# van waarin `git blame` niets meer terugvindt. De rest van src/ en de
+# opmaak in exe/styles/ volgen de huisstijl wél.
+exe/index.html
+src/i18n/L.ts
+
+# Uitvoer van Claude-sessies, geen broncode.
+Claude outputs/

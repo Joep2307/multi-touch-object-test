@@ -1,0 +1,40 @@
+@use "../abstracts" as *;
+
+/* De drie bouwstenen waar elk paneel uit bestaat: een kop, een romp en
+   rijen knoppen. Ze staan hier omdat ze nergens bij horen — het menu, het
+   notitievenster en het meetvel gebruiken ze alle drie. */
+.head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+
+    h1,
+    h2 {
+        font-size: var(--text-sm);
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.01em;
+    }
+
+    .chev {
+        color: var(--ink-dim);
+        font-size: var(--text-2xs);
+    }
+}
+
+.body {
+    margin-top: 14px;
+}
+
+/* Een rij bepaalt de tussenruimte en de marge voor alles wat erin staat.
+   Onderdelen die hun eigen rij-variant hebben (.dock-add, .learn-foot,
+   .analytics-launch) zetten die waarden verderop terug; ze staan later in
+   de opmaak en winnen dus. */
+.row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 9px;
+    flex-wrap: wrap;
+}

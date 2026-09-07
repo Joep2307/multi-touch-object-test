@@ -1,9 +1,35 @@
+# ── Wat er gebouwd of opgehaald wordt ────────────────────────────────
 node_modules/
 dist/
 dist.nieuw/
 dist.oud/
-.puck-update-staat
-.DS_Store
 .vite/
+coverage/
+
+# De Rust-crate voor de puckmeetkunde. De gebouwde .wasm gaat wél mee in
+# git (de NUC heeft geen cargo, zie TODO.md); wat cargo eromheen bouwt niet.
+src/wasm/**/target/
+
+# ── Stand van de tafel zelf ──────────────────────────────────────────
+.puck-update-staat
+
+# ── Python (de uitschrijfdienst) ─────────────────────────────────────
 __pycache__/
 *.pyc
+.venv/
+venv/
+
+# ── Testuitvoer ──────────────────────────────────────────────────────
+test-results/
+playwright-report/
+.playwright/
+
+# ── Plaatselijk, hoort bij één machine ───────────────────────────────
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
+
+# Werkmap van Claude-sessies: schermafdrukken en aantekeningen, geen bron.
+Claude outputs/

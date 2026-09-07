@@ -1,0 +1,146 @@
+@use "../abstracts" as *;
+
+/* Het toetsenbord op het glas: aan de tafel is er geen ander. */
+.keyboard {
+    left: 50%;
+    bottom: 14px;
+    z-index: 40;
+    display: none;
+    width: min(1030px, calc(100vw - 28px));
+    transform: translateX(-50%);
+    padding: 12px;
+    background: fade(#0a0e14, 0.98);
+    box-shadow: 0 -14px 50px fade(#000000, 0.42);
+
+    @include light {
+        background: fade(#f8fafc, 0.98);
+        box-shadow: 0 -14px 50px var(--shadow);
+    }
+
+    &.visible {
+        display: block;
+        animation: keyboard-up 0.2s ease-out both;
+    }
+
+    /* Toetsenbord voor iemand aan de overkant: bovenaan en op zijn kop. */
+    &.flipped {
+        top: 14px;
+        bottom: auto;
+        transform: translateX(-50%) rotate(180deg);
+
+        &.visible {
+            animation: keyboard-down 0.2s ease-out both;
+        }
+    }
+
+    button {
+        flex: 1 1 0;
+        min-width: 52px;
+        height: 62px;
+        min-height: 0;
+        padding: 0 8px;
+        font-size: var(--text);
+        font-weight: 600;
+        background: #1a2230;
+        border-color: #2b3748;
+        touch-action: manipulation;
+
+        @include light {
+            background: #e8eef5;
+            border-color: #c4cfdd;
+        }
+
+        &:active {
+            background: #31415a;
+            transform: translateY(1px);
+
+            @include light {
+                background: #d7e1ec;
+            }
+        }
+    }
+
+    .key-wide {
+        flex: 1.55;
+    }
+
+    .key-space {
+        flex: 4;
+    }
+
+    .key-active {
+        background: fade($accent, 0.28);
+        border-color: var(--accent);
+    }
+}
+
+.keyboard-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 3px;
+
+    .eyebrow {
+        margin: 0;
+    }
+}
+
+.keyboard-field {
+    font-size: var(--text-3xs);
+    color: var(--ink-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+}
+
+.keyboard-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+@keyframes keyboard-up {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 22px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+@keyframes keyboard-down {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -22px) rotate(180deg);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0) rotate(180deg);
+    }
+}
+
+@include narrow {
+    .keyboard {
+        width: calc(100vw - 12px);
+        bottom: 6px;
+        padding: 7px;
+
+        button {
+            min-width: 0;
+            height: 45px;
+            padding: 0 3px;
+            font-size: var(--text-sm);
+        }
+    }
+
+    .keyboard-row {
+        gap: 3px;
+        margin-top: 4px;
+    }
+}

@@ -79,17 +79,17 @@ Kijk eerst in `journalctl -u puck-update -n 30`. Drie dingen die eerder misginge
   anoniem: `git config --local credential.https://github.com.helper ""` in de
   kloon op de NUC zet die hulp voor deze map uit.
 - **Twee bijwerkers tegelijk.** Alleen `puck-update.timer` hoort te draaien.
-  Er is een tijd lang ook een `puck-autopull.timer` als *user*-unit beschreven;
+  Er is een tijd lang ook een `puck-autopull.timer` als _user_-unit beschreven;
   die is uit de repo, maar op een machine waar hij ooit is aangezet blijft hij
   staan. Controleren en uitzetten:
 
-  ```sh
-  systemctl list-timers --all | grep -i puck    # systeemunits
-  systemctl --user list-timers | grep -i puck   # user-units
-  systemctl --user disable --now puck-autopull.timer
-  rm -f ~/.config/systemd/user/puck-autopull.{service,timer} ~/.local/bin/puck-autopull.sh
-  systemctl --user daemon-reload
-  ```
+    ```sh
+    systemctl list-timers --all | grep -i puck    # systeemunits
+    systemctl --user list-timers | grep -i puck   # user-units
+    systemctl --user disable --now puck-autopull.timer
+    rm -f ~/.config/systemd/user/puck-autopull.{service,timer} ~/.local/bin/puck-autopull.sh
+    systemctl --user daemon-reload
+    ```
 
 - **De build werd afgekapt.** `puck-update.service` heeft `TimeoutStartSec=900`;
   zonder die regel schiet systemd na 90 seconden af op een `npm ci` die nog
