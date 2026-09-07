@@ -60,6 +60,19 @@ ok("de audio komt heel aan", nep.aanroepen[0][0]==len(audio) or (print(nep.aanro
 ok("de taal komt mee", nep.aanroepen[0][1]=="nl")
 ok("de extensie blijft webm", nep.aanroepen[0][2]=="webm")
 
+# 2b. "auto": de tafel laat de taal aan de dienst, en die geeft er geen door aan
+# whisper -- leeg betekent daar `language=None`, oftewel: zoek hem zelf.
+body_auto = b""
+body_auto += f"--{grens}\r\nContent-Disposition: form-data; name=\"audio\"; filename=\"deel.webm\"\r\nContent-Type: audio/webm\r\n\r\n".encode()
+body_auto += audio + b"\r\n"
+body_auto += f"--{grens}\r\nContent-Disposition: form-data; name=\"lang\"\r\n\r\nauto\r\n".encode()
+body_auto += f"--{grens}--\r\n".encode()
+req = urllib.request.Request(BASE+"/api/transcribe", data=body_auto,
+      headers={"Content-Type": f"multipart/form-data; boundary={grens}"})
+r = urllib.request.urlopen(req)
+ok("auto geeft gewoon 200", r.status==200)
+ok("auto stuurt geen taal door", nep.aanroepen[-1][1]=="" or (print(nep.aanroepen[-1]),False))
+
 # 3. leeg verzoek
 req = urllib.request.Request(BASE+"/api/transcribe", data=b"", headers={"Content-Type":"multipart/form-data; boundary=x"})
 try:

@@ -15,7 +15,8 @@ import type { Template } from "../types/Template";
 export const templates = {
     list: TPL_FACTORY.map((t): Template => ({
         ...t,
-        ratios: [t.ratios[0], t.ratios[1]],
+        ...(t.ratios ? { ratios: [t.ratios[0], t.ratios[1]] } : {}),
+        ...(t.angles ? { angles: [...t.angles] } : {}),
     })),
     own: [] as Template[],
     ownSeq: 0,

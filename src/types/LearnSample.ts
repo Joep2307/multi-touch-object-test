@@ -1,8 +1,6 @@
+import type { DuoSample } from "./DuoSample";
+import type { RingSample } from "./RingSample";
+import type { TriSample } from "./TriSample";
+
 /* One measurement from the series whose median becomes the puck. */
-export interface LearnSample {
-    r0: number;
-    r1: number;
-    longest: number;
-    cx: number;
-    cy: number;
-}
+export type LearnSample = TriSample | RingSample | DuoSample;

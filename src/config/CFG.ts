@@ -6,6 +6,28 @@ import { QS } from "./QS";
 export const CFG = {
     longestSideMM: 60,
     puckRadiusMM: 45,
+    /* The new puck is not a triangle but a ring: five feet on one circle.
+     `ringRadiusMM` is the radius of that circle -- outer diameter 80 mm and
+     a viewing hole of 56 mm, so the middle of the rim sits at 34 mm.
+     `ringToleranceDeg` is how much each gap between two feet may deviate on
+     average; with five points the table measures the angle from five
+     measurements at once, so this can be strict.
+
+     Two numbers make the difference between "the table hesitates" and "the
+     table picks the wrong puck". The four templates lie 14.4 degrees apart
+     (mean gap difference). A single limit of 9 degrees left 5 degrees of
+     play in that; at a real table a foot easily trembles 2 mm and then that
+     is too strict, because the puck keeps dropping out. The limit now sits
+     at 12, and on top of that the best puck must fit `ringMarginDeg` better
+     than the runner-up: if that difference is smaller, the measurement is
+     ambiguous and the table would rather say nothing than name the wrong
+     puck. `ringHoldDeg` belongs to holding on with four feet, which is
+     allowed to be more generous: only one template joins in there, so it
+     cannot pick the wrong one. */
+    ringRadiusMM: 34,
+    ringToleranceDeg: 12,
+    ringMarginDeg: 3,
+    ringHoldDeg: 14,
     /* A rotating physical puck sometimes briefly loses contact on one foot.
      Two good frames are enough to lock onto it; after that we hold the last
      known position and angle for 0.9 s instead of dropping it after 0.18 s. */

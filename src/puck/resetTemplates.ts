@@ -1,15 +1,22 @@
 import { TPL_FACTORY } from "../config/TPL_FACTORY";
 import { templates } from "../state/templates";
+import { cloneTpl } from "./cloneTpl";
 import { TPL_KEY } from "./saveTemplates";
 
-/* Back to the blueprint. */
+/* Back to the blueprint. First all shape fields go: a puck that was learned
+   as a triangle has to become the ring of the drawing again, not both at
+   once. */
 export function resetTemplates(): void {
     for (const t of templates.list) {
         const f = TPL_FACTORY.find((x) => x.id === t.id);
         if (!f) continue;
-        t.ratios = [f.ratios[0], f.ratios[1]];
+        delete t.ratios;
         delete t.longestMM;
+        delete t.angles;
+        delete t.ringMM;
         delete t.learnedAt;
+        delete t.duoSeen;
+        Object.assign(t, cloneTpl(f));
     }
     try {
         localStorage.removeItem(TPL_KEY);

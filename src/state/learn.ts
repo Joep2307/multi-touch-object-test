@@ -1,3 +1,4 @@
+import type { LearnMeasure } from "../types/LearnMeasure";
 import type { LearnPhase } from "../types/LearnPhase";
 import type { LearnSample } from "../types/LearnSample";
 
@@ -11,9 +12,15 @@ export const learn = {
     phase: "wait" as LearnPhase,
     samples: [] as LearnSample[],
     t0: 0,
-    m: null as { r0: number; r1: number; longest: number } | null,
+    m: null as LearnMeasure | null,
     tplId: null as string | null,
     clash: null as string | null,
     note: "",
     moved: false,
+    /* The duo is saved in one go: two triangles from the same measurement,
+     with the same date. */
+    duoSaved: false,
+    /* How many already-learned pucks lie on the glass right now -- only so
+     the window can say so. */
+    known: 0,
 };

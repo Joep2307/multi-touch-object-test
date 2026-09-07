@@ -11,7 +11,7 @@ Twee routes, precies wat speech.js verwacht (zie deploy/TRANSCRIPTIE.md):
     GET  /api/transcribe   ->  200 {"ok":true,"model":"small","klaar":true}
     POST /api/transcribe   ->  200 {"text":"..."}
          multipart/form-data met  audio = een compleet audiobestandje (~8 s)
-                                  lang  = "nl" of "en"
+                                  lang  = "nl", "en" of "auto"
 
 Alles wat geen 200 is op de GET betekent voor de tafel "geen dienst" — dan valt
 hij terug op de spraakherkenning van de browser of op alleen opnemen. De GET
@@ -28,7 +28,8 @@ Instellingen komen uit de omgeving, want systemd geeft ze zo door:
     PUCK_STT_MODEL    small       tiny · base · small · medium · large-v3
     PUCK_STT_DEVICE   cpu         cuda als de machine een GPU heeft
     PUCK_STT_COMPUTE  int8        int8_float16 / float16 op een GPU
-    PUCK_STT_LANG     nl          taal als de tafel er geen meestuurt
+    PUCK_STT_LANG     nl          taal als de tafel er geen meestuurt ("auto"
+                                  laat whisper hem per blokje zelf bepalen)
     PUCK_STT_BIND     127.0.0.1   0.0.0.0 om hem van buiten de NUC te bereiken
     PUCK_STT_MODEL_DIR            eigen map met modellen (offline machine)
 """
@@ -119,12 +120,15 @@ class Uitschrijver:
             log(f"model klaar in {time.time() - begin:.1f}s")
             return self._model
 
-    def tekst(self, pad: str, taal: str) -> str:
+    def tekst(self, pad: str, taal: str = "") -> str:
         model = self.laad()
         with self._slot:
-            segmenten, _info = model.transcribe(
+            # Lege taal = laten bepalen. Whisper doet dat per blokje opnieuw,
+            # dus acht seconden "eh, ja" kan zomaar Duits worden; met een vaste
+            # taal kan dat niet. Alleen aanzetten waar het echt gemengd is.
+            segmenten, info = model.transcribe(
                 pad,
-                language=taal,
+                language=taal or None,
                 beam_size=1,                    # snelheid boven de laatste procenten
                 vad_filter=True,                # stilte eruit voor het model kijkt
                 vad_parameters={"min_silence_duration_ms": 400},
@@ -132,6 +136,8 @@ class Uitschrijver:
                 # laat het model bij twijfel de vorige zin herhalen.
                 condition_on_previous_text=False,
             )
+            if not taal:
+                log(f"taal herkend: {info.language} ({info.language_probability:.2f})")
             zinnen = []
             for s in segmenten:
                 # Twee maten voor "dit was geen spraak": het model zegt zelf hoe
@@ -248,6 +254,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "geen audio in het verzoek"}, 400)
             return
         taal = (velden.get("lang") or TAAL)[:5] or TAAL
+        if taal == "auto":
+            taal = ""                          # geen taal = whisper zoekt hem zelf
         suffix = achtervoegsel(naam, self.headers.get("Content-Type", ""))
         begin = time.time()
         pad = None
@@ -257,7 +265,7 @@ class Handler(BaseHTTPRequestHandler):
                 pad = f.name
             tekst = self.uitschrijver.tekst(pad, taal)
             duur = time.time() - begin
-            log(f"{len(audio)//1024} kB {suffix} · {duur:.1f}s · {taal} · {tekst[:60]!r}")
+            log(f"{len(audio)//1024} kB {suffix} · {duur:.1f}s · {taal or 'auto'} · {tekst[:60]!r}")
             self._json({"text": tekst, "seconden": round(duur, 2)})
         except Exception as e:
             # Een blokje dat misgaat mag het gesprek niet stilleggen: de tafel

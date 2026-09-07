@@ -1,22 +1,34 @@
 import type { Point } from "../../types/Point";
 import type { Shape } from "../../types/Shape";
-import { LAYOUT } from "./layout";
-import { puckGeometry } from "./puckGeometry";
+import { dist } from "./dist";
 
-/* Describe the triangle formed by three contact points: side ratios, longest
-   side, the nose, and the centroid. Null if it's too small — or as long as
-   the wasm hasn't loaded yet. */
+/* Describe the triangle formed by three contact points: side ratios, the
+   longest side, the nose, and the centroid. Null if it is too small. */
 export function describe(p1: Point, p2: Point, p3: Point): Shape | null {
-    const g = puckGeometry.exports;
-    if (!g) return null;
-    if (!g.describe_triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)) return null;
-    const o = puckGeometry.f64(g.out_ptr(), LAYOUT.DESCRIBE_LEN);
+    const e = [
+        { d: dist(p1, p2), a: p1, b: p2, o: p3 },
+        { d: dist(p2, p3), a: p2, b: p3, o: p1 },
+        { d: dist(p3, p1), a: p3, b: p1, o: p2 },
+    ].sort((x, y) => x.d - y.d);
+    const long = e[2];
+    if (long.d < 1) return null;
+    const anchor = long.o;
+    let P = long.a,
+        Q = long.b;
+    if (dist(Q, anchor) < dist(P, anchor)) {
+        const t = P;
+        P = Q;
+        Q = t;
+    }
+    const cross =
+        (Q.x - P.x) * (anchor.y - P.y) - (Q.y - P.y) * (anchor.x - P.x);
     return {
-        ratios: [o[0], o[1]],
-        longest: o[2],
-        anchor: { x: o[3], y: o[4] },
-        chir: o[5] >= 0 ? 1 : -1,
-        cx: o[6],
-        cy: o[7],
+        ring: false,
+        ratios: [e[0].d / long.d, e[1].d / long.d],
+        longest: long.d,
+        anchor,
+        chir: cross >= 0 ? 1 : -1,
+        cx: (p1.x + p2.x + p3.x) / 3,
+        cy: (p1.y + p2.y + p3.y) / 3,
     };
 }

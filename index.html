@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Puck Table — participatie kaart</title>
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="./app.ts"></script>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<!-- Een korte gebruiksaanwijzing op het vrije stuk rechtsonder. De bewegingen
+     worden met CSS voorgedaan; er loopt dus geen extra tekenlus of video die
+     de kaart op de NUC zwaarder maakt. -->
+<aside id="puckHelp" aria-labelledby="puckHelpTitle">
+  <p id="puckHelpTitle" class="puck-help-title" data-i18n="helpTitle">Zo werkt de puck</p>
+  <div class="puck-help-steps">
+    <div class="puck-help-step">
+      <span class="puck-help-demo help-turn" aria-hidden="true">
+        <span class="help-puck"><i></i></span><span class="help-turn-arrow"></span>
+      </span>
+      <span data-i18n="helpTurn">Draai · zoom</span>
+    </div>
+    <div class="puck-help-step">
+      <span class="puck-help-demo help-move" aria-hidden="true">
+        <span class="help-map-lines"></span><span class="help-puck"><i></i></span>
+      </span>
+      <span data-i18n="helpMove">Schuif · reis</span>
+    </div>
+    <div class="puck-help-step">
+      <span class="puck-help-demo help-tap" aria-hidden="true">
+        <span class="help-puck"><i></i></span><span class="help-touch"></span>
+      </span>
+      <span data-i18n="helpTap">Tik midden · kies</span>
+    </div>
+  </div>
+</aside>
+
+<!-- Twee paar menuknoppen, diagonaal tegenover elkaar. Aan een tafel waar
+     mensen omheen staan is elk paneel dat blijft staan in de weg: het ligt
+     over de kaart en het staat voor de helft van het gezelschap op zijn kop.
+     Alles wat niet op elk moment nodig is zit daarom achter deze knoppen, en
+     ze staan er twee keer zodat beide lange zijden ze binnen handbereik
+     hebben. Per hoek zijn het er twee, want de twee dingen die je tijdens een
+     sessie werkelijk pakt — het kaartbeeld en de instellingen — horen niet
+     achter dezelfde tik en dezelfde scroll te zitten. Links de kaart, rechts
+     de instellingen; aan kant B gespiegeld, zodat de volgorde voor wie daar
+     staat hetzelfde leest. -->
+<button class="panel menu-btn" id="btnMapA" type="button" data-side="a" data-view="map"
+        aria-label="Kaart" data-i18n-aria="mapHead" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/>
+  </svg>
+</button>
+<button class="panel menu-btn" id="btnSetA" type="button" data-side="a" data-view="settings"
+        aria-label="Instellingen" data-i18n-aria="settings" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+</button>
+
+<button class="panel menu-btn" id="btnMapB" type="button" data-side="b" data-view="map"
+        aria-label="Kaart" data-i18n-aria="mapHead" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/>
+  </svg>
+</button>
+<button class="panel menu-btn" id="btnSetB" type="button" data-side="b" data-view="settings"
+        aria-label="Instellingen" data-i18n-aria="settings" aria-expanded="false" aria-controls="menu">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+</button>
+
+<!-- ── Vastleggen ───────────────────────────────────────────
+     De opbrengst van een sessie is niet alleen wat er getypt is, maar ook hoe
+     het beeld zich vulde. Dat vastleggen is een handeling van tijdens de
+     sessie — je drukt erop terwijl het gesprek loopt — en hoort dus op de
+     kaart en niet in de analyse achteraf. Drie manieren zitten achter één
+     knop: er is er telkens maar één nodig, en drie losse knoppen zouden
+     permanent over de kaart liggen. Zelfde plek als de menuknoppen, derde in
+     de rij, aan beide lange zijden. -->
+<button class="panel menu-btn" id="btnCapA" type="button" data-side="a"
+        aria-label="Vastleggen" data-i18n-aria="capture" aria-expanded="false" aria-controls="capBar">
+  <svg class="cap-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M3 8.5h3.6L8.6 5.5h6.8l2 3H21v10.5H3z"/><circle cx="12" cy="13.6" r="3.5"/>
+  </svg>
+  <!-- Tijdens een opname of tijdlapse neemt dit de plaats van het cameraatje
+       in: een rood rondje met de looptijd eronder. Zo is aan de kaart zelf te
+       zien dat er iets loopt, zonder het paneel open te hoeven doen. -->
+  <span class="cap-live" aria-hidden="true"><i></i><b class="cap-time">0:00</b></span>
+</button>
+<button class="panel menu-btn" id="btnCapB" type="button" data-side="b"
+        aria-label="Vastleggen" data-i18n-aria="capture" aria-expanded="false" aria-controls="capBar">
+  <svg class="cap-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M3 8.5h3.6L8.6 5.5h6.8l2 3H21v10.5H3z"/><circle cx="12" cy="13.6" r="3.5"/>
+  </svg>
+  <!-- Tijdens een opname of tijdlapse neemt dit de plaats van het cameraatje
+       in: een rood rondje met de looptijd eronder. Zo is aan de kaart zelf te
+       zien dat er iets loopt, zonder het paneel open te hoeven doen. -->
+  <span class="cap-live" aria-hidden="true"><i></i><b class="cap-time">0:00</b></span>
+</button>
+
+<div class="panel" id="capBar" role="dialog" aria-label="Vastleggen" data-i18n-aria="capture">
+  <p class="eyebrow" data-i18n="captureHead">VASTLEGGEN</p>
+  <div class="row"><button id="btnShot" data-i18n="capShot">Foto van de kaart</button></div>
+  <!-- De tekst van deze twee wisselt met de stand (starten ↔ stoppen, met
+       teller); paintCapBar() in app.ts zet hem, dus geen data-i18n. -->
+  <div class="row"><button id="btnRec">Opname starten</button></div>
+  <div class="row"><button id="btnLapse">Tijdlapse starten</button></div>
+  <p class="hint" id="capHint" data-i18n="capHint">Legt het kaartbeeld vast — de vensters die erboven liggen niet.</p>
+</div>
+
+<div class="panel" id="menu" role="dialog" aria-label="Menu" data-i18n-aria="menu">
+  <div class="menu-head">
+    <h1 id="menuTitle">Participatietafel</h1>
+    <!-- Taal. De tafel staat op plekken waar niet iedereen Nederlands leest;
+         de knop staat boven in het menu zodat hij bij het openen meteen in
+         beeld is, maar niet permanent over de kaart ligt. -->
+    <div class="lang-switch" id="langSwitch" role="group" aria-label="Taal / Language" data-i18n-aria="language">
+      <button id="langNl" type="button" lang="nl" aria-pressed="true">NL</button>
+      <button id="langEn" type="button" lang="en" aria-pressed="false">EN</button>
+    </div>
+    <button id="menuClose" type="button" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+  </div>
+
+  <!-- ── Kaart ─────────────────────────────────────────────────────────
+       Wat je tijdens een sessie aan de kaart doet: welk beeld eronder ligt,
+       hem vastzetten of verschuiven, ergens heen springen, offline bewaren. -->
+  <div class="menu-sec collapsed" id="layersMenu" data-view="map">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="layersBody">
+      <span data-i18n="layersHead">Lagen</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="layersBody" role="region"></div>
+  </div>
+
+  <div class="menu-sec collapsed" id="mapSec" data-view="map">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="mapBody">
+      <span data-i18n="mapHead">Kaart</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="mapBody" role="region">
+    <p class="eyebrow menu-subhead" data-i18n="mapControlHead">Bediening</p>
+    <div class="row"><button id="btnMove" data-i18n="move">Kaart vastzetten</button></div>
+    <div class="row"><button id="btnCalm" data-i18n="calm">Kaart dempen</button></div>
+    <p class="hint" id="calmHint" data-i18n="calmHint" style="margin:0 0 9px">Gedempt is de kaart de ondergrond en zijn de markeringen het enige felle op tafel.</p>
+    <div class="row"><button id="btnMoveDots" data-i18n="moveDots">Dots verplaatsen</button></div>
+    <p class="hint" id="dotsHint" data-i18n="dotsHint" style="margin:0 0 9px">Zet aan en sleep dan een dot.</p>
+    <p class="eyebrow menu-subhead" data-i18n="kgHead">Kennisgraaf</p>
+    <div class="row"><button id="btnKg" data-i18n="kgShow">Graaf tonen</button></div>
+    <p class="hint" id="kgStatus">uit</p>
+
+    <p class="eyebrow menu-subhead" data-i18n="placesHead">Ga naar</p>
+    <label class="field" for="search" data-i18n="searchPlace">Zoek een plek</label>
+    <input id="search" placeholder="Breda, Ginneken…" data-i18n-ph="searchPh" autocomplete="off">
+    <p class="hint" id="searchHint" role="status" aria-live="polite"></p>
+    <div class="row" style="margin-top:9px">
+      <button data-go="51.5886,4.7756,15">Centrum</button>
+      <button data-go="51.5975,4.7715,15">Belcrum</button>
+    </div>
+    <div class="row">
+      <button data-go="51.5726,4.7864,15">Ginneken</button>
+      <button data-go="51.6098,4.7813,14">Hoge Vucht</button>
+    </div>
+    <div class="row">
+      <button data-go="51.5866,4.7759,13" data-i18n="allBreda">Heel Breda</button>
+    </div>
+    <p class="eyebrow menu-subhead" data-i18n="offlineHead">Offline kaart</p>
+    <div class="row" style="margin-top:9px">
+      <button id="btnBake" data-i18n="bake">Kaart offline bewaren</button>
+    </div>
+    <div class="row"><button id="btnUnbake" data-i18n="unbake">Bewaarde kaart wissen</button></div>
+    <p class="hint" id="bakeHint" data-i18n="bakeHint">Druk hierop mét internet; daarna werkt dit kaartbeeld ook offline.</p>
+
+    <!-- Bron van waarheid voor de kaartbeelden: de knoppenlijst hierboven
+         wordt hieruit opgebouwd. Zelf staat hij uit het zicht, anders zou
+         dezelfde keuze twee keer in hetzelfde venster staan. -->
+    <label class="field src-only" for="tiles" data-i18n="basemap">Kaartbeeld</label>
+    <select id="tiles" class="src-only">
+      <optgroup label="Algemeen" data-i18n-label="grpGeneral">
+        <option value="osm" selected data-i18n="tileOsm">OpenStreetMap</option>
+        <option value="brt" data-i18n="tileBrt">Topografie — PDOK</option>
+        <option value="brtgrijs" data-i18n="tileGrijs">Grijs — PDOK</option>
+        <option value="brtpastel" data-i18n="tilePastel">Pastel — PDOK</option>
+      </optgroup>
+      <optgroup label="Thema" data-i18n-label="grpTheme">
+        <option value="groen" data-i18n="tileGroen">Groen &amp; hoogte</option>
+        <option value="bebouwing" data-i18n="tileBebouwing">Bebouwing</option>
+        <option value="verkeer" data-i18n="tileVerkeer">Verkeer &amp; fiets</option>
+        <option value="water" data-i18n="tileWater">Water — PDOK</option>
+        <option value="lucht" data-i18n="tileLucht">Luchtfoto — PDOK</option>
+      </optgroup>
+      <optgroup label="Overig" data-i18n-label="grpOther">
+        <option value="dark" data-i18n="tileDark">Donker (CARTO — API-sleutel nodig)</option>
+        <option value="light" data-i18n="tileLight">Licht (CARTO — API-sleutel nodig)</option>
+        <option value="none" data-i18n="tileNone">Geen — alleen raster</option>
+      </optgroup>
+    </select>
+    </div>
+  </div>
+
+  <!-- ── Instellingen ──────────────────────────────────────
+       Alleen wat je aan de tafel zelf goedzet: hoe de bediening staat en hoe
+       groot ze is. De teller en de laatste markeringen stonden hier ook, maar
+       daar stel je niets mee in — dat is de opbrengst en die staat nu in de
+       sessie-analyse. Wat je één keer per opstelling ijkt (schermdiagonaal,
+       tolerantie, het adres van de graaf) staat in CFG in app.js; het
+       gereedschap om dat te ijken verschijnt alleen als de URL ?dev bevat. -->
+  <div class="menu-sec collapsed" id="controls" data-view="settings">
+    <button class="accordion-head" id="ctrlHead" type="button" aria-expanded="false" aria-controls="controlsBody">
+      <span data-i18n="settings">Instellingen</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="controlsBody" role="region">
+      <div class="mode-switch" aria-label="Bediening kiezen" data-i18n-aria="chooseControl">
+        <button id="modeTouch" type="button" data-i18n="touchscreen">Touchscreen</button>
+        <button id="modeLaptop" type="button">Laptop</button>
+        <button id="modePuck" type="button" data-i18n="modePuck">Puck</button>
+      </div>
+      <!-- Alleen in de puckstand te lezen: dat is de stand waarin er iets
+           verdwijnt (de balk) en er dus iets uit te leggen valt. -->
+      <p class="hint puck-mode-hint" data-i18n="modePuckHint" style="margin:7px 0 0">De balk onderaan is weg. De tafel herkent alleen pucks die je zelf hebt ingelezen.</p>
+      <p class="eyebrow menu-subhead" data-i18n="appearanceHead">Weergave</p>
+      <div class="mode-switch theme-switch" aria-label="Kleurmodus kiezen" data-i18n-aria="chooseTheme">
+        <button id="themeLight" type="button" data-i18n="lightMode">
+          <span class="theme-icon" aria-hidden="true">☀</span> Licht
+        </button>
+        <button id="themeDark" type="button" data-i18n="darkMode">
+          <span class="theme-icon" aria-hidden="true">☾</span> Donker
+        </button>
+      </div>
+      <!-- Aan een tafel zonder toetsenbord is F11 geen knop. Volledig scherm
+           haalt de browserbalk weg; de gebaren van het bureaublad zelf gaan
+           daar niet mee weg — zie deploy/KIOSK.md. -->
+      <div class="row" style="margin:9px 0 0"><button id="btnFullscreen" data-i18n="fullscreen">Volledig scherm</button></div>
+      <div class="row scale-row" id="scaleRow" aria-label="Grootte van de bediening" data-i18n-aria="controlSize">
+        <button id="btnScaleDown" type="button" aria-label="Bediening kleiner" data-i18n-aria="smaller">&minus;</button>
+        <span class="scale-val mono" id="scaleVal" aria-live="polite">100%</span>
+        <button id="btnScaleUp" type="button" aria-label="Bediening groter" data-i18n-aria="larger">+</button>
+      </div>
+      <p class="hint" id="scaleHint" data-i18n="scaleHint" style="margin:7px 0 0">Vensters en knoppen; de kaart blijft op ware grootte.</p>
+      <div class="row orientation-row" style="margin:9px 0 0">
+        <button id="btnOrientation" type="button" aria-describedby="orientationHint" aria-pressed="false">
+          <span class="orientation-icon" aria-hidden="true">↻</span>
+          <span id="orientationLabel">Draai bediening 90 graden</span>
+        </button>
+      </div>
+      <p class="hint" id="orientationHint" data-i18n="orientationHint" aria-live="polite" style="margin:7px 0 0">Draait alleen de bediening, vensters en tekst; de kaart blijft staan.</p>
+      <div class="row" id="sidesRow" style="margin:9px 0 0"><button id="btnSides" type="button" data-i18n="twoSides">Twee zijden</button></div>
+      <p class="hint" id="sidesHint" data-i18n="sidesHint" style="margin:7px 0 0">Pucks-balk aan beide kanten; vensters draaien naar wie ze opent.</p>
+
+      <!-- Een knop naast de tafel die de sessie opnieuw begint. Zo'n USB-knop
+           doet zich voor als een toetsenbord en stuurt één toets; welke dat is
+           verschilt per knop, dus de tafel leest hem zelf uit. -->
+      <p class="eyebrow menu-subhead" data-i18n="resetHead">Resetknop</p>
+      <div class="row"><button id="btnResetKey" data-i18n="resetKey">Resetknop instellen</button></div>
+      <p class="hint" id="resetKeyHint" aria-live="polite" style="margin:7px 0 0"></p>
+
+      <!-- Alleen de themakeuze staat hier: die bepaalt wat er op de pucks
+           komt te staan. Of de graaf zichtbaar is, is een kaartlaag en staat
+           bij de kaart. -->
+      <p class="eyebrow menu-subhead" data-i18n="kgHead">Kennisgraaf</p>
+      <div class="row"><button id="btnKgThemes" data-i18n="kgThemes">Thema's uit graaf</button></div>
+      <p class="hint" data-i18n="kgThemesHint">De onderwerpen op de pucks komen dan uit de graaf in plaats van uit de vaste lijst.</p>
+
+      <!-- Herkennen staat bewust niet achter ?dev. Dit doe je aan de tafel
+           zelf, met de tape nog in je hand; dan is de URL aanpassen precies
+           de handeling die je niet wilt moeten doen. -->
+      <p class="eyebrow menu-subhead" data-i18n="physicalPucks">Fysieke pucks</p>
+      <div class="row">
+        <button id="btnRecognise" class="primary" data-i18n="recog">Puck herkennen</button>
+        <button id="btnDebug" data-i18n="touchDebug">Puck-diagnose</button>
+      </div>
+      <p class="hint" data-i18n-html="recogHint">Leg de puck op het scherm met de pijl naar boven en druk op <b>Puck herkennen</b>. Een gedrukte puck heeft vijf pootjes; drie stukjes tape in een driehoek werken ook nog.</p>
+
+      <!-- Gereedschap voor wie de tafel bouwt of ijkt. Aan een tafel met
+           publiek eromheen zijn dit alleen maar knoppen die iets kapot kunnen
+           maken: één veeg over de tolerantieschuif en de herkenning is van
+           slag. Ze staan er daarom alleen bij met ?dev in de URL. -->
+      <div class="dev-only">
+        <p class="eyebrow menu-subhead" data-i18n="simulationHead">Simulatie</p>
+        <p class="hint" data-i18n="devNote" style="margin:0 0 9px">Zichtbaar omdat de URL ?dev bevat.</p>
+        <div class="row">
+          <button id="btnSim" class="on" data-i18n="simPuck">Puck simuleren</button>
+        </div>
+        <label class="field" for="tol"><span data-i18n="tolLabel">Ratio-tolerantie</span> <span id="tolVal" class="mono">0.060</span></label>
+        <input type="range" id="tol" min="0.01" max="0.15" step="0.005" value="0.06">
+        <label class="field" for="diag" data-i18n="diagLabel">Schermdiagonaal (inch)</label>
+        <input type="number" id="diag" value="43" min="10" max="120" step="0.5">
+
+        <p class="eyebrow menu-subhead" data-i18n="buildTools">Bouwgereedschap</p>
+        <div class="row">
+          <button id="btnSheet" data-i18n="sheetBtn">Bouwtekening</button>
+          <button id="btnExport" data-i18n="exportCfg">Config exporteren</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sessie ────────────────────────────────────────────
+       De naam bepaalt waaronder er bewaard wordt, dus die hoort vóór het
+       gesprek te staan. Nalezen, meenemen en wissen zitten één tik verder in
+       het analysevenster: dat zijn dingen van erna, en ze horen bij het
+       overzicht waarop je ze baseert. -->
+  <div class="menu-sec collapsed" id="sessionSec" data-view="settings">
+    <button class="accordion-head" type="button" aria-expanded="false" aria-controls="sessionBody">
+      <span data-i18n="sessionHead">Sessie</span><span class="accordion-chev" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body" id="sessionBody" role="region">
+      <label class="field" for="sess" data-i18n="sessionName">Naam van de sessie</label>
+      <input id="sess" value="sessie-01">
+      <div class="row analytics-launch"><button id="btnAnalytics" class="primary" data-i18n="analyticsOpen">Sessie-analyse</button></div>
+      <p class="hint" data-i18n="analyticsHint">Daar staan het overzicht, de export en het wissen bij elkaar.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Aardingswaarschuwing bij het ijken: drie contactpunten zonder herkende
+     puck betekent meestal dat de pads niet koppelen. Installatietaal, dus
+     alleen zichtbaar in de ontwikkelstand. -->
+<div class="panel dev-only" id="flag" role="status"></div>
+
+<!-- Twee pucks-balken: één per lange zijde van de tafel. De bovenste staat
+     op zijn kop, zodat hij leesbaar is voor wie aan de overkant staat. -->
+<div class="panel dock" id="puckDockTop">
+  <div class="puck-dock-head">
+    <p class="hint puck-hint"></p>
+    <button class="danger btn-clear" data-i18n="deselect">Deselecteren</button>
+  </div>
+  <div class="tray row"></div>
+  <div class="row dock-add"><button class="primary btn-add-puck" data-i18n="puckAdd">+ Puck</button></div>
+  <p class="build-stamp"></p>
+</div>
+
+<div class="panel dock" id="puckDock">
+  <div class="puck-dock-head">
+    <p class="hint puck-hint"></p>
+    <button class="danger btn-clear" data-i18n="deselect">Deselecteren</button>
+  </div>
+  <div class="tray row"></div>
+  <div class="row dock-add"><button class="primary btn-add-puck" data-i18n="puckAdd">+ Puck</button></div>
+  <p class="build-stamp"></p>
+</div>
+
+<div class="panel" id="zoom">
+  <button id="zIn">+</button><button id="zOut">−</button>
+</div>
+
+<div class="panel" id="kgInfo">
+  <p class="eyebrow" id="kgInfoType">document</p>
+  <p class="kg-title" id="kgInfoLabel"></p>
+  <div id="kgInfoBody"></div>
+  <div class="row" style="margin-bottom:0">
+    <button id="kgInfoOpen" data-i18n="open">Openen</button>
+    <button id="kgInfoClose" data-i18n="close">Sluiten</button>
+  </div>
+</div>
+
+<!-- Documents stay inside the table app: a failed document request can be
+     dismissed without leaving the map or relying on browser history. -->
+<div id="documentViewer" role="dialog" aria-modal="true" aria-labelledby="documentViewerTitle">
+  <div class="document-viewer-inner">
+    <div class="document-viewer-head">
+      <p class="document-viewer-title" id="documentViewerTitle"></p>
+      <button id="closeDocumentViewer" type="button" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+    </div>
+    <iframe id="documentViewerFrame" title="Document" data-i18n-title="document" referrerpolicy="no-referrer"></iframe>
+  </div>
+</div>
+
+<div class="panel note" id="note">
+  <div class="note-head">
+    <p class="eyebrow" id="noteHead" data-i18n="newNote">Nieuwe bijdrage</p>
+    <button type="button" id="noteFlip" class="note-flip" title="Naar de overkant" aria-label="Naar de overkant" data-i18n-title="flipNote" data-i18n-aria="flipNote">⇅</button>
+  </div>
+  <div class="note-main">
+  <label class="field" for="noteTitle" data-i18n="fTitle">Titel</label>
+  <input id="noteTitle" placeholder="Geef deze bijdrage een titel" data-i18n-ph="titlePh" maxlength="80">
+  <label class="field" for="noteText" data-i18n="fDescription">Beschrijving</label>
+  <textarea id="noteText" placeholder="Wat is hier aan de hand?" data-i18n-ph="descPh" rows="4"></textarea>
+
+  <!-- Het gesprek zelf. De knop staat bewust onder de beschrijving: eerst
+       kiest de groep een plek en een thema, daarna gaan ze praten. -->
+  <div class="talk">
+    <div class="talk-head">
+      <p class="eyebrow" data-i18n="talkHead">Gesprek</p>
+      <!-- De taal van dit gesprek, los van de taal van de tafel: aan een tafel
+           in het Nederlands staat geregeld een groep die Engels praat. "Auto"
+           laat de uitschrijfdienst het per blokje zelf bepalen en verschijnt
+           alleen als die dienst er is -- de spraakherkenning van de browser
+           moet vooraf weten welke taal ze hoort. -->
+      <div class="lang-switch talk-lang" id="talkLang" role="group"
+           aria-label="Taal van het gesprek" data-i18n-aria="talkLangGroup">
+        <button id="talkLangNl" type="button" lang="nl" aria-pressed="true">NL</button>
+        <button id="talkLangEn" type="button" lang="en" aria-pressed="false">EN</button>
+        <button id="talkLangAuto" type="button" aria-pressed="false"
+                data-i18n="talkLangAuto" data-i18n-title="talkLangAutoTip">Auto</button>
+      </div>
+      <span id="talkTime" class="mono talk-time"></span>
+    </div>
+    <div class="row">
+      <button id="talkBtn" class="talk-btn" data-i18n="talkStart">Gesprek opnemen</button>
+      <button id="talkClear" class="talk-clear" data-i18n="talkClear">Tekst wissen</button>
+      <button id="talkAudio" class="talk-clear" data-i18n="talkAudio" style="display:none">Opname bewaren</button>
+    </div>
+    <textarea id="talkText" class="talk-text" placeholder="Wat er gezegd wordt komt hier te staan." data-i18n-ph="talkPh" rows="3"></textarea>
+    <p id="talkPartial" class="talk-partial"></p>
+    <p id="talkStatus" class="talk-status"></p>
+  </div>
+
+  <div class="row">
+    <button id="noteDel" class="danger" data-i18n="del">Verwijderen</button>
+    <button id="noteSave" class="primary" data-i18n="saveBtn">Bewaren</button>
+  </div>
+
+  <div class="kg-block">
+    <p class="eyebrow" data-i18n="alreadyKnown">Wat is hier al bekend</p>
+    <div id="noteNearby" class="note-nearby"><p class="empty" data-i18n="kgLoading">Kennisgraaf wordt geladen…</p></div>
+    <p class="eyebrow" id="noteMatchHead" data-i18n="aboutWhatYouSay" style="display:none">Gaat over wat je zegt</p>
+    <div id="noteMatches" class="note-matches"></div>
+    <div class="row" style="margin-bottom:0">
+      <button id="noteAsk" class="primary" data-i18n="askSolution">Vraag om een oplossing</button>
+    </div>
+    <div id="noteAnswer" class="note-answer"></div>
+    <div id="noteSources" class="note-sources"></div>
+  </div>
+  </div>
+
+  <div class="contact-followup" id="contactFollowup">
+    <p class="contact-title" data-i18n="contactTitle">Op de hoogte blijven?</p>
+    <p class="contact-intro" data-i18n="contactIntro">Laat je contactgegevens achter als je wilt horen wat er met deze bijdrage gebeurt.</p>
+    <label class="field" for="contactName" data-i18n="contactName">Naam (optioneel)</label>
+    <input id="contactName" type="text" autocomplete="name" placeholder="Je naam" data-i18n-ph="contactNamePh" maxlength="100">
+    <label class="field" for="contactEmail" data-i18n="contactEmail">E-mail (optioneel)</label>
+    <input id="contactEmail" type="text" autocomplete="email" placeholder="naam@voorbeeld.nl" data-i18n-ph="contactEmailPh" maxlength="160">
+    <label class="field" for="contactPhone" data-i18n="contactPhone">Telefoon (optioneel)</label>
+    <input id="contactPhone" type="text" autocomplete="tel" placeholder="06 …" data-i18n-ph="contactPhonePh" maxlength="40">
+    <label class="contact-consent" for="contactConsent">
+      <input id="contactConsent" type="checkbox">
+      <span data-i18n="contactConsent">Ja, ik geef toestemming om mij over deze bijdrage te benaderen.</span>
+    </label>
+    <p class="contact-status" id="contactStatus" role="status"></p>
+    <div class="row contact-actions">
+      <button id="contactSkip" data-i18n="contactSkip">Nee, bedankt</button>
+      <button id="contactSave" class="primary" data-i18n="contactSave">Contact bewaren</button>
+    </div>
+  </div>
+</div>
+
+<div class="panel keyboard" id="keyboard" aria-label="Schermtoetsenbord" data-i18n-aria="onscreenKeyboard">
+  <div class="keyboard-head">
+    <p class="eyebrow" data-i18n="keyboardHead">Toetsenbord</p>
+    <span id="keyboardField" class="mono keyboard-field"></span>
+  </div>
+  <div id="keyboardKeys" class="keyboard-keys"></div>
+</div>
+
+<!-- ── Puck herkennen ────────────────────────────────────
+     Een vel over de kaart, maar de plakkers op de tafel tellen gewoon door:
+     contactpunten worden op `window` gelezen, niet op de kaart. Het kaartje
+     staat bovenaan zodat het vlak eronder vrij blijft om de puck neer te
+     leggen, en de driehoek wordt er live overheen getekend. -->
+<div id="learn" role="dialog" aria-modal="true" aria-labelledby="learnTitle">
+  <svg id="learnPoints" aria-hidden="true"></svg>
+  <div class="learn-card" id="learnCard">
+    <button id="closeLearnTop" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+    <h2 id="learnTitle" data-i18n="recogTitle">Puck herkennen</h2>
+    <p class="learn-intro" id="learnIntro" data-i18n="recogIntro">Leg de puck op het vrije vlak hieronder, met de pijl naar boven, en houd hem stil. Zodra de pootjes gelezen zijn, kies je welke puck dit is.</p>
+    <p class="learn-status" id="learnStatus" aria-live="polite"></p>
+    <div class="learn-bar" aria-hidden="true"><i id="learnBar"></i></div>
+    <div id="learnBody"></div>
+    <div class="row learn-foot">
+      <button id="btnLearnReset" data-i18n="recogReset">Metingen wissen</button>
+      <button id="btnLearnExport" data-i18n="recogExport">Metingen exporteren</button>
+      <button id="closeLearn" data-i18n="close">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<div id="sheet"><div class="inner">
+  <button id="closeSheetTop" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+  <h2 data-i18n="sheetTitle">Bouwtekening pucks</h2>
+  <p data-i18n="sheetIntro">Padposities per puck, in millimeters vanaf het midden. Bij de gedrukte pucks liggen vijf pootjes op één cirkel; de gaten ertussen liggen ver genoeg uit elkaar om de vier pucks met een paar graden meetfout nog te onderscheiden.</p>
+  <div class="sheetgrid" id="sheetGrid"></div>
+  <button id="closeSheet" data-i18n="close">Sluiten</button>
+</div></div>
+
+<!-- Een afzonderlijk leesvenster voor de opbrengst van de sessie. Het is
+     bewust geen permanent dashboard: tijdens het gesprek blijft de kaart vrij,
+     en pas bij reflectie neemt dit overzicht het hele scherm over. -->
+<div id="analytics" role="dialog" aria-modal="true" aria-label="Sessie-analyse" data-i18n-aria="analyticsTitle">
+  <div class="analytics-inner">
+    <div class="analytics-actions">
+      <button type="button" id="flipAnalytics" aria-label="Draai 90 graden" title="Draai 90 graden" data-i18n-aria="rotateQuarter" data-i18n-title="rotateQuarter">↻</button>
+      <button type="button" id="closeAnalytics" class="analytics-close" aria-label="Sluiten" data-i18n-aria="close">&times;</button>
+    </div>
+    <p class="eyebrow" data-i18n="analyticsEyebrow">SESSIE-OVERZICHT</p>
+    <h2 data-i18n="analyticsTitle">Analyse van de pucks</h2>
+    <p class="analytics-intro" id="analyticsIntro"></p>
+    <div class="analytics-kpis" id="analyticsKpis"></div>
+    <div class="analytics-grid">
+      <section class="analytics-card"><h3 data-i18n="analyticsTypes">Wat is er gelegd?</h3><div id="analyticsTypes"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsTopics">Welke onderwerpen?</h3><div id="analyticsTopics"></div></section>
+      <section class="analytics-card analytics-wide"><h3 data-i18n="analyticsPlaces">Waar liggen de pucks?</h3><p class="analytics-note" data-i18n="analyticsPlacesNote">Groepen binnen ongeveer 250 meter. De grootste groepen tonen waar het gesprek zich concentreert.</p><div id="analyticsPlaces"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsRelations">Relaties op dezelfde plek</h3><p class="analytics-note" data-i18n="analyticsRelationsNote">Onderwerpen die dicht bij elkaar zijn neergelegd, kunnen samen besproken worden.</p><div id="analyticsRelations"></div></section>
+      <section class="analytics-card"><h3 data-i18n="analyticsQuality">Hoe compleet is de input?</h3><div id="analyticsQuality"></div></section>
+      <section class="analytics-card analytics-wide"><h3 data-i18n="recentMarks">Laatste markeringen</h3><div id="recentBody"><p class="empty" data-i18n="noMarks">Nog geen markeringen.</p></div></section>
+    </div>
+    <!-- Meenemen en opruimen stonden bij de instellingen, waar "Alles wissen"
+         twee tikken van een lopende sessie lag. Hier staan ze onder het
+         overzicht waarop je de beslissing neemt. -->
+    <div class="analytics-footer">
+      <button id="btnGeo" data-i18n="exportGeo">Export GeoJSON</button>
+      <button id="btnCsv" data-i18n="exportCsv">Export CSV</button>
+      <button id="btnWipe" class="danger" data-i18n="wipe">Alles wissen</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
