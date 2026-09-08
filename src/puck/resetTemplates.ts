@@ -14,6 +14,8 @@ export function resetTemplates(): void {
         delete t.longestMM;
         delete t.angles;
         delete t.ringMM;
+        delete t.slots;
+        delete t.code;
         delete t.learnedAt;
         delete t.duoSeen;
         Object.assign(t, cloneTpl(f));

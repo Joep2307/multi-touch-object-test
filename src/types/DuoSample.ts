@@ -3,6 +3,7 @@
 export interface DuoSample {
     duo: true;
     ring?: false;
+    slot?: false;
     size: number;
     cx: number;
     cy: number;

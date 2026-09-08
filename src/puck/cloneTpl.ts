@@ -1,10 +1,11 @@
 import type { Template } from "../types/Template";
-import { isRing } from "./geometry/isRing";
-
-/* A copy that doesn't share its shape array with the original. */
+/* A copy that doesn't share its shape array with the original. Only the
+   arrays that are really there are copied: a grid puck has neither, and
+   handing it an empty triangle would make it look like one. */
 export const cloneTpl = (t: Template): Template => ({
     ...t,
-    ...(isRing(t)
-        ? { angles: [...(t.angles ?? [])] }
-        : { ratios: [...(t.ratios ?? [1, 1])] as [number, number] }),
+    ...(t.angles ? { angles: [...t.angles] } : {}),
+    ...(t.ratios
+        ? { ratios: [t.ratios[0], t.ratios[1]] as [number, number] }
+        : {}),
 });

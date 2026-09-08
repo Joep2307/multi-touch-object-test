@@ -3,6 +3,7 @@
 export interface RingSample {
     ring: true;
     duo?: false;
+    slot?: false;
     angles: number[];
     size: number;
     cx: number;

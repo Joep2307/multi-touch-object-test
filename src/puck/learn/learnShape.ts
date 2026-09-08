@@ -6,6 +6,12 @@ import type { ShapeValue } from "../../types/ShapeValue";
 export function learnShape(): ShapeValue {
     const m = learn.m;
     if (!m || m.duo) return {};
+    if (m.slot)
+        return {
+            slots: m.slots,
+            code: m.code,
+            ringMM: +(m.radius / view.pxPerMM).toFixed(1),
+        };
     return m.ring
         ? {
               angles: m.angles.map((a) => +a.toFixed(1)),

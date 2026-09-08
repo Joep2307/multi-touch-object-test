@@ -5,10 +5,19 @@ zet daarmee een markering op de kaart: een oordeel, een toelichting, en het
 gesprek dat eromheen gevoerd wordt. Onder de kaart ligt de kennisgraaf van
 coco-biblio, zodat de tafel kan laten zien wat er over die plek al bekend is.
 
-Een puck heeft drie voetjes. Het scherm ziet daar drie contactpunten van, en
-de driehoek daartussen is wat hem tot déze puck maakt — die verhouding blijft
-gelijk, waar hij ook ligt en hoe hij ook gedraaid is. Meer dan dat weet de
-tafel niet van hem, en meer is er niet nodig.
+Een puck heeft voetjes; het scherm ziet daar contactpunten van, en het
+patroon daartussen is wat hem tot déze puck maakt — dat blijft gelijk, waar
+hij ook ligt en hoe hij ook gedraaid is. Meer dan dat weet de tafel niet van
+hem, en meer is er niet nodig. Er zijn drie vormen:
+
+- **Driehoek** — drie stukjes tape. De verhouding van de zijden is de puck.
+- **Ring** — vijf pootjes op één cirkel. De gaten tussen de hoeken zijn de
+  puck.
+- **Roostercode** — de ring in twaalf vakjes van 30°, en welke vakjes een
+  pootje hebben ís de puck. De tafel meet dan niet "hoeveel graden ernaast"
+  maar "in welk vakje", dus een pootje mag een halve vakbreedte verschuiven.
+  De diameter van de ring telt als tweede kenmerk mee: dezelfde code op
+  26 mm is een andere puck dan op 34 mm.
 
 ## Beginnen
 

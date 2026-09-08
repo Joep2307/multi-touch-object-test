@@ -4,6 +4,8 @@
 export interface ShapeValue {
     angles?: number[];
     ringMM?: number;
+    slots?: number;
+    code?: number;
     ratios?: [number, number];
     longestMM?: number;
 }

@@ -12,6 +12,13 @@ export interface Template {
     /* Ring: the angles of the five feet, and the radius of their circle. */
     angles?: number[];
     ringMM?: number;
+    /* Grid code: the ring divided into `slots` compartments, and `code`
+     as the bit mask of which of them carry a foot -- bit 0 is the slot the
+     arrow points into. The radius is `ringMM`, the same field as the ring
+     above: two pucks with the same code but a different ring are two
+     different pucks. */
+    slots?: number;
+    code?: number;
     /* Triangle: the two short sides divided by the longest, and that
      longest side in mm. */
     ratios?: [number, number];

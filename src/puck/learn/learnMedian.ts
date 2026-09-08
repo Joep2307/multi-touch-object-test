@@ -2,6 +2,7 @@ import { learn } from "../../state/learn";
 import type { DuoSample } from "../../types/DuoSample";
 import type { LearnMeasure } from "../../types/LearnMeasure";
 import type { RingSample } from "../../types/RingSample";
+import type { SlotSample } from "../../types/SlotSample";
 import type { TriSample } from "../../types/TriSample";
 import { norm360 } from "../geometry/norm360";
 
@@ -18,6 +19,19 @@ export function learnMedian(): LearnMeasure {
         return a[a.length >> 1];
     };
     const size = med(((s: { size: number }) => s.size) as never);
+    /* A grid puck has no numbers to average: a slot is occupied or it
+     isn't. So a majority vote per slot -- a foot that loses contact for
+     three frames out of fifty doesn't change the code. */
+    if ((S[0] as SlotSample).slot) {
+        const n = (S[0] as SlotSample).slots;
+        let code = 0;
+        for (let i = 0; i < n; i++) {
+            let c = 0;
+            for (const sm of S as SlotSample[]) if ((sm.code >>> i) & 1) c++;
+            if (c * 2 > S.length) code |= 1 << i;
+        }
+        return { slot: true, slots: n, code, radius: size };
+    }
     if ((S[0] as DuoSample).duo) {
         const d = (f: (s: DuoSample) => number): number =>
             med(f as unknown as (s: never) => number);

@@ -13,17 +13,22 @@ import { puckSepPX } from "../puckSepPX";
 import { tplLongest } from "../tplLongest";
 import { describe } from "./describe";
 import { describeRing } from "./describeRing";
+import { describeSlots } from "./describeSlots";
 import { dist } from "./dist";
 import { duoBootstrap } from "./duoBootstrap";
 import { fitCircle } from "./fitCircle";
 import { isRing } from "./isRing";
+import { isSlotted } from "./isSlotted";
 import { matchRing } from "./matchRing";
+import { matchSlots } from "./matchSlots";
 import { maxTplSpan } from "./maxTplSpan";
 import { mayOverlap } from "./mayOverlap";
 import { noteRingDiag } from "./noteRingDiag";
 import { pick4 } from "./pick4";
 import { pick5 } from "./pick5";
+import { sizeErr } from "./sizeErr";
 import { tplRing } from "./tplRing";
+import { tplSlots } from "./tplSlots";
 
 /* Which pucks lie in this cloud of contact points? Two kinds of puck, two
    searches over the same points: triangles out of triples, rings out of
@@ -48,6 +53,9 @@ export function recognise(
         (t) => !isRing(t) && !(t.nest && !t.learnedAt && !t.duoSeen),
     );
     const rings = list.filter(isRing);
+    const slotted = list.filter(isSlotted);
+    /* All the grids that occur; usually just the one from CFG. */
+    const slotCounts = [...new Set(slotted.map(tplSlots))];
     const cands: PuckCandidate[] = [];
     const pxPerMM = view.pxPerMM;
     const maxSpan = maxTplSpan() * pxPerMM * 1.45;
@@ -142,9 +150,10 @@ export function recognise(
      point. The search point itself is always in the triple: every ring
      contains its own lowest point, and the other four lie within one
      diameter of it, so nothing is lost. */
-    if (rings.length) {
-        const rMin = Math.min(...rings.map(tplRing)) * pxPerMM * 0.72;
-        const rMax = Math.max(...rings.map(tplRing)) * pxPerMM * 1.3;
+    if (rings.length || slotted.length) {
+        const radii = [...rings, ...slotted].map(tplRing);
+        const rMin = Math.min(...radii) * pxPerMM * 0.72;
+        const rMax = Math.max(...radii) * pxPerMM * 1.3;
         const seen = new Set<string>(),
             reach = 2 * rMax * 1.12;
         for (let i = 0; i < points.length; i++) {
@@ -159,7 +168,7 @@ export function recognise(
                         if (j !== i && dist(points[i], points[j]) <= reach)
                             nb.push(j);
                 }
-            if (nb.length < 4) continue;
+            if (nb.length < Math.min(4, CFG.slotMinFeet - 1)) continue;
             /* With many fingers on the glass we only look at the eleven
              nearest points: the feet of the same puck always lie closer
              than the rest of the table. */
@@ -186,32 +195,121 @@ export function recognise(
                             ) <
                             fit.r * 0.16,
                     );
-                    if (on.length < 5) continue;
+                    if (on.length < Math.min(5, CFG.slotMinFeet)) continue;
+                    /* Cleanest first: whoever lies closest to the fitted
+                     circle is most likely a foot. Both searches below take
+                     their points from the front of this list. */
+                    const offCircle = (k: number): number =>
+                        Math.abs(
+                            Math.hypot(
+                                points[k].x - fit.cx,
+                                points[k].y - fit.cy,
+                            ) - fit.r,
+                        );
+                    on.sort((a2, b2) => offCircle(a2) - offCircle(b2));
+                    /* ── The grid code ─────────────────────────────
+                     A grid puck is not a five out of the points on this
+                     circle but all of them at once: which slots are
+                     occupied is the puck. So no combinations here -- one
+                     circle is one candidate, and a stray finger becomes an
+                     `extra` that `matchSlots` is allowed to forgive. */
+                    if (slotted.length && on.length >= CFG.slotMinFeet) {
+                        const group = on.slice(0, 9);
+                        const key =
+                            "s" + [...group].sort((x, y) => x - y).join(",");
+                        const uid = group
+                            .map((k) => points[k].uid)
+                            .find((u) => u !== undefined);
+                        if (
+                            !seen.has(key) &&
+                            !(
+                                uid !== undefined &&
+                                group.some((k) => points[k].uid !== uid)
+                            )
+                        ) {
+                            seen.add(key);
+                            for (const n of slotCounts) {
+                                const d = describeSlots(
+                                    group.map((k) => points[k]),
+                                    n,
+                                );
+                                if (
+                                    !d ||
+                                    d.spread > 0.16 ||
+                                    d.snap > CFG.slotSnapDeg ||
+                                    d.dup
+                                )
+                                    continue;
+                                /* Size first, then the code: the ring is a
+                                 feature of its own here. Only what fits
+                                 the measured circle competes, and among
+                                 those the best code has to beat the
+                                 runner-up by `slotMarginBits`. */
+                                const fits = slotted
+                                    .filter((tpl) => tplSlots(tpl) === n)
+                                    .map((tpl) => ({
+                                        tpl,
+                                        m: matchSlots(d, tpl),
+                                        se: sizeErr(
+                                            d.radius,
+                                            tplRing(tpl),
+                                            pxPerMM,
+                                        ),
+                                        tracked: onTable.has(tpl.id),
+                                    }))
+                                    .filter(
+                                        (g) =>
+                                            g.se <=
+                                                (g.tracked
+                                                    ? CFG.slotSizeTolTracked
+                                                    : CFG.slotSizeTol) &&
+                                            g.m.err <=
+                                                CFG.slotErrMax +
+                                                    (g.tracked ? 1 : 0) &&
+                                            g.m.miss <=
+                                                CFG.slotMissMax +
+                                                    (g.tracked ? 1 : 0) &&
+                                            g.m.extra <= CFG.slotExtraMax,
+                                    )
+                                    .sort(
+                                        (a2, b2) =>
+                                            a2.m.err - b2.m.err ||
+                                            a2.se - b2.se,
+                                    );
+                                const win = fits[0],
+                                    second = fits[1];
+                                if (!win) continue;
+                                if (
+                                    second &&
+                                    second.m.err - win.m.err <
+                                        CFG.slotMarginBits
+                                )
+                                    continue;
+                                const limit = CFG.slotErrMax + 1;
+                                cands.push({
+                                    tpl: win.tpl,
+                                    errN: win.m.err / limit,
+                                    idx: group.slice(),
+                                    d: { ...d, angle: win.m.angle },
+                                    conf: Math.max(
+                                        0,
+                                        1 -
+                                            (win.m.err / limit) * 0.7 -
+                                            win.se * 0.6,
+                                    ),
+                                });
+                                break;
+                            }
+                        }
+                    }
                     /* A loose finger can lie on the same circle -- a hand
                      resting next to the puck does exactly that. Then there
                      are six or seven, and every five out of them is tried;
                      the puck isn't lost because someone leans on the glass.
                      More than seven points on one circle is no longer a
                      puck, and the seven cleanest remain. */
-                    if (on.length > 7)
-                        on = on
-                            .sort(
-                                (a2, b2) =>
-                                    Math.abs(
-                                        Math.hypot(
-                                            points[a2].x - fit.cx,
-                                            points[a2].y - fit.cy,
-                                        ) - fit.r,
-                                    ) -
-                                    Math.abs(
-                                        Math.hypot(
-                                            points[b2].x - fit.cx,
-                                            points[b2].y - fit.cy,
-                                        ) - fit.r,
-                                    ),
-                            )
-                            .slice(0, 7);
-                    for (const group of pick5(on)) {
+                    if (on.length > 7) on = on.slice(0, 7);
+                    for (const group of rings.length ? pick5(on) : []) {
                         /* Same rule as for the triangles: points of two
                          drag copies never form one puck. */
                         const uid = group
@@ -240,10 +338,23 @@ export function recognise(
                          fits `ringMarginDeg` better than the runner-up. Any
                          closer than that and the measurement is ambiguous,
                          and the table would rather say nothing. */
-                        const measured = rings
+                        const all = rings
                             .map((tpl) => ({ tpl, m: matchRing(d, tpl) }))
                             .sort((a2, b2) => a2.m.err - b2.m.err);
-                        noteRingDiag(d, measured);
+                        noteRingDiag(d, all);
+                        /* The diameter counts before the choice, not after
+                         it. A ring that is clearly too small or too large
+                         is a different puck, so it must not first win the
+                         angle comparison and then be rejected on size --
+                         that used to make the runner-up disappear along
+                         with it and the puck fall silent. */
+                        const measured = all.filter(
+                            (g) =>
+                                sizeErr(d.radius, tplRing(g.tpl), pxPerMM) <=
+                                (onTable.has(g.tpl.id)
+                                    ? CFG.ringSizeTolTracked
+                                    : CFG.ringSizeTol),
+                        );
                         const win = measured[0],
                             second = measured[1];
                         if (!win) continue;
@@ -258,9 +369,7 @@ export function recognise(
                         const limit =
                             CFG.ringToleranceDeg * (tracked ? 1.25 : 1);
                         if (m.err > limit) continue;
-                        const want = tplRing(tpl) * pxPerMM;
-                        const sizeErr = Math.abs(d.radius - want) / want;
-                        if (sizeErr > (tracked ? 0.3 : 0.22)) continue;
+                        const se = sizeErr(d.radius, tplRing(tpl), pxPerMM);
                         const shape: RingShape = { ...d, angle: m.angle };
                         cands.push({
                             tpl,
@@ -269,7 +378,7 @@ export function recognise(
                             d: shape,
                             conf: Math.max(
                                 0,
-                                1 - (m.err / limit) * 0.7 - sizeErr * 0.6,
+                                1 - (m.err / limit) * 0.7 - se * 0.6,
                             ),
                         });
                     }
@@ -380,6 +489,55 @@ export function recognise(
             });
             break;
         }
+    }
+    /* The same for a grid puck: only its own code joins in, so it cannot
+     change identity while holding on, and one slot may go missing
+     (`slotHoldBits`). What it may not do is drift: the circle has to sit
+     where the puck was. */
+    for (const t of tpls ? [] : tracks.map.values()) {
+        if (!isSlotted(t.tpl)) continue;
+        if (
+            out.some(
+                (o) =>
+                    Math.hypot(o.x - t.x, o.y - t.y) < sep &&
+                    !mayOverlap(o.tpl, t.tpl),
+            )
+        )
+            continue;
+        const want = tplRing(t.tpl) * pxPerMM,
+            close: number[] = [];
+        for (let i = 0; i < points.length; i++) {
+            if (used.has(i)) continue;
+            const r = Math.hypot(points[i].x - t.x, points[i].y - t.y);
+            if (r >= want * 0.6 && r <= want * 1.4) close.push(i);
+        }
+        if (close.length < CFG.slotMinFeet) continue;
+        const off = (i: number): number =>
+            Math.abs(Math.hypot(points[i].x - t.x, points[i].y - t.y) - want);
+        close.sort((a, b) => off(a) - off(b));
+        const group = close.slice(0, 9);
+        const d = describeSlots(
+            group.map((k) => points[k]),
+            tplSlots(t.tpl),
+        );
+        if (!d || d.spread > 0.2 || d.snap > CFG.slotSnapDeg * 1.3 || d.dup)
+            continue;
+        if (
+            sizeErr(d.radius, tplRing(t.tpl), pxPerMM) > CFG.slotSizeTolTracked
+        )
+            continue;
+        if (Math.hypot(d.cx - t.x, d.cy - t.y) > sep) continue;
+        const m = matchSlots(d, t.tpl);
+        if (m.err > CFG.slotHoldBits) continue;
+        group.forEach((i) => used.add(i));
+        out.push({
+            tpl: t.tpl,
+            conf: 0.4,
+            x: d.cx,
+            y: d.cy,
+            angle: m.angle,
+            held: true,
+        });
     }
     return { pucks: out, usedIdx: used };
 }

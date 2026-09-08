@@ -4,6 +4,7 @@ import { bakeMap } from "../map/bakeMap";
 import { paintMapLayer } from "../map/paintMapLayer";
 import { recognise } from "../puck/geometry/recognise";
 import { updateLearn } from "../puck/learn/updateLearn";
+import { updateNoise } from "../puck/noise/updateNoise";
 import { simPads } from "../puck/sim/simPads";
 import { syncSimPucksToMap } from "../puck/sim/syncSimPucksToMap";
 import { track } from "../puck/track";
@@ -16,6 +17,7 @@ import type { TouchPoint } from "../types/TouchPoint";
 import { updateUI } from "../ui/updateUI";
 import { drawDebugPoints } from "./drawDebugPoints";
 import { drawLockBadge } from "./drawLockBadge";
+import { drawNoise } from "./drawNoise";
 import { drawNoteTether } from "./drawNoteTether";
 import { drawPins } from "./drawPins";
 import { drawPuck } from "./drawPuck";
@@ -54,7 +56,13 @@ export function frame(): void {
     drawLockBadge(ctx);
     drawResetProgress(ctx, now);
 
-    if (ui.debugMode) drawDebugPoints(ctx, points, usedIdx);
+    if (ui.debugMode) {
+        drawDebugPoints(ctx, points, usedIdx);
+        /* How steadily the glass reports a puck that lies still. Only while
+         the diagnosis is on, so it costs nothing the rest of the time. */
+        updateNoise(points, now);
+        drawNoise(ctx);
+    }
 
     if (now - view.lastUI > 150) {
         view.lastUI = now;

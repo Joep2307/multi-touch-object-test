@@ -1,9 +1,13 @@
 import type { Point } from "../../types/Point";
 import type { Template } from "../../types/Template";
 import { tplLongest } from "../tplLongest";
+import { codeSlots } from "./codeSlots";
 import { isRing } from "./isRing";
+import { isSlotted } from "./isSlotted";
 import { norm360 } from "./norm360";
+import { slotWidth } from "./slotWidth";
 import { tplRing } from "./tplRing";
+import { tplSlots } from "./tplSlots";
 
 /* The contact points of a template, in millimetres times `k`: pass
    `pxPerMM` for the screen, or leave `k` out for millimetres on paper. On a
@@ -11,6 +15,15 @@ import { tplRing } from "./tplRing";
    around its centroid, because for a triangle that is the heart of the
    puck. */
 export function padsFor(tpl: Template, k = 1): Point[] {
+    if (isSlotted(tpl)) {
+        const R = tplRing(tpl) * k,
+            n = tplSlots(tpl),
+            w = slotWidth(n);
+        return codeSlots(tpl.code ?? 0, n).map((s) => ({
+            x: R * Math.cos((s * w * Math.PI) / 180),
+            y: R * Math.sin((s * w * Math.PI) / 180),
+        }));
+    }
     if (isRing(tpl)) {
         const R = tplRing(tpl) * k;
         return [...(tpl.angles ?? [])]

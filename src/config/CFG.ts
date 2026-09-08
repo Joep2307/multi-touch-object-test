@@ -28,6 +28,49 @@ export const CFG = {
     ringToleranceDeg: 12,
     ringMarginDeg: 3,
     ringHoldDeg: 14,
+    /* The diameter is a feature of its own, not just a check: two pucks
+     with the same pattern but a different ring are two different pucks. A
+     template whose radius lies further away than this is therefore dropped
+     before the best fit is chosen, instead of the best fit being rejected
+     on size afterwards -- that used to let a puck fall silent because a
+     look-alike with the wrong ring won the comparison first. A puck
+     already on the table gets the wider limit. */
+    ringSizeTol: 0.22,
+    ringSizeTolTracked: 0.3,
+    /* ── The grid code ───────────────────────────────────────────────
+     The third kind of puck. The ring is divided into `slotCount`
+     compartments and the puck is the pattern of which ones carry a foot,
+     so the table doesn't measure "how many degrees off" but "in which
+     slot". With twelve slots of 30 degrees a foot may sit 15 degrees off
+     and still lands right -- where the free-angle ring has 12 degrees for
+     the whole pattern.
+
+     `slotSnapDeg` is how far the feet may sit from the middle of their
+     slot on average; above that they are fingers and not a puck.
+     `slotErrMax` is what may go wrong in total before a puck is named for
+     the first time, `slotMissMax` and `slotExtraMax` of which kind: a foot
+     that loses contact, a finger that happens to lie on the same circle.
+     One is deliberately strict. A reading with as many feet as the code
+     differs in an even number of slots, so a complete reading has to be
+     exact and only a missing or an extra foot costs one -- and six
+     fingers spread over a circle, which land two slots away often enough,
+     are rejected. A puck already on the table is allowed one more, since
+     it cannot change identity by it. On top of that the best code must
+     beat the runner-up by `slotMarginBits`, otherwise the table would
+     rather say nothing. `slotHoldBits` belongs to holding on to a puck that is
+     already being tracked, where only its own code joins in and nothing
+     can be confused. `slotMinFeet` is how many points on a circle are
+     worth trying at all. */
+    slotCount: 12,
+    slotSnapDeg: 7,
+    slotErrMax: 1,
+    slotMissMax: 1,
+    slotExtraMax: 1,
+    slotMarginBits: 2,
+    slotHoldBits: 2,
+    slotMinFeet: 4,
+    slotSizeTol: 0.18,
+    slotSizeTolTracked: 0.26,
     /* A rotating physical puck sometimes briefly loses contact on one foot.
      Two good frames are enough to lock onto it; after that we hold the last
      known position and angle for 0.9 s instead of dropping it after 0.18 s. */

@@ -10,5 +10,7 @@ export const tplWire = (t: Template): Record<string, unknown> => ({
     longestMM: t.longestMM ?? null,
     angles: t.angles || null,
     ringMM: t.ringMM ?? null,
+    slots: t.slots ?? null,
+    code: t.code ?? null,
     learnedAt: t.learnedAt || null,
 });

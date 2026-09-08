@@ -9,11 +9,15 @@ import { view } from "../../state/view";
 import type { Verdict } from "../../types/Verdict";
 import { puckMode } from "../../ui/puckMode";
 import { activeTemplates } from "../activeTemplates";
+import { codeSelfSym } from "../geometry/codeSelfSym";
+import { codeText } from "../geometry/codeText";
 import { gapText } from "../geometry/gapText";
 import { gapsOf } from "../geometry/gapsOf";
 import { isRing } from "../geometry/isRing";
+import { isSlotted } from "../geometry/isSlotted";
 import { ringSelfSym } from "../geometry/ringSelfSym";
 import { tplRing } from "../geometry/tplRing";
+import { tplSlots } from "../geometry/tplSlots";
 import { isToolPuck } from "../isToolPuck";
 import { removeOwnPuck } from "../removeOwnPuck";
 import { tplColor } from "../tplColor";
@@ -77,20 +81,27 @@ export function renderLearn(): void {
             return;
         }
         st.innerHTML =
-            (isRing(tpl)
+            (isSlotted(tpl)
                 ? tr(
-                      "recogSavedRing",
+                      "recogSavedSlots",
                       tplName(tpl),
-                      gapText(tpl.angles ?? []),
+                      codeText(tpl.code ?? 0, tplSlots(tpl)),
                       tplRing(tpl).toFixed(1),
                   )
-                : tr(
-                      "recogSaved",
-                      tplName(tpl),
-                      (tpl.ratios?.[0] ?? 0).toFixed(3),
-                      (tpl.ratios?.[1] ?? 0).toFixed(3),
-                      tplLongest(tpl).toFixed(1),
-                  )) + (learn.clash ? tr("recogClash", learn.clash) : "");
+                : isRing(tpl)
+                  ? tr(
+                        "recogSavedRing",
+                        tplName(tpl),
+                        gapText(tpl.angles ?? []),
+                        tplRing(tpl).toFixed(1),
+                    )
+                  : tr(
+                        "recogSaved",
+                        tplName(tpl),
+                        (tpl.ratios?.[0] ?? 0).toFixed(3),
+                        (tpl.ratios?.[1] ?? 0).toFixed(3),
+                        tplLongest(tpl).toFixed(1),
+                    )) + (learn.clash ? tr("recogClash", learn.clash) : "");
         again();
         return;
     }
@@ -112,28 +123,38 @@ export function renderLearn(): void {
     }
     if (learn.phase === "done" && learn.m && !learn.m.duo) {
         const m = learn.m;
-        st.innerHTML = m.ring
+        st.innerHTML = m.slot
             ? tr(
-                  "recogMeasuredRing",
-                  gapText(m.angles),
+                  "recogMeasuredSlots",
+                  codeText(m.code, m.slots),
                   (m.radius / view.pxPerMM).toFixed(1),
               )
-            : tr(
-                  "recogMeasured",
-                  m.r0.toFixed(3),
-                  m.r1.toFixed(3),
-                  (m.longest / view.pxPerMM).toFixed(1),
-              );
+            : m.ring
+              ? tr(
+                    "recogMeasuredRing",
+                    gapText(m.angles),
+                    (m.radius / view.pxPerMM).toFixed(1),
+                )
+              : tr(
+                    "recogMeasured",
+                    m.r0.toFixed(3),
+                    m.r1.toFixed(3),
+                    (m.longest / view.pxPerMM).toFixed(1),
+                );
         /* The same warning, two shapes: a triangle without a clear front is
          nearly isosceles, a ring resembles itself after one turn. In both
          cases the ring menu stalls later on. */
-        const wobbly = m.ring
-            ? ringSelfSym(gapsOf(m.angles)) < CFG.ringToleranceDeg * 1.2
-                ? tr("recogRingSym")
+        const wobbly = m.slot
+            ? codeSelfSym(m.code, m.slots) < 3
+                ? tr("recogSlotSym")
                 : ""
-            : nearlyIsosceles(m.r0, m.r1)
-              ? tr("recogIso")
-              : "";
+            : m.ring
+              ? ringSelfSym(gapsOf(m.angles)) < CFG.ringToleranceDeg * 1.2
+                  ? tr("recogRingSym")
+                  : ""
+              : nearlyIsosceles(m.r0, m.r1)
+                ? tr("recogIso")
+                : "";
         const iso = wobbly ? `<p class="learn-warn">${wobbly}</p>` : "";
         if (puckMode()) {
             /* No preset. The measurement becomes a new puck; you only say
@@ -154,7 +175,7 @@ export function renderLearn(): void {
              could only learn the pair here and never one loose half. Only
              for a triangle -- the halves are triangles, and putting a ring
              on one would make the duo into something else. */
-            if (!m.ring)
+            if (!m.ring && !m.slot)
                 body.insertAdjacentHTML(
                     "beforeend",
                     `<p class="learn-which">${tr("recogWhichDuoHalf")}</p>` +

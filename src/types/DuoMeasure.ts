@@ -4,6 +4,7 @@ import type { TriMeasure } from "./TriMeasure";
 export interface DuoMeasure {
     duo: true;
     ring?: false;
+    slot?: false;
     o: Omit<TriMeasure, "ring" | "duo">;
     i: Omit<TriMeasure, "ring" | "duo">;
 }
