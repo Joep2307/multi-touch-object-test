@@ -23,3 +23,14 @@ src/i18n/L.ts
 
 # Uitvoer van Claude-sessies, geen broncode.
 Claude outputs/
+
+# Pre-module migration sources. The maintained app and tests are in src/
+# and exe/; these are kept only as the historical table snapshot.
+/app.ts
+/capture.ts
+/globals.d.ts
+/index.html
+/kg.ts
+/speech.ts
+/styles.css
+/test/

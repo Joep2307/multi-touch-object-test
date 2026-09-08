@@ -5,6 +5,17 @@
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
+    /* Enabled repo-wide on 8 Sep 2026: each of these cost zero errors
+       across the whole tree, so there was nothing to weigh. The one
+       still missing is `noUncheckedIndexedAccess` — 166 errors, and
+       every one of them is a real place where an array index is
+       assumed to hit. That is its own piece of work, not a flag flip;
+       src/core/ already has it via tsconfig.core.json. */
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noEmit": true,
     "isolatedModules": true,
     "esModuleInterop": true,

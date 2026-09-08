@@ -14,6 +14,7 @@ const EMPTY: PositionSnapshot = {
     fittedRadiusPX: 0,
     residualPX: 0,
     confidence: CONFIDENCE_MIN,
+    shapeConfidence: CONFIDENCE_MIN,
 };
 
 /* Where the object is, and whether the table can see it at all.
@@ -66,11 +67,10 @@ export class Position extends Trait<PositionSnapshot> {
         }
 
         const countScore = clamp01(points.length / Math.max(1, expected));
-        const fitScore = clamp01(
-            1 - fit.residualPX / this.policy.maxResidualPX,
-        );
+        const shapeScore = this.#shapeScore(fit, sample);
         const sizeScore = this.#sizeScore(fit.radiusPX, sample);
-        const confidence = countScore * fitScore * sizeScore;
+        const shapeConfidence = countScore * shapeScore;
+        const confidence = shapeConfidence * sizeScore;
 
         this.#snapshot = {
             sensed: confidence > CONFIDENCE_MIN,
@@ -81,7 +81,40 @@ export class Position extends Trait<PositionSnapshot> {
             fittedRadiusPX: fit.radiusPX,
             residualPX: fit.residualPX,
             confidence,
+            shapeConfidence,
         };
+    }
+
+    /* Are the feet arranged like this kind? Compared as a **ratio** —
+       spread over radius — so the answer holds whatever the screen
+       scale turns out to be.
+
+       Two things forced that. First, the spread is scored against the
+       kind's *inherent* spread rather than against zero: zero is right
+       for a ring and for an equilateral triad, but an equilateral
+       triad has no distinguishable nose, so the standard three-point
+       footprint is deliberately asymmetric and its feet genuinely do
+       sit at different distances from the centroid. Scoring that
+       against zero punished exactly the asymmetry the heading needs.
+
+       Second, both quantities had to lose their units. A score in
+       pixels is a function of `pxPerMM`, and `PxPerMMEstimator` is
+       gated on this score — so a scale that started wrong made the
+       score low, which made the estimator ignore the reading, which
+       left the scale wrong. A ratio breaks that loop. */
+    #shapeScore(
+        fit: { radiusPX: number; residualPX: number },
+        sample: BaseSample,
+    ): number {
+        if (fit.radiusPX <= 0) return CONFIDENCE_MIN;
+        const measured = fit.residualPX / fit.radiusPX;
+        const radiusMM = sample.spec.footRadiusMM;
+        const expected =
+            radiusMM > 0
+                ? (sample.spec.footRadiusSpreadMM ?? 0) / radiusMM
+                : 0;
+        const off = Math.abs(measured - expected);
+        return clamp01(1 - off / this.policy.shapeTolerance);
     }
 
     /* Is what we measured the right size for this kind? Size is a

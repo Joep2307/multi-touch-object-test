@@ -85,6 +85,8 @@ describe("the language table", () => {
             "tilePastel",
             "tileWater",
             "overlaysHead",
+            "duoTheme",
+            "talkLangAuto",
         ]);
         const copied = Object.keys(L.en).filter(
             (k) =>

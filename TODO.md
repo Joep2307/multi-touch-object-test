@@ -1,11 +1,16 @@
 # TODO — Base architecture: contacts, traits, physicals, roles
 
-Status: **plan only, no code written yet.** Successor to the two design
-notes that were removed from the tree (`ARCHITECTURE.md`,
-`ARCHITECTURE-CLASSES.md`); their vocabulary is kept on purpose, so the
-words in this plan mean the same things they did there. The previous
-TODO — the TypeScript/wasm conversion, finished 4 September 2026 — is
-archived as `TODO-typescript-conversion.md`.
+Status: **implemented through the Phase 6 parity bridge.** The bridge
+still needs validation on the physical table before it can replace the
+legacy pipeline. Successor to the two design notes that were removed
+from the tree (`ARCHITECTURE.md`, `ARCHITECTURE-CLASSES.md`); their
+vocabulary is kept on purpose. The previous TODO — the TypeScript/wasm
+conversion, finished 4 September 2026 — is archived as
+`TODO-typescript-conversion.md`.
+
+Last verified on 8 September 2026: `npm run check` passes all 220 unit
+tests, `npm run build` succeeds, and `npm run smoke` passes including a
+simulated puck with the `?base` pipeline enabled.
 
 ## Goal
 
@@ -267,18 +272,32 @@ the puck bar on the table) or work on a branch until parity holds.
 ### 0. Scaffolding and rules
 
 - [x] `src/core/` created with barrels, importable.
-- [ ] `tsconfig.json`: `strict` on, plus `noUncheckedIndexedAccess`,
-      `exactOptionalPropertyTypes`, `noImplicitOverride`,
-      `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`, and the
-      `@/*` path alias for `src/*`.
-- [ ] Turn strict on for `src/core/**` first if the existing tree
-      does not survive it in one go; record what still fails.
-- [ ] ESLint boundary rule: nothing under `src/core/` may import from
+- [x] `tsconfig.json`: `strict` was already on; `noImplicitOverride`,
+      `noFallthroughCasesInSwitch`, `verbatimModuleSyntax`,
+      `noUnusedLocals` and `noUnusedParameters` are now on
+      repo-wide. Each cost zero errors across the whole tree, so
+      there was nothing to weigh.
+- [ ] `noUncheckedIndexedAccess` repo-wide: **166 errors**, every one
+      a real place where an array index is assumed to hit. Its own
+      piece of work, not a flag flip. `src/core/` already has it.
+- [ ] `exactOptionalPropertyTypes` repo-wide: 10 errors, all of the
+      "optional field assigned `T | undefined`" kind. Small, but
+      each fix widens a type on live code, so it wants its own pass.
+- [ ] The `@/*` path alias still is not wired. It needs tsconfig,
+      vite and vitest changed together, or an import resolves for
+      the compiler and not at runtime. `src/core/` uses relative
+      imports through barrels meanwhile, which keeps the chains
+      short enough that it has not hurt.
+- [x] The whole source tree now compiles with `strict`; the additional
+      safety flags apply to `src/core/**` through `tsconfig.core.json`.
+- [x] ESLint boundary rule: nothing under `src/core/` may import from
       `src/state`, `src/render`, `src/ui`, `src/map`, or the DOM
       globals. This is the rule that keeps the core testable.
 - [ ] ESLint boundary rule: no file under a container folder imports
-      from a sibling container — only from its own folder, the
-      resolver, and services.
+      from a sibling container. **Cannot be written yet** — the
+      containers it governs (`functions/map-control/` and its
+      siblings) are phase 7. Listed here because the rule has to
+      land with the first container, not after the tenth.
 - [x] Core tests live in `src/test/unit/core/`, mirroring the
       `src/core/` tree. `vitest.config.js` is **not** touched — the
       decision in its header comment stands.
@@ -299,22 +318,30 @@ played back, so that comes first.
       it and gets written in phase 6 with the bridge.
 - [x] `ContactRecorder` captures frames; `recordedAt` is passed in
       rather than read from the clock, so a fixture is reproducible.
-- [ ] **Needs the table.** Wire the recorder to a dev-only button and
-      record the six real streams below into
-      `exe/public/fixtures/frames/`, then copy the ones tests use into
-      `src/test/unit/core/fixtures/`. Until then the only fixture is
-      `threePointPlaceRotateLift.json`, which is **synthetic** — a
-      generated three-foot puck, good enough to prove replay works and
-      not good enough to prove recognition does.
+- [x] The recorder is wired: `BaseSessionRecorder` captures the
+      bridge's own contact frame, `installBaseHooks` gives it
+      Shift+Alt+R/S/P at the table and `window.__base` on a
+      laptop, both behind `?base`. A recording round-trips through
+      `ReplayContactSource` with every contact intact — tested,
+      because a recording that replayed differently from the
+      session it came from would be worse than having none.
+- [ ] **Needs the table.** Record six streams and drop them in
+      `src/test/unit/core/fixtures/`: a puck placed and lifted; one
+      turned a full circle; one slid across the table; one turned
+      while a foot drops out mid-rotation; two pucks of the same
+      kind brought close together; and a palm and sleeve on the
+      glass with no puck present. The dropout and the two-puck one
+      are the valuable pair — nothing synthetic reproduces either.
+      Drive it with `?base` and Shift+Alt+R/S/P, or `window.__base`
+      from a laptop. Until then the only fixture is synthetic.
 - [x] `ReplayContactSource`, plus `ContactRecorder` and the
       `ContactRecording` format it writes.
 - [ ] Record at least: one puck placed and lifted; one puck rotated a
       full turn; one puck panned across the table; a foot dropping
       out mid-move; two pucks at once; a hand resting on the glass.
-- [x] Tests: 17 in `src/test/unit/core/`, covering the pointer and
+- [x] Tests: 14 in `src/test/unit/core/contact.test.ts`, covering the
       simulated sources, the recorder cap, the version guard, and a
-      record → replay round trip. **Not yet run** — vitest needs the
-      Mac (see below).
+      record → replay round trip. Passing on the Mac.
 
 ### 2. Base tier one — Position and Direction
 
@@ -343,8 +370,17 @@ played back, so that comes first.
 - [x] `HeadingSource` with two real implementations:
       `ApexHeadingSource` (primary — the apex of the isosceles
       three-foot footprint) and `GapHeadingSource` (legacy rings).
-- [ ] `SlotHeadingSource` waits for phase 6: it needs the slot count
-      and code from real template data, which the bridge supplies.
+- [x] `SlotHeadingSource`. A slot puck has no distinguished foot —
+      its identity _is_ the pattern — so the heading is the rotation
+      at which the measured feet line up with the code the kind
+      carries. Each (foot, filled compartment) pair proposes one
+      rotation, so the candidate set is small and exact rather than
+      a search. `PhysicalKind.slotCode` carries the code;
+      `BaseFactory` refuses a slot kind without one rather than
+      falling back to `GapHeadingSource`, which would read the
+      widest accidental gap and return a plausible wrong angle.
+      A rotationally symmetric code returns null: it genuinely has
+      several right answers and guessing makes the puck flicker.
       `CodeHeadingSource` and `CodeCentreSolver` wait for stickers —
       slot-coded pucks have feet on a ring, so `CircleFitSolver`
       already serves them and a second class would be a duplicate.
@@ -357,66 +393,131 @@ played back, so that comes first.
 - [x] Alignment test: `Base.outerDiameterPX` is the kind's size times
       the current scale, and the estimator walks a deliberately wrong
       seed back to the truth and clamps against a bad one.
-- [x] 30 tests in `src/test/unit/core/base.test.ts`, on synthetic
-      geometry whose answers can be worked out by hand. **Not yet
-      run** — vitest needs the Mac.
+- [x] 22 tests in `src/test/unit/core/base.test.ts`, on synthetic
+      geometry whose answers can be worked out by hand. Passing on
+      the Mac.
 
 ### 3. Base tier one — Move, Rotate, Tap
 
-- [ ] `Move` + `MovePolicy`, `Rotate` + `RotatePolicy`,
-      `Tap` + `TapKind` + `TapPolicy`.
-- [ ] Move the relevant numbers out of `CFG` into those policies:
-      `jitterPX`, `smoothing`, the tap and dwell timings, the zoom
-      gain. `CFG` keeps only what is genuinely per-installation.
-- [ ] Tests: a full turn reads 360 and not 0; a rotation across the
-      wrap point is continuous; jitter below the dead zone does not
-      register as a move; a 120 ms contact is a tap and an 800 ms one
-      is a hold; lifting mid-rotation cancels rather than half
-      applies.
+- [x] `Move` + `MovePolicy`, `Rotate` + `RotatePolicy`,
+      `Tap` + `TapKind` + `TapPolicy`, plus
+      `shortestAngleDiffDeg` beside the angle convention it uses.
+- [x] `Move` smooths the centre _before_ differencing. Anything that
+      differentiates raw centres — speed, acceleration — multiplies
+      the sensor's noise instead of damping it, so tier two depends
+      on this being right.
+- [x] `Rotate` measures against the last _accepted_ heading and
+      skips frames where `Direction.known` is false, so a puck that
+      loses a foot mid-turn pauses instead of appearing to spin.
+      `maxStepDeg` drops a step no hand could make in one frame:
+      that is the heading source changing its mind about which foot
+      is the nose, and without the guard one bad frame offsets the
+      total forever.
+- [x] `Tap` takes its interval from the contacts' own `firstSeen`
+      rather than a timer it starts, so a foot flickering during a
+      long hold does not restart the clock.
+- [x] Numbers moved out of `CFG` into policies: `smoothing` (as an
+      EMA weight, ~2/(n+1) of the old frame count), the tap and
+      dwell timings. **Not** `jitterPX` — in the old code that is a
+      different threshold doing a different job (separating one
+      puck's feet from another's), not a stillness test.
+- [x] The zoom gain deliberately did **not** move into
+      `RotatePolicy`. Amplifying a turn is the zoom's opinion about
+      what turning means, not a property of the turn;
+      `ZoomInteraction` owns it in phase 8. A trait reports degrees.
+- [x] 17 tests in `src/test/unit/core/kinematics.test.ts`. Passing on
+      the Mac.
 
 ### 4. Base tier two — Tail and Acceleration
 
-- [ ] `Tail` + `TailPoint` + `TailPolicy`.
-- [ ] `Acceleration` + `AccelerationPolicy`.
-- [ ] Assert the tier rule in a test: both traits compile and pass
+- [x] `Tail` + `TailPoint` + `TailPolicy`; bounded ring storage and
+      stable snapshots avoid allocating on unchanged frames.
+- [x] `Acceleration` + `AccelerationPolicy`.
+- [x] Assert the tier rule in a test: both traits compile and pass
       with the raw `ContactFrame` withheld from them.
-- [ ] Tests: tail respects `maxAgeMS` and `minStepPX`; speed of a
-      known synthetic path matches the analytic answer.
+- [x] 10 tests in `src/test/unit/core/derived.test.ts`: tail respects
+      `maxAgeMS`, `maxPoints` and `minStepPX`; speed of a known
+      synthetic path matches the analytic answer. Passing on the Mac.
+- [x] 19 seeded property tests cover geometry, headings, rays and
+      scale bounds; 8 synthesised robustness tests add table-like
+      noise, dropped feet, nearby objects and rejected heading jumps.
 
 ### 5. Physicals, kinds and presence
 
-- [ ] `Physical` and the whole subclass tree.
-- [ ] `PhysicalKind` descriptor; today's `state/templates`, the
+- [x] `Physical` and the subclass tree. Split by **shape**, not by
+      origin: `TangibleObject` has a `Base`, `HardwareControl` is real
+      but has no pose, `VirtualPhysical` produces no contacts at all.
+      `SimulatedPuck` is therefore a `Puck`, not a `VirtualPhysical` —
+      a drag copy really does emit contacts, which is exactly what
+      makes it useful.
+- [x] `PhysicalKind` descriptor; today's `state/templates`, the
       `Template` type and `TPL_FACTORY` become kind descriptors,
-      unchanged in content.
-- [ ] Three kind families registered side by side: the 3-point kind
-      as the standard for anything new, and the ring and slot kinds
-      as legacy — registered, loadable and supported indefinitely,
-      not deprecated. Existing pucks never stop working.
-- [ ] `Affordance` and its subclasses; `isToolPuck()` and
-      `mayOverlap()` become affordance queries.
-- [ ] `DuoInsert` is a **modifier**, not a role: while nested it
-      adds or swaps functions on the host and removes them on
-      separation. `mayOverlap` stays a physical fact on `Nestable`.
-      Decided — do not give the insert a role of its own.
-- [ ] `Presence` + `PresencePolicy`; `TrackState` and the dropout
-      memory move here.
-- [ ] `PhysicalRegistry`, `KindRegistry`, `IdentityMap`.
-- [ ] Tests: a puck lifted and put back within the memory window is
-      the same `PhysicalId` with its authored records intact; after
-      the window it is a new one.
+      unchanged in content. `defaultRole`, `cardinality` and
+      `appearance` are deliberately **not** on it yet — they arrive
+      with roles in phase 7, and a field nothing reads is a field that
+      quietly goes wrong.
+- [x] Three kind families registered side by side via `KindFamily`:
+      `triad` as the standard for anything new, `ring` and `slot` as
+      legacy — registered, loadable and supported indefinitely.
+      `coded` exists as a name and `BaseFactory` throws for it, because
+      no recogniser for printed patterns exists yet.
+- [x] `Affordance` and its subclasses; `affordanceOf()` is the one
+      place the question "can this object physically do X" is
+      answered. `mayOverlap` now lives on `Nestable`, so it is a fact
+      about objects rather than a permission.
+- [x] `DuoInsert` is a modifier, not a role: it nests into a `DuoHost`
+      and separates from it, and neither knows anything about
+      functions.
+- [x] `Presence` + `PresencePolicy`, four states with two windows:
+      `holdMS` (900, today's `CFG.dropoutMS`) keeps a briefly
+      unmeasured puck on the glass, `memoryMS` keeps a lifted one
+      itself. Two numbers because they answer different questions;
+      collapsing them gives either a flickering table or a puck that
+      inherits a stranger's history.
+- [x] `BaseFactory` picks solver and heading source per family, and
+      **shares one `PxPerMMEstimator`** across every physical — how
+      big a pixel is, is a fact about the screen, not about a puck.
+- [x] `KindRegistry` (refuses duplicate ids rather than overwriting),
+      `PhysicalRegistry` (announces joined / lifted / returned / left
+      from `Presence`, in one place), `IdentityMap` (same kind _and_
+      near the same place, which is the old `tracks.memory` rule made
+      explicit).
+- [x] 23 tests in `src/test/unit/core/physical.test.ts`, covering the
+      presence state machine end to end, hole-versus-rim hit testing,
+      the duo, registry events and both directions of the identity
+      question. Passing on the Mac.
 
 ### 6. Bridge — run both pipelines side by side
 
 The point of this phase is confidence, not features.
 
-- [ ] `TrackBridge`: feed the existing `recognise()` output into a
+`src/bridge/` lives **outside** `src/core/` on purpose: it is the
+one place allowed to import from both trees, which is what keeps
+the core's boundary rules absolute rather than
+"absolute except here". It is checked by the main tsconfig, not by
+`tsconfig.core.json`.
+
+- [x] `templateToKind` in `src/bridge/`: every one of today's
+      templates becomes a `PhysicalKind`, so the two pipelines are
+      provably describing the same objects before anything is
+      compared. Carries the 45 mm → 80 mm outer-diameter fix.
+- [x] `ParityCheck` + `ParityReport`: counts every frame the two
+      disagree, on what, and by how much. Angles compared with
+      `shortestAngleDiffDeg`, never subtracted — two readings either
+      side of the wrap point are half a degree apart and plain
+      subtraction calls that 359. Keeps the **worst** case, not the
+      average: an average hides the one frame in a thousand where a
+      puck jumped, and that frame is the bug.
+- [x] 24 tests in `src/test/unit/bridge/`. Passing on the Mac.
+- [x] `TrackBridge`: feed the existing `recognise()` output into a
       `ContactFrame`, build `Physical`s from it, and keep them
-      updated alongside `tracks`.
-- [ ] A dev overlay that draws the new model's centre, direction ray
+      updated alongside `tracks`. The recogniser carries the contact
+      indices it chose and the tracker exposes its exact assignment;
+      the bridge never tries to recognise or match the object again.
+- [x] A `?base` dev overlay that draws the new model's centre, direction ray
       and tail next to the old one, so a mismatch is visible on the
       glass.
-- [ ] `ParityCheck`: per frame, compare centre, angle and identity
+- [x] `ParityCheck`: per frame, compare centre, angle and identity
       between old and new; log divergence over a threshold.
 - [ ] Run a full session on the table; drive the divergence to zero
       or write down, per case, why the new answer is the better one.
@@ -584,6 +685,76 @@ Settled on 8 September 2026, folded into the phases above.
     the parity bridge — the whole Base, proven against the running
     table. Phases 7–10 stay written down but are **not** started; they
     get re-decided once parity holds.
+
+## Bugs found by running the code
+
+Found on 8 September 2026 by executing the model and its adversarial
+tests — none of them was visible to typecheck, lint, Prettier or review.
+All are fixed.
+
+1. **The primary pipeline was inert.** The standard three-point
+   footprint was never `sensed`, so `Direction`, `Move` and `Rotate`
+   were dead behind it and `PxPerMMEstimator` took zero samples in 600
+   frames. `CentroidSolver`'s residual measures how far a footprint is
+   from _equilateral_, and `ApexHeadingSource` requires it to be _away_
+   from equilateral — the two requirements pointed in opposite
+   directions, leaving a working window of roughly 8° to 11° of
+   asymmetry that existed by accident. The chosen footprint (12°) sat
+   just outside it. Fixed by scoring the measured spread against the
+   kind's own inherent spread instead of against zero:
+   `FootprintSpec.footRadiusSpreadMM`, derived by `footprintFrom()`
+   using the same solver that will measure the kind at runtime.
+2. **The calibrator was gated by the thing it calibrated.**
+   `PxPerMMEstimator` only accepted readings above a confidence
+   threshold, and confidence included the size check, which is computed
+   from the scale being calibrated. A seed more than about four per
+   cent off scored too low to be trusted, so every reading was ignored
+   and the scale stayed wrong forever. Fixed by splitting
+   `shapeConfidence` — count and shape agreement, compared as a
+   dimensionless spread-to-radius ratio — out of `confidence`, and
+   gating the estimator on that. A seed 11% off now corrects itself;
+   before, 5% could not.
+3. **Replay handed out two clocks at once.** `ReplayContactSource`
+   stamped each frame with the caller's `now` while leaving every
+   contact's `firstSeen` on the recording's clock. `Tap` reads dwell as
+   `at - firstSeen`, so replaying a recording into a caller whose clock
+   stood at 5000 reported a 4920 ms dwell on the first frame: an
+   instant hold from a puck just put down. Fixed in the replay source
+   rather than in `Tap`, because any trait reading contact timestamps
+   would have inherited it.
+4. **A rejected heading jump poisoned the next frame.** `Rotate`
+   correctly refused a step larger than `maxStepDeg`, but still stored
+   that rejected heading as its new baseline. The following valid frame
+   was then measured from the bad reading and accumulated a false turn.
+   Fixed by advancing the baseline only for accepted headings.
+5. **A gone physical could revive.** `Presence` handled `sensed` before
+   checking its terminal state, so a late update moved `gone` back to
+   `placed` even though the registry had discarded that identity. The
+   terminal guard now runs first.
+6. **Lifted identity forgot where it had been.** `Position` correctly
+   clears a missing measurement, but `IdentityMap` read that live value
+   when deciding whether a returning puck was the same object. Tangible
+   physicals now retain their last accepted centre for identity recovery.
+7. **A non-finite radius poisoned calibration.** `NaN` passes ordinary
+   less-than comparisons, so one invalid fitted radius could turn the
+   shared `pxPerMM` value into `NaN`. The estimator now rejects all
+   non-finite measurements before blending.
+
+8. **The guard against a bad frame became a trap.** `Rotate` rejects
+   a step larger than `maxStepDeg` and keeps its baseline where it
+   was — right for one glitch frame, fatal for a heading that has
+   genuinely moved. Pick a puck up, turn it in your hand, put it
+   back, and every frame after that is a large step: rotation dies
+   silently and never recovers. Measured at 50 frames of zero
+   accumulation with no way back. Fixed with
+   `RotatePolicy.maxRejectedFrames`: after five rejections in a row
+   the baseline moves to wherever the heading now is, and the jump
+   itself is still never counted as a turn.
+
+The lesson worth keeping: every one of these passed strict TypeScript,
+ESLint, Prettier and a careful read. Only execution found them, and the
+first two would have been indistinguishable at the table from "the
+recognition is a bit unreliable today".
 
 ## Open questions
 

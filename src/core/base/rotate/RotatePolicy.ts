@@ -11,6 +11,16 @@ import { Policy } from "../Policy";
  * and it is dropped rather than accumulated. Without this guard one
  * bad frame permanently offsets `deltaTotalDeg`.
  *
+ * `maxRejectedFrames` is what stops that guard from becoming a trap.
+ * Rejecting a step keeps the baseline where it was, which is right for
+ * a single bad frame — but a heading that has *genuinely* moved stays
+ * rejected forever, and rotation dies silently. Pick a puck up, turn
+ * it in your hand, put it back: the heading is legitimately somewhere
+ * else, every frame after that is a large step, and without this the
+ * puck never turns again. After this many rejections in a row the
+ * baseline moves to wherever the heading now is, without the jump
+ * being counted as a turn.
+ *
  * There is deliberately no amplification here. The old table
  * multiplies rotation to drive the zoom, but that is the zoom's
  * opinion about what turning means, not a property of the turn.
@@ -23,6 +33,7 @@ export class RotatePolicy extends Policy {
     constructor(
         readonly deadZoneDeg: number = 0.4,
         readonly maxStepDeg: number = 45,
+        readonly maxRejectedFrames: number = 5,
     ) {
         super();
     }
@@ -31,6 +42,7 @@ export class RotatePolicy extends Policy {
         return {
             deadZoneDeg: this.deadZoneDeg,
             maxStepDeg: this.maxStepDeg,
+            maxRejectedFrames: this.maxRejectedFrames,
         };
     }
 }

@@ -430,6 +430,7 @@ export function recognise(
             conf: c.conf,
             x: c.d.cx,
             y: c.d.cy,
+            contactIndices: [...c.idx],
             angle: c.d.ring
                 ? (c.d.angle ?? 0)
                 : Math.atan2(c.d.anchor.y - c.d.cy, c.d.anchor.x - c.d.cx),
@@ -484,6 +485,7 @@ export function recognise(
                 conf: 0.4,
                 x: d.cx,
                 y: d.cy,
+                contactIndices: [...g],
                 angle: m.angle,
                 held: true,
             });
@@ -535,6 +537,7 @@ export function recognise(
             conf: 0.4,
             x: d.cx,
             y: d.cy,
+            contactIndices: [...group],
             angle: m.angle,
             held: true,
         });

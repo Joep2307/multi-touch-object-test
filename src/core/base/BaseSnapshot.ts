@@ -1,7 +1,9 @@
+import type { AccelerationSnapshot } from "./acceleration";
 import type { DirectionSnapshot } from "./direction/DirectionSnapshot";
 import type { MoveSnapshot } from "./move/MoveSnapshot";
 import type { PositionSnapshot } from "./position/PositionSnapshot";
 import type { RotateSnapshot } from "./rotate/RotateSnapshot";
+import type { TailSnapshot } from "./tail";
 import type { TapSnapshot } from "./tap/TapSnapshot";
 
 /* Everything the base knows about one object at one moment.
@@ -24,4 +26,6 @@ export type BaseSnapshot = {
     readonly move: MoveSnapshot;
     readonly rotate: RotateSnapshot;
     readonly tap: TapSnapshot;
+    readonly tail: TailSnapshot;
+    readonly acceleration: AccelerationSnapshot;
 };

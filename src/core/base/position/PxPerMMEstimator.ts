@@ -20,8 +20,9 @@ import type { PxPerMMPolicy } from "./PxPerMMPolicy";
  *
  *   - only `complete` readings count, so a puck with a foot missing
  *     cannot shrink the whole table;
- *   - only readings above `minConfidence` count, so a hand that
- *     happened to fit a circle cannot either;
+ *   - only readings whose *shape* agreement is above
+ *     `minConfidence` count, so a hand that happened to fit a circle
+ *     cannot either;
  *   - the result is clamped to `maxDrift` around the seed, so even a
  *     long run of bad readings cannot walk the scale away.
  *
@@ -53,13 +54,28 @@ export class PxPerMMEstimator {
        which is also what `value` reports. */
     observe(snapshot: PositionSnapshot, sample: BaseSample): number {
         if (!snapshot.complete) return this.#value;
-        if (snapshot.confidence < this.#policy.minConfidence) {
+        /* Gated on `shapeConfidence`, never on `confidence`.
+           `confidence` includes the size check, and the size check is
+           computed from the very scale being calibrated: a seed more
+           than about four per cent off scored too low to be trusted,
+           so the estimator ignored every reading and the scale stayed
+           wrong forever. A calibrator may not be gated by the thing it
+           calibrates. */
+        if (snapshot.shapeConfidence < this.#policy.minConfidence) {
             return this.#value;
         }
         const knownMM = sample.spec.footRadiusMM;
-        if (knownMM <= 0 || snapshot.fittedRadiusPX <= 0) return this.#value;
+        const measuredPX = snapshot.fittedRadiusPX;
+        if (
+            !Number.isFinite(knownMM) ||
+            !Number.isFinite(measuredPX) ||
+            knownMM <= 0 ||
+            measuredPX <= 0
+        ) {
+            return this.#value;
+        }
 
-        const measured = snapshot.fittedRadiusPX / knownMM;
+        const measured = measuredPX / knownMM;
         const w = this.#policy.smoothing;
         const blended = this.#value * (1 - w) + measured * w;
 

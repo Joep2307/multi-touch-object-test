@@ -1,10 +1,13 @@
 export { Base } from "./Base";
+export { footprintFrom } from "./footprintFrom";
 export { Policy } from "./Policy";
 export { Trait } from "./Trait";
+export * from "./acceleration";
 export * from "./direction";
 export * from "./move";
 export * from "./position";
 export * from "./rotate";
+export * from "./tail";
 export * from "./tap";
 export type { BaseSample } from "./BaseSample";
 export type { BaseSnapshot } from "./BaseSnapshot";

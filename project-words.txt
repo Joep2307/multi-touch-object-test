@@ -34,6 +34,7 @@ Effentbuurt
 Erfgoedweb
 Ginnekenbuurt
 Ginnekenmarkt
+Kasa
 Liniepad
 Liniepadbuurt
 Markbuurt
@@ -49,12 +50,17 @@ Puckstand
 Rastercel
 Recognise
 SRTM
+Suuu
+Suvv
+Svuu
+Svvv
 Schermstand
 Seeligpark
 Seeligparkbuurt
 Speelhuislaan
 Speelhuislaanbuurt
 Teteringenbuurt
+Tijdlapse
 Tuinzigt
 Tuinzigtbuurt
 Ulvenhoutbuurt
@@ -120,6 +126,7 @@ ijkvelden
 importmap
 installatietaal
 isbn
+isize
 journalctl
 kioskstand
 kpis
@@ -140,6 +147,7 @@ northchange
 nums
 ondertitelbestanden
 ongeschaald
+osize
 ontwikkelaarsconsole
 ontwikkelstand
 oordeelskleuren
@@ -151,6 +159,7 @@ pgrep
 pinpointable
 ptrs
 puckbalk
+puckbesturing
 puckcontacten
 puckdriehoek
 puckherkenning
@@ -170,6 +179,8 @@ recognise
 recognised
 recognises
 rlib
+rmax
+rmin
 roosterpuck
 rustup
 schermpixel
@@ -190,6 +201,7 @@ tafelstand
 tegenóver
 tekenbare
 tekenlus
+tijdlapse
 timeslice
 toetsenbordindeling
 tpls

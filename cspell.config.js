@@ -49,6 +49,16 @@ export default {
         "src/wasm/**/Cargo.lock",
         "package-lock.json",
         "Claude outputs/**",
+        /* Historical pre-module snapshot; maintained sources live under
+           src/ and exe/. */
+        "app.ts",
+        "capture.ts",
+        "globals.d.ts",
+        "index.html",
+        "kg.ts",
+        "speech.ts",
+        "styles.css",
+        "test/**",
         "*.pdf",
         "*.png",
         ".git/**",

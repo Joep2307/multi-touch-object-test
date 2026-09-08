@@ -5,9 +5,11 @@
  * eslint.config.js. Read TODO.md for what is being built here and in
  * what order.
  *
- * Phases 0 to 2 are done: contacts and replay, then the base traits
- * Position and Direction. Move, Rotate and Tap follow in phase 3,
- * Tail and Acceleration in phase 4, physicals in phase 5.
+ * Phases 0 to 3 and 5 are done: contacts and replay, the base traits,
+ * and physicals with their kinds and presence. Phase 4 (Tail and
+ * Acceleration) is being written separately; phase 6 brings the
+ * bridge that runs this beside the old pipeline.
  */
 export * from "./base";
 export * from "./contact";
+export * from "./physical";

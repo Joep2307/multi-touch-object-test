@@ -110,7 +110,10 @@ const browser = await chromium.launch(
 
 async function newPage(
     uiMode: string,
-    { twoSided = false }: { twoSided?: boolean } = {},
+    {
+        twoSided = false,
+        base = false,
+    }: { twoSided?: boolean; base?: boolean } = {},
 ) {
     const ctx = await browser.newContext({
         viewport: { width: W, height: H },
@@ -135,9 +138,32 @@ async function newPage(
         )
             errs.push(m.text());
     });
-    await page.goto(BASE + "/index.html?test");
+    await page.goto(BASE + `/index.html?test${base ? "&base" : ""}`);
     await page.waitForTimeout(900);
     return { page, ctx, errs };
+}
+
+// ── 0. the side-by-side Base pipeline is safe when explicitly enabled ──
+{
+    const { page, ctx, errs } = await newPage("laptop", { base: true });
+    const tray = page.locator("#puckDock .traypuck").first();
+    const box = await tray.boundingBox();
+    if (box !== null) {
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(W / 2, H / 2, { steps: 12 });
+        await page.mouse.up();
+        await page.waitForTimeout(400);
+    }
+    ok(
+        "Base-vergelijking draait zonder JS-fouten",
+        box !== null &&
+            errs.length === 0 &&
+            (await page.evaluate(
+                () => (window as any).__puck?.tracks().length,
+            )) > 0,
+    );
+    await ctx.close();
 }
 
 // ── 1. laptop: drag copy onto the map, tap on the rim vs. tap in the viewing hole ──

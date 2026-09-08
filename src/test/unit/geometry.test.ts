@@ -46,7 +46,7 @@ suite("dist", () => {
 suite("padsFor", () => {
     it("legt de driehoek met zijn zwaartepunt in de oorsprong", () => {
         for (const tpl of TEMPLATES) {
-            const pts = padsFor(tpl, 60);
+            const pts = padsFor(tpl);
             expect(pts).toHaveLength(3);
             expect(pts.reduce((s, p) => s + p.x, 0) / 3).toBeCloseTo(0, 10);
             expect(pts.reduce((s, p) => s + p.y, 0) / 3).toBeCloseTo(0, 10);
@@ -56,7 +56,7 @@ suite("padsFor", () => {
     it("bouwt precies de zijden die het sjabloon voorschrijft", () => {
         for (const tpl of TEMPLATES) {
             const L = 60;
-            const [a, b, c] = padsFor(tpl, L);
+            const [a, b, c] = padsFor(tpl);
             const zijden = [dist(a, b), dist(b, c), dist(c, a)].sort(
                 (x, y) => x - y,
             );
@@ -73,8 +73,8 @@ suite("padsFor", () => {
     });
 
     it("schaalt mee met de langste zijde", () => {
-        const klein = padsFor(TEMPLATES[0], 30);
-        const groot = padsFor(TEMPLATES[0], 60);
+        const klein = padsFor(TEMPLATES[0], 0.5);
+        const groot = padsFor(TEMPLATES[0]);
         klein.forEach((p, i) => {
             expect(groot[i].x).toBeCloseTo(p.x * 2, 9);
             expect(groot[i].y).toBeCloseTo(p.y * 2, 9);
@@ -85,7 +85,7 @@ suite("padsFor", () => {
 suite("describe", () => {
     it("leest van elk sjabloon zijn eigen verhoudingen terug", () => {
         for (const tpl of TEMPLATES) {
-            const d = tri(padsFor(tpl, 60));
+            const d = tri(padsFor(tpl));
             expect(d.ratios[0]).toBeCloseTo(Math.min(...tpl.ratios), 9);
             expect(d.ratios[1]).toBeCloseTo(Math.max(...tpl.ratios), 9);
             expect(d.longest).toBeCloseTo(60, 9);
@@ -94,10 +94,10 @@ suite("describe", () => {
 
     it("houdt dezelfde verhoudingen als de puck draait en verschuift", () => {
         const tpl = TEMPLATES[1];
-        const recht = tri(padsFor(tpl, 60));
+        const recht = tri(padsFor(tpl));
         for (const hoek of [0.3, 1.1, Math.PI / 2, 2.9, 5.5]) {
             const d = tri(
-                padsFor(tpl, 60).map((p) => move(rotate(p, hoek), 431, -87)),
+                padsFor(tpl).map((p) => move(rotate(p, hoek), 431, -87)),
             );
             expect(d.ratios[0]).toBeCloseTo(recht.ratios[0], 9);
             expect(d.ratios[1]).toBeCloseTo(recht.ratios[1], 9);
@@ -106,7 +106,7 @@ suite("describe", () => {
     });
 
     it("meldt het zwaartepunt waar de puck ligt", () => {
-        const d = tri(padsFor(TEMPLATES[0], 60).map((p) => move(p, 800, 500)));
+        const d = tri(padsFor(TEMPLATES[0]).map((p) => move(p, 800, 500)));
         expect(d.cx).toBeCloseTo(800, 9);
         expect(d.cy).toBeCloseTo(500, 9);
     });
@@ -124,31 +124,31 @@ suite("describe", () => {
 
     it("geeft de hoek terug waarin het anker staat", () => {
         const tpl = TEMPLATES[2];
-        const recht = tri(padsFor(tpl, 60));
+        const recht = tri(padsFor(tpl));
         const nul = Math.atan2(
             recht.anchor.y - recht.cy,
             recht.anchor.x - recht.cx,
         );
         for (const hoek of [0, 0.7, 2.2, -1.4]) {
-            const d = tri(padsFor(tpl, 60).map((p) => rotate(p, hoek)));
+            const d = tri(padsFor(tpl).map((p) => rotate(p, hoek)));
             const gemeten = Math.atan2(d.anchor.y - d.cy, d.anchor.x - d.cx);
             expect(wrapAngle(gemeten - nul - hoek)).toBeCloseTo(0, 9);
         }
     });
 
     it("onderscheidt een puck van zijn spiegelbeeld", () => {
-        const pts = padsFor(TEMPLATES[0], 60);
+        const pts = padsFor(TEMPLATES[0]);
         const gespiegeld = pts.map((p) => ({ x: -p.x, y: p.y }));
         expect(tri(pts).chir).not.toBe(tri(gespiegeld).chir);
     });
 
     it("houdt de draairichting vast terwijl de puck ronddraait", () => {
         const tpl = TEMPLATES[3];
-        const chir = tri(padsFor(tpl, 60)).chir;
+        const chir = tri(padsFor(tpl)).chir;
         for (let hoek = 0; hoek < 2 * Math.PI; hoek += 0.4) {
-            expect(
-                tri(padsFor(tpl, 60).map((p) => rotate(p, hoek))).chir,
-            ).toBe(chir);
+            expect(tri(padsFor(tpl).map((p) => rotate(p, hoek))).chir).toBe(
+                chir,
+            );
         }
     });
 
@@ -167,7 +167,7 @@ suite("describe", () => {
         // lies further than that tolerance from every other. Anyone
         // designing a fifth puck must get this test passing again.
         for (const a of TEMPLATES) {
-            const d = tri(padsFor(a, 60));
+            const d = tri(padsFor(a));
             for (const b of TEMPLATES) {
                 if (a.id === b.id) continue;
                 expect(

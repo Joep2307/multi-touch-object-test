@@ -16,6 +16,17 @@ import type { ContactRecording } from "./ContactRecording";
  * velocity — measures against one clock, and mixing a recorded clock
  * into that would make a replayed dropout look either instant or
  * eternal depending on when the recording was made.
+ *
+ * **Which is why every timestamp on the way out is shifted, not only
+ * the frame's.** An earlier version moved `at` onto the caller's clock
+ * and left each contact's `firstSeen` and `lastSeen` on the recording's
+ * — so a frame arrived carrying two clocks at once. `Tap` measures
+ * dwell as `sample.at - firstSeen`, and replaying a recording that
+ * started at 80 ms into a caller whose clock stood at 5000 made the
+ * very first frame report a dwell of 4920 ms: an instant hold, on
+ * arrival, from a puck that had only just been put down. Any trait
+ * reading a contact's own timestamps would have inherited the same
+ * fault, so the fix belongs here rather than in `Tap`.
  */
 export class ReplayContactSource extends ContactSource {
     readonly #frames: readonly ContactFrame[];
@@ -49,7 +60,16 @@ export class ReplayContactSource extends ContactSource {
             this.#index += 1;
         }
         const current = this.#frames[this.#index] ?? first;
-        return { at: now, points: current.points };
+        const shift = now - current.at;
+        if (shift === 0) return { at: now, points: current.points };
+        return {
+            at: now,
+            points: current.points.map((p) => ({
+                ...p,
+                firstSeen: p.firstSeen + shift,
+                lastSeen: p.lastSeen + shift,
+            })),
+        };
     }
 
     override clear(): void {

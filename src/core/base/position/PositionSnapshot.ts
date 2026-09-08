@@ -23,4 +23,11 @@ export type PositionSnapshot = {
     readonly fittedRadiusPX: number;
     readonly residualPX: number;
     readonly confidence: number;
+    /* The part of `confidence` that does not depend on the screen
+       scale: enough feet, arranged like this kind. Separate because
+       `PxPerMMEstimator` has to be gated on something that is not
+       itself a function of the scale it is calibrating — gating it on
+       `confidence` deadlocks, and a seed more than a few per cent off
+       could then never be corrected. */
+    readonly shapeConfidence: number;
 };

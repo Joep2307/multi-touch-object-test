@@ -1,0 +1,19 @@
+#!/bin/sh
+# Format and lint what is actually being committed, and typecheck the
+# core. Deliberately no husky and no lint-staged: adding either means an
+# `npm install`, and installs for this repo happen on the Mac, never in a
+# session sandbox — a Linux install here leaves binaries an arm64 Mac
+# cannot run. A hooks directory costs nothing and needs no dependency.
+#
+# Turn it on once, per clone:
+#     git config core.hooksPath .githooks
+#
+# Skip it for one commit with `git commit --no-verify`.
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|scss|json|md|ya?ml)$' || true)
+[ -z "$staged" ] && exit 0
+
+echo "$staged" | xargs npx prettier --check
+echo "$staged" | grep -E '\.ts$' | xargs -r npx eslint
+npx tsc --noEmit -p tsconfig.core.json

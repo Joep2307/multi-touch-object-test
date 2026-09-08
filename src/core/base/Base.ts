@@ -3,10 +3,12 @@ import type { BaseSnapshot } from "./BaseSnapshot";
 import type { ContactSet } from "../contact/ContactSet";
 import type { Direction } from "./direction/Direction";
 import type { FootprintSpec } from "./FootprintSpec";
+import type { Acceleration } from "./acceleration/Acceleration";
 import type { Move } from "./move/Move";
 import type { Position } from "./position/Position";
 import type { PxPerMMEstimator } from "./position/PxPerMMEstimator";
 import type { Rotate } from "./rotate/Rotate";
+import type { Tail } from "./tail/Tail";
 import type { Tap } from "./tap/Tap";
 
 /* The kinematic truth about one object, and the container its traits
@@ -26,8 +28,10 @@ import type { Tap } from "./tap/Tap";
  *
  * `Move`, `Rotate` and `Tap` run after `Direction` because each reads
  * a snapshot the earlier traits produced. `Tail` and `Acceleration`
- * join the end of the same sequence in phase 4: they are the derived
- * tier and read only what tier one already computed.
+ * come last: they are the derived tier and read only what tier one
+ * already computed — `Move`'s smoothed displacement, never the raw
+ * frame. That ordering is what makes the tier boundary real rather
+ * than a convention.
  */
 export class Base {
     constructor(
@@ -36,6 +40,8 @@ export class Base {
         readonly move: Move,
         readonly rotate: Rotate,
         readonly tap: Tap,
+        readonly tail: Tail,
+        readonly acceleration: Acceleration,
         readonly pxPerMM: PxPerMMEstimator,
     ) {}
 
@@ -52,6 +58,8 @@ export class Base {
         this.move.update(sample);
         this.rotate.update(sample);
         this.tap.update(sample);
+        this.tail.update(sample);
+        this.acceleration.update(sample);
     }
 
     /* What the object's outer edge measures on screen, in pixels.
@@ -74,6 +82,8 @@ export class Base {
             move: this.move.snapshot(),
             rotate: this.rotate.snapshot(),
             tap: this.tap.snapshot(),
+            tail: this.tail.snapshot(),
+            acceleration: this.acceleration.snapshot(),
         };
     }
 
@@ -83,6 +93,8 @@ export class Base {
         this.move.reset();
         this.rotate.reset();
         this.tap.reset();
+        this.tail.reset();
+        this.acceleration.reset();
         this.pxPerMM.reset();
     }
 }

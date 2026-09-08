@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
     ApexHeadingSource,
     CentroidSolver,
+    footprintFrom,
     Direction,
     DirectionPolicy,
     Move,
@@ -23,11 +24,15 @@ import {
 import type { ContactPoint } from "../../../core/contact";
 import type { FootprintSpec } from "../../../core/base";
 
-const SPEC: FootprintSpec = {
-    expectedCount: 3,
-    footRadiusMM: 40,
-    outerDiameterMM: 80,
-};
+const TRIAD_FEET = [0, 132, 228].map((deg) => {
+    const rad = (deg * Math.PI) / 180;
+    return { x: 40 * Math.cos(rad), y: 40 * Math.sin(rad) };
+});
+const SPEC: FootprintSpec = footprintFrom(
+    TRIAD_FEET,
+    80,
+    new CentroidSolver(),
+);
 
 const feet = (
     cx: number,
@@ -160,6 +165,31 @@ describe("Rotate", () => {
         r.step(feet(400, 300, 3, 16), 16);
         const before = r.rotate.snapshot().deltaTotalDeg;
         r.step(feet(400, 300, 130, 32), 32);
+        expect(r.rotate.snapshot().deltaTotalDeg).toBeCloseTo(before, 9);
+    });
+
+    it("re-baselines when the heading has genuinely moved", () => {
+        /* Rejecting a large step protects the total from one bad
+           frame. Holding that rejection forever kills rotation: pick
+           a puck up, turn it in your hand, put it back, and every
+           frame after that is a large step. It must recover. */
+        const r = rig();
+        for (let f = 0; f <= 10; f += 1) {
+            r.step(feet(400, 300, f * 2, f * 16), f * 16);
+        }
+        const before = r.rotate.snapshot().deltaTotalDeg;
+        for (let f = 11; f < 60; f += 1) {
+            r.step(feet(400, 300, f * 2 + 130, f * 16), f * 16);
+        }
+        expect(r.rotate.snapshot().deltaTotalDeg).toBeGreaterThan(before + 20);
+    });
+
+    it("still ignores a single glitch frame", () => {
+        const r = rig();
+        r.step(feet(400, 300, 0, 0), 0);
+        r.step(feet(400, 300, 3, 16), 16);
+        const before = r.rotate.snapshot().deltaTotalDeg;
+        r.step(feet(400, 300, 133, 32), 32);
         expect(r.rotate.snapshot().deltaTotalDeg).toBeCloseTo(before, 9);
     });
 

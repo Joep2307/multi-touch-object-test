@@ -131,6 +131,20 @@ describe("ReplayContactSource", () => {
         expect(src.frame(41 * 16).points).toHaveLength(3);
     });
 
+    it("hands out one clock, not two", () => {
+        /* The frame carries the caller's `now`; every contact on it
+           must be on that same clock. A frame with the caller's `at`
+           and the recording's `firstSeen` made Tap report an instant
+           hold on the first frame of a replay. */
+        const src = new ReplayContactSource(recording);
+        src.frame(5000);
+        const frame = src.frame(5000 + 30 * 16);
+        for (const point of frame.points) {
+            expect(point.firstSeen).toBeLessThanOrEqual(frame.at);
+            expect(frame.at - point.firstSeen).toBeLessThan(2000);
+        }
+    });
+
     it("round-trips a recording it just made", () => {
         const live = new PointerContactSource();
         const rec = new ContactRecorder("round-trip");

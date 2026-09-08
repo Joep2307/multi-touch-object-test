@@ -28,6 +28,16 @@ declare global {
         webkitSpeechRecognition?: SpeechRecognitionCtor;
         MV: typeof MV;
         setNorth: typeof setNorth;
+        /* Only present on a `?base` URL: the recording controls for a
+           parity session. See src/bridge/installBaseHooks.ts. */
+        __base?: {
+            start: (name?: string) => string;
+            stop: () => string;
+            save: () => string;
+            parity: () => string;
+            readonly recording: boolean;
+            readonly frames: number;
+        };
         __puck?: {
             topics: () => string[];
             ringStart: (n: number) => number;

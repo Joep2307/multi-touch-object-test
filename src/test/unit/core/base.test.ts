@@ -7,11 +7,14 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+    Acceleration,
+    AccelerationPolicy,
     ApexHeadingSource,
     Base,
     CentroidSolver,
     CircleFitSolver,
     Direction,
+    footprintFrom,
     DirectionPolicy,
     DirectionRay,
     GapHeadingSource,
@@ -23,6 +26,8 @@ import {
     PxPerMMPolicy,
     Rotate,
     RotatePolicy,
+    Tail,
+    TailPolicy,
     Tap,
     TapPolicy,
 } from "../../../core/base";
@@ -33,11 +38,15 @@ import fixture from "./fixtures/threePointPlaceRotateLift.json";
 
 const recording = fixture as ContactRecording;
 
-const SPEC: FootprintSpec = {
-    expectedCount: 3,
-    footRadiusMM: 40,
-    outerDiameterMM: 80,
-};
+const TRIAD_FEET = [0, 132, 228].map((deg) => {
+    const rad = (deg * Math.PI) / 180;
+    return { x: 40 * Math.cos(rad), y: 40 * Math.sin(rad) };
+});
+const SPEC: FootprintSpec = footprintFrom(
+    TRIAD_FEET,
+    80,
+    new CentroidSolver(),
+);
 
 const feet = (
     cx: number,
@@ -65,12 +74,15 @@ const makeBase = (seed = 4): Base => {
         position,
         new ApexHeadingSource(new DirectionPolicy()),
     );
+    const move = new Move(position, new MovePolicy());
     return new Base(
         position,
         direction,
-        new Move(position, new MovePolicy()),
+        move,
         new Rotate(direction, new RotatePolicy()),
         new Tap(position, new TapPolicy()),
+        new Tail(move, new TailPolicy()),
+        new Acceleration(move, new AccelerationPolicy()),
         new PxPerMMEstimator(seed, new PxPerMMPolicy()),
     );
 };
@@ -78,7 +90,7 @@ const makeBase = (seed = 4): Base => {
 describe("CentroidSolver", () => {
     it("finds the middle and the foot distance", () => {
         const fit = new CentroidSolver().solve(
-            feet(400, 300, 160, [0, 132, 228]),
+            feet(400, 300, 160, [0, 120, 240]),
         );
         expect(fit?.centre.x).toBeCloseTo(400, 6);
         expect(fit?.centre.y).toBeCloseTo(300, 6);
@@ -165,6 +177,7 @@ describe("PxPerMMEstimator", () => {
         fittedRadiusPX,
         residualPX: 0,
         confidence: 1,
+        shapeConfidence: 1,
     });
     const sample = (pxPerMM: number) => ({
         at: 0,
@@ -175,7 +188,9 @@ describe("PxPerMMEstimator", () => {
 
     it("walks a wrong seed towards what the puck actually measures", () => {
         const est = new PxPerMMEstimator(3.8, new PxPerMMPolicy());
-        for (let i = 0; i < 400; i += 1) est.observe(good(160), sample(4));
+        for (let i = 0; i < 400; i += 1) {
+            est.observe(good(SPEC.footRadiusMM * 4), sample(4));
+        }
         expect(est.value).toBeCloseTo(4, 2);
     });
 
@@ -186,9 +201,9 @@ describe("PxPerMMEstimator", () => {
         expect(est.sampleCount).toBe(0);
     });
 
-    it("ignores a low-confidence reading", () => {
+    it("ignores a reading whose shape does not match", () => {
         const est = new PxPerMMEstimator(3.8, new PxPerMMPolicy());
-        est.observe({ ...good(160), confidence: 0.4 }, sample(4));
+        est.observe({ ...good(160), shapeConfidence: 0.4 }, sample(4));
         expect(est.value).toBe(3.8);
     });
 

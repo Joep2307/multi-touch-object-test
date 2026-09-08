@@ -6,16 +6,20 @@ import type { CentreFit } from "./CentreFit";
  *
  * This is the primary solver, and not merely because it is the
  * simplest. A circle fitted through exactly three points passes
- * through all three *exactly*, so its residual is always zero — which
- * makes the residual useless as a quality signal for the one kind of
- * object we are standardising on. The centroid does not have that
- * problem: the feet of a three-point puck are equidistant from the
- * centre by construction, so the spread of those three distances is a
- * real measurement of whether this is one object or three fingers.
+ * through all three *exactly*, so its residual is always zero — for
+ * any three points at all, including three unrelated fingers. That
+ * makes it useless as a quality signal for the one kind of object we
+ * are standardising on. The centroid keeps a usable signal: the three
+ * distances vary in a way that is fixed by the shape, so a measured
+ * spread that differs from the shape's own spread means these points
+ * are not that object.
  *
- * That is the whole argument for `CentroidSolver` over
- * `CircleFitSolver` on three points, and it is why the choice of
- * solver belongs to the kind rather than to a count.
+ * Note the "differs from the shape's own spread". The spread is **not
+ * zero** for a three-point puck: the footprint is deliberately not
+ * equilateral, because an equilateral one has no distinguishable
+ * apex and therefore no readable orientation. `FootprintSpec`
+ * carries the expected spread for exactly this reason, and
+ * `footprintFrom()` derives it with this same solver.
  */
 export class CentroidSolver extends CentreSolver {
     override readonly id = "centre.centroid";

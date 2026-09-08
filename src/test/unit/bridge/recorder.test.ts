@@ -1,0 +1,128 @@
+/* Capturing a session at the table.
+ *
+ * The round-trip test is the one that matters. Everything still open in
+ * phases 1, 2 and 6 depends on recordings taken from the real glass,
+ * and a recording that replays differently from the session it came
+ * from would be worse than having none — it would produce confident
+ * test results about a table that never happened.
+ */
+import { describe, expect, it } from "vitest";
+import {
+    BaseSessionRecorder,
+    ParityCheck,
+    TrackBridge,
+} from "../../../bridge";
+import { ReplayContactSource } from "../../../core/contact";
+import type { ContactRecording } from "../../../core/contact";
+import type { Detection } from "../../../types/Detection";
+import type { Template } from "../../../types/Template";
+import type { TrackBridgeContact } from "../../../bridge/TrackBridgeContact";
+
+const TPL: Template = {
+    id: "ring-1",
+    verdict: "good",
+    angles: [0, 70, 150, 210, 300],
+    ringMM: 34,
+};
+
+const contacts = (cx: number, cy: number): TrackBridgeContact[] =>
+    [0, 70, 150, 210, 300].map((deg, i) => {
+        const rad = (deg * Math.PI) / 180;
+        return {
+            sourceId: `pointer:${i}`,
+            x: cx + 136 * Math.cos(rad),
+            y: cy + 136 * Math.sin(rad),
+            radiusPX: 0,
+            simulated: false,
+        };
+    });
+
+const detection = (cx: number, cy: number): Detection => ({
+    tpl: TPL,
+    conf: 0.9,
+    x: cx,
+    y: cy,
+    angle: 0,
+    contactIndices: [0, 1, 2, 3, 4],
+});
+
+const rig = () => {
+    const bridge = new TrackBridge(4);
+    const parity = new ParityCheck();
+    const recorder = new BaseSessionRecorder(bridge, parity);
+    let at = 0;
+    const step = (): void => {
+        at += 16;
+        bridge.update(at, contacts(400, 300), [
+            {
+                detection: detection(400, 300),
+                trackId: "puck-1",
+                visible: true,
+            },
+        ]);
+        recorder.capture();
+    };
+    return { recorder, parity, step, now: () => at };
+};
+
+describe("BaseSessionRecorder", () => {
+    it("captures nothing until it is armed", () => {
+        const r = rig();
+        for (let i = 0; i < 10; i += 1) r.step();
+        expect(r.recorder.frameCount).toBe(0);
+        expect(r.recorder.recording).toBe(false);
+    });
+
+    it("replays exactly what it recorded", () => {
+        const r = rig();
+        r.recorder.start("probe", r.now());
+        for (let i = 0; i < 25; i += 1) r.step();
+        expect(r.recorder.frameCount).toBe(25);
+
+        const json = r.recorder.toJSON("2026-09-08T00:00:00.000Z");
+        expect(json).not.toBeNull();
+        const parsed = JSON.parse(json ?? "") as ContactRecording;
+        expect(parsed.frames).toHaveLength(25);
+
+        const replay = new ReplayContactSource(parsed);
+        replay.frame(1000);
+        expect(replay.frame(1000 + 10 * 16).points).toHaveLength(5);
+    });
+
+    it("refuses to produce a file from an unarmed session", () => {
+        const r = rig();
+        for (let i = 0; i < 5; i += 1) r.step();
+        expect(r.recorder.toJSON("2026-09-08T00:00:00.000Z")).toBeNull();
+    });
+
+    it("names a file a disk will accept", () => {
+        const r = rig();
+        r.recorder.start("twee pucks / draaien!", 1234);
+        expect(r.recorder.fileName()).not.toMatch(/[^a-zA-Z0-9.-]/);
+    });
+
+    it("reports the worst divergence, not the average", () => {
+        const r = rig();
+        r.parity.compare(
+            0,
+            "t",
+            "k",
+            { seen: true, x: 0, y: 0, angleDeg: 0 },
+            { seen: true, x: 40, y: 0, angleDeg: 0 },
+        );
+        expect(r.recorder.paritySummary()).toMatch(/40\.0 px/);
+    });
+
+    it("clears the score when a new recording starts", () => {
+        const r = rig();
+        r.parity.compare(
+            0,
+            "t",
+            "k",
+            { seen: true, x: 0, y: 0, angleDeg: 0 },
+            { seen: true, x: 40, y: 0, angleDeg: 0 },
+        );
+        r.recorder.start("second", 0);
+        expect(r.parity.divergenceCount).toBe(0);
+    });
+});

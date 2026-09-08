@@ -2,6 +2,8 @@ import { CFG } from "../config/CFG";
 import { tracks } from "../state/tracks";
 import type { Detection } from "../types/Detection";
 import type { Track } from "../types/Track";
+import type { TrackAssignment } from "../types/TrackAssignment";
+import type { TrackResult } from "../types/TrackResult";
 import { wrapAngle } from "./geometry/wrapAngle";
 import { puckSepPX } from "./puckSepPX";
 import { applyPuckControls } from "./applyPuckControls";
@@ -12,7 +14,7 @@ import { startTrack } from "./startTrack";
    closest pair first, and never farther than `puckSepPX()`. That measure
    sits comfortably below the distance between two discs, so two identical
    pucks don't secretly swap identity (and with it, topic and marker). */
-export function track(dets: Detection[], now: number): Track[] {
+export function track(dets: Detection[], now: number): TrackResult {
     const forDet = new Map<Detection, Track>(),
         taken = new Set<Track>();
     const koppel = (reach: number) => {
@@ -40,6 +42,7 @@ export function track(dets: Detection[], now: number): Track[] {
      same kind can no longer swap identity here. */
     koppel(puckSepPX() * 2.5);
     const seen = new Set<Track>();
+    const assignments: TrackAssignment[] = [];
     for (const d of dets) {
         const t = forDet.get(d) || startTrack(d, now);
         seen.add(t);
@@ -64,6 +67,11 @@ export function track(dets: Detection[], now: number): Track[] {
         // against a segment boundary.
         t.angle = t.angleOrigin + (t.filteredAngle - t.rawOrigin);
         t.state = t.frames >= CFG.stableFrames ? "recognised" : "candidate";
+        assignments.push({
+            detection: d,
+            trackId: t.id,
+            visible: t.state !== "candidate",
+        });
         const moved = Math.hypot(t.x - t.anchorX, t.y - t.anchorY);
         if (moved > CFG.jitterPX) {
             t.anchorX = t.x;
@@ -75,8 +83,8 @@ export function track(dets: Detection[], now: number): Track[] {
             t.armed = true;
             t.pinId = null;
         }
-        // Anyone who actually picks up the puck and puts it down elsewhere is
-        // pointing at a new location: the zoom anchor point goes along with it.
+        // Anyone who picks the puck up and puts it down elsewhere points at a
+        // new location: the zoom anchor point goes along with it.
         if (moved > CFG.rearmPX) t.zoomAnchor = null;
         // Turning zooms and sliding travels; menu options are tapped.
         applyPuckControls(t, now);
@@ -84,12 +92,10 @@ export function track(dets: Detection[], now: number): Track[] {
     for (const [id, t] of [...tracks.map]) {
         if (seen.has(t)) continue;
         if (now - (t.lastSeen ?? 0) > CFG.dropoutMS) {
-            // A puck that drops out is almost never a puck that's being removed:
-            // one bad contact, a bump against the table, a sleeve sliding over the
-            // glass. So its mode goes on hold briefly instead of being dropped
-            // immediately. Otherwise it would come back as a fresh puck, immediately
-            // choose whatever mode its nose happens to be pointing at, and lose its
-            // marker.
+            // A puck that drops out is almost never being removed: one bad
+            // contact, a bump, or a sleeve sliding over the glass. Its mode
+            // goes on hold briefly. Otherwise it would come back fresh,
+            // choose whichever mode its nose points at, and lose its marker.
             while (
                 tracks.memory.length &&
                 now - tracks.memory[0].t >= CFG.puckMemoryMS
@@ -115,5 +121,8 @@ export function track(dets: Detection[], now: number): Track[] {
         } else if (t.state === "recognised") t.state = "incomplete";
         else tracks.map.delete(id);
     }
-    return [...tracks.map.values()].filter((t) => t.state !== "candidate");
+    return {
+        pucks: [...tracks.map.values()].filter((t) => t.state !== "candidate"),
+        assignments,
+    };
 }

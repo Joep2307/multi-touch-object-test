@@ -18,5 +18,5 @@ export function learnPoints(): TouchPoint[] {
     }
     const { pucks, usedIdx } = recognise(pts, known);
     learn.known = pucks.length;
-    return pts.filter((p, i) => !usedIdx.has(i));
+    return pts.filter((_p, i) => !usedIdx.has(i));
 }
