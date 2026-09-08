@@ -4,11 +4,7 @@ import type { Detection } from "../types/Detection";
 import type { Track } from "../types/Track";
 import { wrapAngle } from "./geometry/wrapAngle";
 import { puckSepPX } from "./puckSepPX";
-import { applyPuckZoom } from "./ring/applyPuckZoom";
-import { commitPuckChoice } from "./ring/commitPuckChoice";
-import { ringIndexOf } from "./ring/ringIndexOf";
-import { ringItems } from "./ring/ringItems";
-import { updatePuckMenu } from "./ring/updatePuckMenu";
+import { applyPuckControls } from "./applyPuckControls";
 import { startTrack } from "./startTrack";
 
 /* Which detection belongs to which puck that was already there? Not by
@@ -66,8 +62,7 @@ export function track(dets: Detection[], now: number): Track[] {
         // contact-point jitter, and more gain than this makes the ring
         // nervous: then the jitter of the contact points alone already taps
         // against a segment boundary.
-        t.angle =
-            t.angleOrigin + (t.filteredAngle - t.rawOrigin) * CFG.rotationGain;
+        t.angle = t.angleOrigin + (t.filteredAngle - t.rawOrigin);
         t.state = t.frames >= CFG.stableFrames ? "recognised" : "candidate";
         const moved = Math.hypot(t.x - t.anchorX, t.y - t.anchorY);
         if (moved > CFG.jitterPX) {
@@ -83,16 +78,8 @@ export function track(dets: Detection[], now: number): Track[] {
         // Anyone who actually picks up the puck and puts it down elsewhere is
         // pointing at a new location: the zoom anchor point goes along with it.
         if (moved > CFG.rearmPX) t.zoomAnchor = null;
-        // Rotating controls the menu; sliding controls the map (in zoom mode).
-        if (t.state === "recognised") {
-            // The mode the puck lands in on the table is its first choice.
-            if (t.landing) {
-                t.landing = false;
-                commitPuckChoice(t, ringIndexOf(t.angle, ringItems(t).length));
-            }
-            updatePuckMenu(t, now);
-        }
-        applyPuckZoom(t);
+        // Turning zooms and sliding travels; menu options are tapped.
+        applyPuckControls(t, now);
     }
     for (const [id, t] of [...tracks.map]) {
         if (seen.has(t)) continue;
@@ -120,6 +107,9 @@ export function track(dets: Detection[], now: number): Track[] {
                 armed: t.armed,
                 angleOrigin: t.angle,
                 zoomAnchor: t.zoomAnchor,
+                ring: t.ring,
+                panOX: t.panOX,
+                panOY: t.panOY,
             });
             tracks.map.delete(id);
         } else if (t.state === "recognised") t.state = "incomplete";

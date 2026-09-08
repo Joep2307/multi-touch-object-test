@@ -19,6 +19,7 @@ import { applyMode } from "./ui/applyMode";
 import { applyPinMoveMode } from "./ui/applyPinMoveMode";
 import { applyScale } from "./ui/applyScale";
 import { buildKeyboards } from "./ui/keyboard/buildKeyboards";
+import { installTestHooks } from "./test/installTestHooks";
 
 /* ═══════════════════════════════════════════════════════════════
    PUCK TABLE — the participation table
@@ -46,6 +47,7 @@ applyPinMoveMode();
 applyMode(ui.mode);
 renderTray();
 applyLang();
+installTestHooks();
 
 // Handy for tweaking from the console: `MV.zoom = 16`, `setNorth(90)`.
 window.MV = MV;

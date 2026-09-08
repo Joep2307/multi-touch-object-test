@@ -28,5 +28,13 @@ declare global {
         webkitSpeechRecognition?: SpeechRecognitionCtor;
         MV: typeof MV;
         setNorth: typeof setNorth;
+        __puck?: {
+            topics: () => string[];
+            ringStart: (n: number) => number;
+            ringPX: () => number;
+            ringOpen: () => boolean[];
+            tracks: () => Array<Record<string, unknown>>;
+            simulated: () => Array<{ x: number; y: number }>;
+        };
     }
 }

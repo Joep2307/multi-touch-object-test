@@ -31,10 +31,10 @@ export function syncSimPucksToMap(): void {
             t.y += dy;
             t.anchorX += dx;
             t.anchorY += dy;
-            // The zoom anchor point shifts along too: a puck that slides out from
-            // under itself because of the map hasn't been pushed forward by anyone,
-            // and so shouldn't zoom either. Otherwise one puck would send the
-            // other's zoom out of control.
+            // Its control origin shifts along too: movement caused by a map
+            // transform is not a fresh physical push of this puck.
+            t.panOX += dx;
+            t.panOY += dy;
             if (t.zoomRefY != null) t.zoomRefY += dy;
             t.buf = t.buf.map((q) => ({ x: q.x + dx, y: q.y + dy }));
         }

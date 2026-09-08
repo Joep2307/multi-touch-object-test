@@ -1,4 +1,5 @@
 import { CFG } from "../config/CFG";
+import { wireCapture } from "../capture/wireCapture";
 import { DEV } from "../config/DEV";
 import { DRAG_PANELS } from "../config/DRAG_PANELS";
 import { el } from "../dom/el";
@@ -90,6 +91,7 @@ import { menu } from "../state/menu";
    and the buttons, in the same order: when two handlers sit on the same
    event, who registered first matters. */
 export function wireEvents(): void {
+    const captureUi = wireCapture();
     // ── The glass ───────────────────────────────────────────────────────
     addEventListener("pointerdown", onControlTapDown, true);
     addEventListener("pointerup", onControlTapUp, true);
@@ -162,19 +164,25 @@ export function wireEvents(): void {
     }
 
     // ── Settings ────────────────────────────────────────────────────────
-    el("btnOrientation").onclick = toggleOrientation;
+    el("btnOrientation").onclick = () => {
+        toggleOrientation();
+        captureUi.reorient();
+    };
     el("btnFullscreen").onclick = toggleFullscreen;
     el("modeTouch").onclick = () => {
         applyMode("touch");
         reorientMenu();
+        captureUi.reorient();
     };
     el("modeLaptop").onclick = () => {
         applyMode("laptop");
         reorientMenu();
+        captureUi.reorient();
     };
     el("modePuck").onclick = () => {
         applyMode("puck");
         reorientMenu();
+        captureUi.reorient();
     };
     /* The add button sits where the vanished tray used to be, on both sides
      of the table. Hence a class rather than an id. */
@@ -221,6 +229,7 @@ export function wireEvents(): void {
         applySides();
         reorientMenu();
         reorientNote();
+        captureUi.reorient();
     };
 
     // ── Knowledge graph ─────────────────────────────────────────────────
@@ -287,10 +296,12 @@ export function wireEvents(): void {
         markLayerMenu();
     };
     MENU_BTNS.forEach(([id, side, view]) => {
-        el(id).onclick = () =>
+        el(id).onclick = () => (
+            captureUi.close(),
             menu.side === side && menu.view === view
                 ? closeMenu()
-                : openMenu(side, view);
+                : openMenu(side, view)
+        );
     });
     el("menuClose").onclick = closeMenu;
     // The menu stays open while someone works on the map alongside it.

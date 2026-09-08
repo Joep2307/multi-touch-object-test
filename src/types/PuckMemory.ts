@@ -17,4 +17,7 @@ export interface PuckMemory {
     armed: boolean;
     angleOrigin: number;
     zoomAnchor: LatLng | null;
+    ring: boolean;
+    panOX: number;
+    panOY: number;
 }

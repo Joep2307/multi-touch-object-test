@@ -30,6 +30,16 @@ export interface Track {
     /* Ready to place a marker; `false` after a tap in the viewing hole. */
     armed: boolean;
     flash: number;
+    /* The option ring is opened by tapping the viewing hole. */
+    ring: boolean;
+    tapIdx: number;
+    tapT0: number;
+    /* Direct map controls: rotation zooms; displacement pans. */
+    panOX: number;
+    panOY: number;
+    panT: number;
+    zoomRot: number;
+    zoomCarry: number;
     menu: PuckMenu;
     mode: PuckMode;
     topicIdx: number;

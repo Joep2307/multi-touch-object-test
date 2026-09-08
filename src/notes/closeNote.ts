@@ -21,6 +21,7 @@ export function closeNote(
     const n = v.el;
     n.style.display = "none";
     n.classList.remove("opening");
+    n.classList.remove("contact-step");
     v.pin = null;
     hideKeyboardIn(n);
 }

@@ -1,4 +1,5 @@
 import type { Verdict } from "./Verdict";
+import type { ContactDetails } from "./ContactDetails";
 
 /* A marker on the map: what was said, where, and by which kind of puck. */
 export interface Pin {
@@ -13,6 +14,7 @@ export interface Pin {
      with `description`. */
     note: string;
     transcript: string;
+    contact?: ContactDetails;
     t: string;
     /* Which table side this marker's window opened toward, if someone
      manually flipped it. Without a choice, the automatic rule applies. */

@@ -73,6 +73,57 @@ body.keyboard-open .note {
     z-index: 45;
 }
 
+.contact-followup {
+    display: none;
+}
+.note.contact-step .note-main {
+    display: none;
+}
+.note.contact-step .contact-followup {
+    display: block;
+}
+.contact-title {
+    font-size: var(--text-lg);
+    font-weight: 800;
+    margin: 8px 0 5px;
+}
+.contact-intro {
+    color: var(--ink-dim);
+    line-height: 1.45;
+    margin: 0 0 12px;
+}
+.contact-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    margin: 16px 0 4px;
+    line-height: 1.38;
+    cursor: pointer;
+
+    input {
+        appearance: auto;
+        flex: none;
+        width: 22px;
+        height: 22px;
+        min-height: 22px;
+        margin: 0;
+        padding: 0;
+        accent-color: var(--accent);
+    }
+}
+.contact-status {
+    min-height: 1.35em;
+    margin: 8px 0 0;
+    color: var(--warn);
+    font-weight: 650;
+}
+.contact-status.saved {
+    color: var(--good);
+}
+.contact-actions {
+    margin-bottom: 0;
+}
+
 @keyframes puck-note-out {
     from {
         opacity: 0;

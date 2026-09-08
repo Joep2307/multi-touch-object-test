@@ -11,6 +11,8 @@ import { flipNote } from "./flipNote";
 import { notePart } from "./notePart";
 import { positionNote } from "./positionNote";
 import { renderMatches } from "./renderMatches";
+import { saveContactFollowup } from "./saveContactFollowup";
+import { showContactFollowup } from "./showContactFollowup";
 
 /* Every button in the window belongs to THIS window. Hence wiring it here
    rather than once per id: there are two of everything. */
@@ -27,8 +29,11 @@ export function wireNote(v: NoteView): void {
             noteToPin(v);
             save();
         }
-        closeNote(v);
+        if (pin) showContactFollowup(v, pin);
+        else closeNote(v);
     };
+    q("contactSkip").onclick = () => closeNote(v);
+    q("contactSave").onclick = () => saveContactFollowup(v);
     q("noteDel").onclick = () => {
         if (v.pin) {
             const i = pins.list.indexOf(v.pin);

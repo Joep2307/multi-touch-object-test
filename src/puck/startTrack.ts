@@ -26,6 +26,14 @@ export function startTrack(d: Detection, now: number): Track {
         anchorY: d.y,
         armed: true,
         flash: 0,
+        ring: false,
+        tapIdx: -1,
+        tapT0: 0,
+        panOX: d.x,
+        panOY: d.y,
+        panT: 0,
+        zoomRot: d.angle,
+        zoomCarry: 0,
         // The puck starts in the main menu. Whichever mode it lands in is
         // immediately its choice: place it with its nose on Zoom, and it
         // zooms, without first rotating away and without waiting.
@@ -63,6 +71,10 @@ export function startTrack(d: Detection, now: number): Track {
         t.angleOrigin = mem.angleOrigin;
         t.angle = mem.angleOrigin;
         t.zoomAnchor = mem.zoomAnchor;
+        t.ring = mem.ring;
+        t.panOX = mem.panOX;
+        t.panOY = mem.panOY;
+        t.zoomRot = mem.angleOrigin;
     }
     t.dwellIdx = ringIndexOf(t.angle, ringItems(t).length);
     return t;

@@ -1,0 +1,146 @@
+@use "../abstracts" as *;
+
+#btnCapA {
+    left: 182px;
+    bottom: 18px;
+}
+
+#btnCapB {
+    right: 182px;
+    top: 18px;
+    display: none;
+}
+
+body.mode-touch.two-sided #btnCapB {
+    display: flex;
+}
+
+body.two-sided #btnCapB {
+    transform: rotate(180deg);
+}
+
+body.controls-flipped {
+    #btnCapA {
+        left: 18px;
+        top: 182px;
+        right: auto;
+        bottom: auto;
+        transform: rotate(90deg);
+    }
+
+    #btnCapB {
+        left: auto;
+        top: auto;
+        right: 18px;
+        bottom: 182px;
+        transform: rotate(-90deg);
+    }
+}
+
+#capBar {
+    display: none;
+    width: 270px;
+    z-index: 31;
+
+    &.open {
+        display: block;
+    }
+    &.at-a {
+        left: 182px;
+        bottom: 100px;
+    }
+    &.at-b {
+        right: 182px;
+        top: 100px;
+    }
+    &.flipped {
+        transform: rotate(180deg);
+        transform-origin: 50% 50%;
+    }
+
+    button {
+        width: 100%;
+    }
+    button.on {
+        color: #ffd9d9;
+        border-color: #e2584f;
+        background: rgba(226, 88, 79, 0.18);
+    }
+}
+
+body.controls-flipped #capBar {
+    transform-origin: 0 0;
+
+    &.at-a {
+        left: 100px;
+        top: 182px;
+        right: auto;
+        bottom: auto;
+        transform: rotate(90deg) translateY(-100%);
+    }
+
+    &.at-b {
+        left: calc(100vw - 100px);
+        top: calc(100vh - 182px);
+        right: auto;
+        bottom: auto;
+        transform: rotate(-90deg) translateY(-100%);
+    }
+}
+
+.menu-btn.filming {
+    border-color: #e2584f;
+}
+.cap-live {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    line-height: 1;
+}
+.menu-btn.filming .cap-icon {
+    display: none;
+}
+.menu-btn.filming .cap-live {
+    display: flex;
+}
+.cap-live i {
+    display: block;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #e2584f;
+    animation: capBlink 2s ease-in-out infinite;
+}
+.cap-time {
+    font-family: var(--mono);
+    font-size: var(--text-3xs);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes capBlink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cap-live i {
+        animation: none;
+    }
+}
+
+@include light {
+    .menu-btn.filming {
+        border-color: #d1554c;
+    }
+    #capBar button.on {
+        color: #a8302a;
+        border-color: #d1554c;
+        background: rgba(209, 85, 76, 0.12);
+    }
+}

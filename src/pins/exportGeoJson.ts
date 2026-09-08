@@ -17,6 +17,7 @@ export function exportGeoJson(): void {
                         title: p.title || "",
                         description: p.description || p.note || "",
                         transcript: p.transcript || "",
+                        contact: p.contact,
                         time: p.t,
                     },
                 })),

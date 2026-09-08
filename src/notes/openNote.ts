@@ -36,6 +36,7 @@ export function openNote(
     if (v.pin && v.pin !== pin) closeNote(v);
     v.pin = pin;
     const n = v.el;
+    n.classList.remove("contact-step");
     // A window is tied to a marker. If it opens for a different marker, it
     // should start next to THAT marker again — a previous manual drag
     // doesn't carry over to a new window.

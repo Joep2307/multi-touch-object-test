@@ -5,7 +5,7 @@ import { pins } from "../state/pins";
 export function exportCsv(): void {
     download(
         el<HTMLInputElement>("sess").value + ".csv",
-        "lat,lng,verdict,topic,title,description,transcript,time\n" +
+        "lat,lng,verdict,topic,title,description,transcript,contact_name,contact_email,contact_phone,contact_consent_at,time\n" +
             pins.list
                 .map((p) =>
                     [
@@ -21,6 +21,16 @@ export function exportCsv(): void {
                             ) +
                             '"',
                         '"' + (p.transcript || "").replace(/"/g, '""') + '"',
+                        '"' +
+                            (p.contact?.name || "").replace(/"/g, '""') +
+                            '"',
+                        '"' +
+                            (p.contact?.email || "").replace(/"/g, '""') +
+                            '"',
+                        '"' +
+                            (p.contact?.phone || "").replace(/"/g, '""') +
+                            '"',
+                        p.contact?.consentAt || "",
                         p.t,
                     ].join(","),
                 )

@@ -8,6 +8,7 @@ import { puckTrackAt } from "../puck/puckTrackAt";
 import { clearPucks } from "../puck/sim/clearPucks";
 import { simPuckAt } from "../puck/sim/simPuckAt";
 import { tryConfirmPuck } from "../puck/tryConfirmPuck";
+import { tryPuckMenuTap } from "../puck/ring/tryPuckMenuTap";
 import { pins } from "../state/pins";
 import { touches } from "../state/touches";
 import { closeKgInfo } from "../ui/kgInfo/closeKgInfo";
@@ -27,8 +28,9 @@ export function onTapUp(e: PointerEvent): void {
     // over everything else, since it's the only action that puts something
     // new on the map.
     if (tryConfirmPuck(e.clientX, e.clientY)) return;
+    // The visible option ring belongs to the puck, not to the map below it.
+    if (tryPuckMenuTap(e.clientX, e.clientY)) return;
     // A tap that lands on a puck (simulated or detected) belongs to that puck.
-    if (simPuckAt(e.clientX, e.clientY)) return;
     const onTrack = puckTrackAt(e.clientX, e.clientY);
     if (onTrack) {
         /* A puck that's already locked in place: tapping reopens its window,
@@ -44,6 +46,7 @@ export function onTapUp(e: PointerEvent): void {
         }
         return;
     }
+    if (simPuckAt(e.clientX, e.clientY)) return;
     const hit = [...pins.list].reverse().find((p) => {
         const s = MV.project(p.lng, p.lat);
         return Math.hypot(s.x - e.clientX, s.y - e.clientY) < 24;

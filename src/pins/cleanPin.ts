@@ -21,6 +21,23 @@ export function cleanPin(
     } = {},
 ): Pin {
     const text = (v: unknown): string => (typeof v === "string" ? v : "");
+    const rawContact =
+        p.contact && typeof p.contact === "object"
+            ? (p.contact as Record<string, unknown>)
+            : null;
+    const contact =
+        rawContact &&
+        rawContact.consent === true &&
+        (text(rawContact.email) || text(rawContact.phone))
+            ? {
+                  name: text(rawContact.name),
+                  email: text(rawContact.email),
+                  phone: text(rawContact.phone),
+                  consent: true as const,
+                  consentAt:
+                      text(rawContact.consentAt) || new now().toISOString(),
+              }
+            : undefined;
     return {
         ...p,
         lat: +(p.lat as number | string),
@@ -31,6 +48,7 @@ export function cleanPin(
         description: text(p.description) || text(p.note),
         note: text(p.note),
         transcript: text(p.transcript),
+        contact,
         t:
             typeof p.t === "string" && p.t.length >= 16
                 ? p.t

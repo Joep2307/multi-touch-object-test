@@ -135,7 +135,7 @@ async function newPage(
         )
             errs.push(m.text());
     });
-    await page.goto(BASE + "/index.html");
+    await page.goto(BASE + "/index.html?test");
     await page.waitForTimeout(900);
     return { page, ctx, errs };
 }
@@ -143,6 +143,14 @@ async function newPage(
 // ── 1. laptop: drag copy onto the map, tap on the rim vs. tap in the viewing hole ──
 {
     const { page, ctx, errs } = await newPage("laptop");
+    ok("opnameknop is aanwezig", await page.locator("#btnCapA").isVisible());
+    await page.click("#btnCapA");
+    ok("opnamemenu opent", await page.locator("#capBar").isVisible());
+    ok(
+        "foto, video en time-lapse zijn beschikbaar",
+        (await page.locator("#capBar button").count()) === 3,
+    );
+    await page.click("#btnCapA");
     const tray = page.locator("#puckDock .traypuck").first();
     ok("puckbalk aanwezig", (await tray.count()) > 0);
     const box = (await tray.boundingBox())!;
@@ -179,11 +187,79 @@ async function newPage(
     ok("tik op de band legt niets vast", (await pinsNow()) === base);
     ok("venster blijft dicht na tik op de band", !(await noteOpen()));
 
-    // click in the viewing hole: captures and opens the window
+    // Clicking the viewing hole places the mark and opens its option ring.
     await page.mouse.click(cx, cy);
     await page.waitForTimeout(400);
-    ok("tik in het kijkgat legt vast", (await pinsNow()) === base + 1);
+    const puckState = await page.evaluate(() =>
+        (window as any).__puck?.tracks(),
+    );
+    ok(
+        "tik in het kijkgat legt vast",
+        (await pinsNow()) === base + 1 ||
+            (console.log("puckstand:", puckState), false),
+    );
     ok("notitievenster opent bij de puck", await noteOpen());
+    ok(
+        "en opent de opties rond de puck",
+        (await page.evaluate(() => (window as any).__puck?.ringOpen())).some(
+            Boolean,
+        ),
+    );
+
+    // Options are selected by tapping their visible segment, never by
+    // turning the puck. Pick the second topic and verify the existing mark.
+    const option = await page.evaluate(() => {
+        const p = (window as any).__puck;
+        const t = p.tracks()[0];
+        const n = p.topics().length + 1;
+        const angle = p.ringStart(n) + (1.5 * Math.PI * 2) / n;
+        return {
+            x: t.x + Math.cos(angle) * p.ringPX(),
+            y: t.y + Math.sin(angle) * p.ringPX(),
+            topic: p.topics()[1],
+        };
+    });
+    await page.mouse.click(option.x, option.y);
+    await page.waitForTimeout(250);
+    const pickedTopic = await page.evaluate(() => {
+        const k = "pucktable-" + document.getElementById("sess").value;
+        return JSON.parse(localStorage.getItem(k) || "[]").at(-1)?.topic;
+    });
+    ok(
+        "een optie wordt alleen door aanklikken gekozen",
+        pickedTopic === option.topic,
+    );
+    ok(
+        "de optiering sluit na de keuze",
+        !(await page.evaluate(() => (window as any).__puck?.ringOpen())).some(
+            Boolean,
+        ),
+    );
+
+    await page.click("#noteSave");
+    await page.waitForTimeout(150);
+    ok(
+        "na bewaren verschijnt de optionele contactvraag",
+        await page.locator("#contactFollowup").isVisible(),
+    );
+    await page.fill("#contactName", "Ada Test");
+    await page.fill("#contactEmail", "ada@example.com");
+    await page.fill("#contactPhone", "0612345678");
+    await page.check("#contactConsent");
+    await page.click("#contactSave");
+    await page.waitForTimeout(750);
+    const contact = await page.evaluate(() => {
+        const k = "pucktable-" + document.getElementById("sess").value;
+        return JSON.parse(localStorage.getItem(k) || "[]").at(-1)?.contact;
+    });
+    ok(
+        "contactgegevens en toestemming blijven bij de bijdrage bewaard",
+        contact?.name === "Ada Test" &&
+            contact?.email === "ada@example.com" &&
+            contact?.phone === "0612345678" &&
+            contact?.consent === true &&
+            !!contact?.consentAt,
+    );
 
     // a second tap in the viewing hole must not capture twice
     await page.mouse.click(cx, cy);
@@ -192,6 +268,55 @@ async function newPage(
 
     ok(
         "geen JS-fouten (laptop)",
+        errs.length === 0 || (console.log(errs.slice(0, 3)), false),
+    );
+    await ctx.close();
+}
+
+// ── 1b. the two physical movements directly operate the map ──
+{
+    const { page, ctx, errs } = await newPage("laptop");
+    const tray = page.locator("#puckDock .traypuck").first();
+    const box = (await tray.boundingBox())!;
+    const cx = W / 2,
+        cy = H / 2;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(cx, cy, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+
+    const zoom0 = await page.evaluate(() => window.MV.zoom);
+    await page.keyboard.down("Shift");
+    await page.mouse.move(cx + 30, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx, cy + 30, { steps: 24 });
+    await page.mouse.up();
+    await page.keyboard.up("Shift");
+    await page.waitForTimeout(500);
+    const zoom1 = await page.evaluate(() => window.MV.zoom);
+    ok("draaien aan de puck zoomt de kaart", Math.abs(zoom1 - zoom0) > 0.1);
+
+    const map0 = await page.evaluate(() => ({
+        lng: window.MV.lng,
+        lat: window.MV.lat,
+    }));
+    const puck = await page.evaluate(() => (window as any).__puck.tracks()[0]);
+    await page.mouse.move(puck.x, puck.y);
+    await page.mouse.down();
+    await page.mouse.move(puck.x + 90, puck.y + 20, { steps: 24 });
+    await page.mouse.up();
+    await page.waitForTimeout(600);
+    const map1 = await page.evaluate(() => ({
+        lng: window.MV.lng,
+        lat: window.MV.lat,
+    }));
+    ok(
+        "de fysieke puck verschuiven beweegt de kaart",
+        Math.hypot(map1.lng - map0.lng, map1.lat - map0.lat) > 0.000001,
+    );
+    ok(
+        "geen JS-fouten (directe puckbesturing)",
         errs.length === 0 || (console.log(errs.slice(0, 3)), false),
     );
     await ctx.close();

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Puck Table — participation map</title>
 <link rel="stylesheet" href="styles/main.scss">
-<script type="module" src="../src/main.ts"></script>
+<script type="module" src="./main.ts"></script>
 </head>
 <body>
 
@@ -48,6 +48,30 @@
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
   </svg>
 </button>
+
+<!-- Capture the map during a session as a photo, recording, or time-lapse. -->
+<button class="panel menu-btn" id="btnCapA" type="button" data-side="a"
+        aria-label="Capture" data-i18n-aria="capture" aria-expanded="false" aria-controls="capBar">
+  <svg class="cap-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M3 8.5h3.6L8.6 5.5h6.8l2 3H21v10.5H3z"/><circle cx="12" cy="13.6" r="3.5"/>
+  </svg>
+  <span class="cap-live" aria-hidden="true"><i></i><b class="cap-time">0:00</b></span>
+</button>
+<button class="panel menu-btn" id="btnCapB" type="button" data-side="b"
+        aria-label="Capture" data-i18n-aria="capture" aria-expanded="false" aria-controls="capBar">
+  <svg class="cap-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path d="M3 8.5h3.6L8.6 5.5h6.8l2 3H21v10.5H3z"/><circle cx="12" cy="13.6" r="3.5"/>
+  </svg>
+  <span class="cap-live" aria-hidden="true"><i></i><b class="cap-time">0:00</b></span>
+</button>
+
+<div class="panel" id="capBar" role="dialog" aria-label="Capture" data-i18n-aria="capture">
+  <p class="eyebrow" data-i18n="captureHead">CAPTURE</p>
+  <div class="row"><button id="btnShot" data-i18n="capShot">Photo of the map</button></div>
+  <div class="row"><button id="btnRec">Start recording</button></div>
+  <div class="row"><button id="btnLapse">Start time-lapse</button></div>
+  <p class="hint" id="capHint" data-i18n="capHint">Captures the map view — not the panels floating above it.</p>
+</div>
 
 <div class="panel" id="menu" role="dialog" aria-label="Menu" data-i18n-aria="menu">
   <div class="menu-head">
@@ -311,6 +335,7 @@
     <p class="eyebrow" id="noteHead" data-i18n="newNote">New contribution</p>
     <button type="button" id="noteFlip" class="note-flip" title="To the other side" aria-label="To the other side" data-i18n-title="flipNote" data-i18n-aria="flipNote">⇅</button>
   </div>
+  <div class="note-main">
   <label class="field" for="noteTitle" data-i18n="fTitle">Title</label>
   <input id="noteTitle" placeholder="Give this contribution a title" data-i18n-ph="titlePh" maxlength="80">
   <label class="field" for="noteText" data-i18n="fDescription">Description</label>
@@ -349,6 +374,27 @@
     </div>
     <div id="noteAnswer" class="note-answer"></div>
     <div id="noteSources" class="note-sources"></div>
+  </div>
+  </div>
+
+  <div class="contact-followup" id="contactFollowup">
+    <p class="contact-title" data-i18n="contactTitle">Stay up to date?</p>
+    <p class="contact-intro" data-i18n="contactIntro">Leave your contact details if you would like to hear what happens with this contribution.</p>
+    <label class="field" for="contactName" data-i18n="contactName">Name (optional)</label>
+    <input id="contactName" type="text" autocomplete="name" placeholder="Your name" data-i18n-ph="contactNamePh" maxlength="100">
+    <label class="field" for="contactEmail" data-i18n="contactEmail">Email (optional)</label>
+    <input id="contactEmail" type="text" autocomplete="email" placeholder="name@example.com" data-i18n-ph="contactEmailPh" maxlength="160">
+    <label class="field" for="contactPhone" data-i18n="contactPhone">Phone (optional)</label>
+    <input id="contactPhone" type="text" autocomplete="tel" placeholder="Phone number" data-i18n-ph="contactPhonePh" maxlength="40">
+    <label class="contact-consent" for="contactConsent">
+      <input id="contactConsent" type="checkbox">
+      <span data-i18n="contactConsent">Yes, I consent to being contacted about this contribution.</span>
+    </label>
+    <p class="contact-status" id="contactStatus" role="status"></p>
+    <div class="row contact-actions">
+      <button id="contactSkip" data-i18n="contactSkip">No, thanks</button>
+      <button id="contactSave" class="primary" data-i18n="contactSave">Save contact details</button>
+    </div>
   </div>
 </div>
 

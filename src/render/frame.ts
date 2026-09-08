@@ -31,14 +31,6 @@ export function frame(): void {
     requestAnimationFrame(frame);
     const now = performance.now();
     const ctx = view.ctx;
-    paintMapLayer();
-    if (tiles.bakePending) {
-        tiles.bakePending = false;
-        bakeMap();
-    }
-    drawGaps(ctx);
-    drawKG(ctx);
-
     syncSimPucksToMap();
     const points: TouchPoint[] = [
         ...touches.real.values(),
@@ -47,6 +39,14 @@ export function frame(): void {
     const { pucks: dets, usedIdx } = recognise(points);
     const pucks = track(dets, now);
     if (learn.open) updateLearn(now);
+
+    paintMapLayer();
+    if (tiles.bakePending) {
+        tiles.bakePending = false;
+        bakeMap();
+    }
+    drawGaps(ctx);
+    drawKG(ctx);
 
     drawPuckKnowledgeRelations(ctx, pucks);
     drawPins(ctx);

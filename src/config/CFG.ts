@@ -80,14 +80,18 @@ export const CFG = {
     jitterPX: 22,
     rearmPX: 70,
     ringPX: 110,
-    rotationGain: 2,
-    /* The ring around the puck has become a menu. Choosing works by rotating
-     to an option and holding still for a moment: tapping stays reserved for
-     recording a marking. `puckDwellMS` is that hold time in the main menu;
-     `puckTopicDwellMS` applies in the theme menu and is much longer, because
-     there you rotate past all the themes to read them, and pausing along the
-     way must not yet count as a choice. `puckZoomPX` is how far you have to
-     push the puck forward for one zoom level. */
+    rotationGain: 1,
+    /* Turning always zooms and sliding always travels. Options are selected
+       by tapping, so there is no hidden puck mode to remember. */
+    puckTapMS: 280,
+    puckZoomRotDeg: 90,
+    puckRotDeadRAD: 0.02,
+    puckZoomEaseMS: 70,
+    puckRotMaxDegS: 540,
+    puckPanDeadPX: 14,
+    puckPanGain: 2.8,
+    puckPanMaxPXS: 900,
+    puckPanEaseMS: 700,
     puckDwellMS: 600,
     puckTopicDwellMS: 2000,
     puckZoomPX: 150,
