@@ -1,0 +1,33 @@
+/* Stricter than the rest of the tree, on purpose.
+ *
+ *   npm run typecheck        the whole repo, as it has always been
+ *   npm run typecheck:core   src/core/ only, with the extra flags below
+ *
+ * The existing 489 files do not survive `noUncheckedIndexedAccess` in one
+ * go, and turning it on repo-wide would mean a few hundred edits before a
+ * single new class exists. So the new core gets the strict settings from
+ * day one and the old tree keeps the settings it has. When the old tree
+ * is gone, this file merges back into tsconfig.json.
+ *
+ * `lib` is ES2022 with no DOM, and `types` is empty. That is the real
+ * boundary: the core cannot reach the DOM because the DOM does not exist
+ * as far as the compiler is concerned. The ESLint rules in
+ * eslint.config.js say the same thing about imports and globals.
+ */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": [],
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/core", "src/test/unit/core"],
+  "exclude": ["node_modules", "dist"]
+}

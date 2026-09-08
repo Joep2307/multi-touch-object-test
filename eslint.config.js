@@ -115,6 +115,77 @@ export default [
         },
     },
 
+    /* The core (src/core/) is headless and must stay that way.
+     *
+     * Everything below Physical has to be testable without a table, a
+     * canvas or a browser, and it has to be portable to Rust later. Both
+     * fall over the moment one file reaches for `document` or imports a
+     * state object. tsconfig.core.json already removes the DOM typings;
+     * these two rules cover what the compiler cannot see.
+     *
+     * If a core file genuinely needs something from the old tree, that is
+     * the signal to pass it in through a parameter instead — not to add
+     * an exception here. */
+    {
+        files: ["src/core/**/*.ts"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [
+                        {
+                            group: [
+                                "**/state/*",
+                                "**/render/*",
+                                "**/ui/*",
+                                "**/ui/**/*",
+                                "**/map/*",
+                                "**/dom/*",
+                                "**/config/*",
+                                "**/puck/*",
+                                "**/puck/**/*",
+                                "**/pins/*",
+                                "**/notes/*",
+                                "**/input/*",
+                                "**/kg/*",
+                                "**/i18n/*",
+                                "**/speech/*",
+                                "**/talk/*",
+                                "**/capture/*",
+                                "**/boot/*",
+                                "**/types/*",
+                                "@biblio",
+                            ],
+                            message:
+                                "src/core/ stays headless: no imports " +
+                                "from the app tree. Pass what you need " +
+                                "in as a parameter.",
+                        },
+                    ],
+                },
+            ],
+            "no-restricted-globals": [
+                "error",
+                {
+                    name: "document",
+                    message: "src/core/ may not touch the DOM.",
+                },
+                {
+                    name: "window",
+                    message: "src/core/ may not touch the DOM.",
+                },
+                {
+                    name: "localStorage",
+                    message: "src/core/ may not touch storage directly.",
+                },
+                {
+                    name: "navigator",
+                    message: "src/core/ may not touch the browser.",
+                },
+            ],
+        },
+    },
+
     /* Node tooling: the configuration files. */
     {
         files: ["*.config.js", "*.config.mjs", "eslint.config.js"],

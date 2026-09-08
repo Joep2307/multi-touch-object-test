@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm test",
+    "check": "npm run typecheck && npm run typecheck:core && npm run lint && npm run format:check && npm run spell && npm test",
     "wasm": "PATH=\"$HOME/.cargo/bin:$PATH\" cargo build --release --target wasm32-unknown-unknown --manifest-path src/wasm/puck-geometry/Cargo.toml && cp src/wasm/puck-geometry/target/wasm32-unknown-unknown/release/puck_geometry.wasm src/puck/geometry/puck_geometry.wasm",
     "wasm:test": "PATH=\"$HOME/.cargo/bin:$PATH\" cargo test --manifest-path src/wasm/puck-geometry/Cargo.toml",
     "smoke": "node src/test/smoke.ts",
@@ -21,6 +21,7 @@
     "format:check": "prettier --check .",
     "spell": "cspell --no-progress \"**/*.{js,mjs,ts,html,css,scss,md,json,yml,cff,rs}\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:core": "tsc --noEmit -p tsconfig.core.json",
     "taal": "node src/test/taal.ts"
   },
   "devDependencies": {
