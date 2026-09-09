@@ -686,6 +686,51 @@ Settled on 8 September 2026, folded into the phases above.
     table. Phases 7–10 stay written down but are **not** started; they
     get re-decided once parity holds.
 
+## What the real table said (9 September 2026)
+
+Six recordings, ~10 s each, run through the model. The first time any
+of this met real data.
+
+**What held.** The palm-and-sleeve recording is sensed as a puck on
+**0 of 467 frames** — the rejection works on real noise, which is the
+safety property that matters most. A still puck reads at confidence
+1.00. Position, the solvers and the size check are sound.
+
+**What did not.** Orientation. The physical pucks measure 116/121/126
+px on their sides — an apex asymmetry of **6.2%**, against a
+`minApexAsymmetry` of 0.08. So `ApexHeadingSource` returned nothing at
+all for a still puck: 0% heading despite 64% sensed.
+
+Worse, and not a tuning problem: a **full circle reads as 97–203
+degrees instead of 360**, at every combination of threshold and
+`maxStepDeg` tried. The apex hops between feet because the true
+asymmetry (6%) is close to the measurement noise (~1.6%), and each hop
+is either rejected — losing the rotation under it — or accepted as a
+false turn.
+
+This is not new. `describe()` in the old pipeline picks the vertex
+opposite the longest side, with the two longest differing by 4%, and
+the table already carries `CFG.puckRotMaxDegS` as a rate limiter added
+after "een meetsprong in de hoek zette de kaart hele niveaus uit". The
+old code has been working around the same physical fact for months.
+
+**Measured, for the record:** pxPerMM ~2.02; footprint 60 mm longest
+side, centroid radius 34.6 mm, inherent spread 0.95 mm; three feet
+present on only 57-64% of frames in every recording.
+
+- [ ] Lower `minApexAsymmetry` to 0.06. Free: a still puck goes from
+      0% to 64% heading with **zero** foot-hops in 717 frames.
+- [ ] Rotation from frame-to-frame matching instead of from an apex.
+      Match this frame's feet to the previous frame's and solve for the
+      best-fit rotation; that needs no distinguishable nose at all, and
+      relative rotation is what the zoom gesture actually uses. Neither
+      pipeline does this today.
+- [ ] **Physical, and time-sensitive if pucks are being made:** give
+      the three-point footprint a markedly asymmetric layout. The
+      synthetic 0/132/228 footprint (12% asymmetry) read every
+      orientation cleanly at every threshold; the real ones at 6% do
+      not.
+
 ## Bugs found by running the code
 
 Found on 8 September 2026 by executing the model and its adversarial
