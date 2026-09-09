@@ -98,7 +98,15 @@ export function frame(): void {
     drawPins(ctx);
     for (const t of pucks) drawPuck(ctx, t, now);
     if (baseBridge !== null && parityCheck !== null) {
-        drawBaseOverlay(ctx, baseBridge, parityCheck, view.W, view.H, now);
+        drawBaseOverlay(
+            ctx,
+            baseBridge,
+            parityCheck,
+            view.W,
+            view.H,
+            now,
+            baseRecorder,
+        );
     }
 
     drawNoteTether(ctx, pucks);

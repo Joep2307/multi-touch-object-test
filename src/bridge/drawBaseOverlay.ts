@@ -1,4 +1,5 @@
 import { DirectionRay } from "../core/base";
+import type { BaseSessionRecorder } from "./BaseSessionRecorder";
 import type { ParityCheck } from "./ParityCheck";
 import type { TrackBridge } from "./TrackBridge";
 
@@ -10,6 +11,7 @@ const CROSS_RADIUS_PX = 13;
 const LINE_WIDTH_PX = 2;
 const LABEL_X_PX = 18;
 const LABEL_Y_PX = 28;
+const LABEL_LINE_PX = 18;
 
 /* Draws only diagnostic geometry. It never feeds values back into either
    pipeline, so enabling parity cannot change what the public table does. */
@@ -20,6 +22,7 @@ export function drawBaseOverlay(
     width: number,
     height: number,
     at: number,
+    recorder: BaseSessionRecorder | null = null,
 ): void {
     ctx.save();
     ctx.lineWidth = LINE_WIDTH_PX;
@@ -67,14 +70,45 @@ export function drawBaseOverlay(
         ctx.lineTo(centre.x, centre.y + CROSS_RADIUS_PX);
         ctx.stroke();
     }
+    /* Everything below has to be readable *on the glass*. The table
+       runs as a kiosk: there is no console and no devtools, so a
+       summary that is only logged may as well not exist. Worse,
+       without an on-screen recording state there is no way to tell
+       that Shift+Alt+R registered — you could record a whole session
+       and capture nothing. */
     ctx.fillStyle = TEXT_COLOUR;
     ctx.font = "600 13px system-ui";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText(
+    const lines = [
         `Base parity: ${parity.divergenceCount}/${parity.frameCount}`,
-        LABEL_X_PX,
-        LABEL_Y_PX,
-    );
+        worstLine(parity),
+    ];
+    if (recorder !== null) {
+        lines.push(
+            recorder.recording
+                ? `REC ● ${recorder.name} — ${recorder.frameCount} frames`
+                : "not recording — Shift+Alt+R to start",
+        );
+    }
+    lines.forEach((line, i) => {
+        ctx.fillText(line, LABEL_X_PX, LABEL_Y_PX + i * LABEL_LINE_PX);
+    });
     ctx.restore();
+}
+
+/* The worst disagreement, not the average. An average hides the one
+   frame in a thousand where a puck jumped, and that frame is the bug —
+   so it is the number worth putting where a person can read it. */
+function worstLine(parity: ParityCheck): string {
+    const worst = parity.worst();
+    if (worst === null) return "worst: none — the two agree";
+    if (worst.centreOffPX === null) {
+        return `worst: only ${worst.seenByOld ? "old" : "new"} saw ${
+            worst.trackId
+        }`;
+    }
+    return `worst: ${worst.centreOffPX.toFixed(1)}px ${(
+        worst.angleOffDeg ?? 0
+    ).toFixed(1)}deg`;
 }
