@@ -89,6 +89,39 @@ describe("BaseSessionRecorder", () => {
         expect(replay.frame(1000 + 10 * 16).points).toHaveLength(5);
     });
 
+    it("keeps what it captured after stopping, so it can be saved", () => {
+        /* The order a person actually uses: record, stop, save. An
+           earlier version dropped the frames on stop, so the save
+           button saw an empty recorder and disabled itself — the data
+           only existed while recording, which is exactly when saving
+           is not offered. Every test passed, because none of them
+           stopped first. */
+        const r = rig();
+        r.recorder.start("probe", 0);
+        for (let i = 0; i < 12; i += 1) r.step();
+        r.recorder.stop(r.now());
+        expect(r.recorder.recording).toBe(false);
+        expect(r.recorder.frameCount).toBe(12);
+        expect(r.recorder.saveable).toBe(true);
+        expect(r.recorder.toJSON("2026-09-09T00:00:00.000Z")).not.toBeNull();
+    });
+
+    it("captures nothing more once stopped", () => {
+        const r = rig();
+        r.recorder.start("probe", 0);
+        for (let i = 0; i < 5; i += 1) r.step();
+        r.recorder.stop(r.now());
+        for (let i = 0; i < 5; i += 1) r.step();
+        expect(r.recorder.frameCount).toBe(5);
+    });
+
+    it("freezes the elapsed time when stopped", () => {
+        const r = rig();
+        r.recorder.start("probe", 1000);
+        r.recorder.stop(11000);
+        expect(r.recorder.elapsedMS(50000)).toBe(10000);
+    });
+
     it("refuses to produce a file from an unarmed session", () => {
         const r = rig();
         for (let i = 0; i < 5; i += 1) r.step();

@@ -44,7 +44,7 @@ export function installBaseHooks(recorder: BaseSessionRecorder): void {
     window.__base = {
         start,
         stop: () => {
-            recorder.stop();
+            recorder.stop(performance.now());
             return "stopped";
         },
         save,
@@ -73,15 +73,18 @@ export function installBaseHooks(recorder: BaseSessionRecorder): void {
     saveBtn.textContent = "Bewaar";
 
     const paint = (): void => {
+        const seconds = Math.floor(
+            recorder.elapsedMS(performance.now()) / 1000,
+        );
         rec.textContent = recorder.recording
-            ? `Stop (${String(recorder.frameCount)})`
+            ? `Stop — ${String(seconds)}s`
             : "Opnemen";
         rec.dataset.armed = recorder.recording ? "1" : "0";
         saveBtn.disabled = recorder.recording || recorder.frameCount === 0;
     };
 
     rec.addEventListener("click", () => {
-        if (recorder.recording) recorder.stop();
+        if (recorder.recording) recorder.stop(performance.now());
         else start(`table-${String(Math.round(performance.now() / 1000))}`);
         paint();
     });
@@ -102,7 +105,7 @@ export function installBaseHooks(recorder: BaseSessionRecorder): void {
             case "r": {
                 e.preventDefault();
                 if (recorder.recording) {
-                    recorder.stop();
+                    recorder.stop(performance.now());
                     console.info("stopped");
                 } else {
                     console.info(start());

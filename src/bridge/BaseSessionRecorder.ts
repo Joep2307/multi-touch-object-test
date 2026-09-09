@@ -24,8 +24,10 @@ import type { TrackBridge } from "./TrackBridge";
  */
 export class BaseSessionRecorder {
     #recorder: ContactRecorder | null = null;
+    #armed = false;
     #name = "";
     #startedAt = 0;
+    #frozenMS = 0;
 
     constructor(
         private readonly bridge: TrackBridge,
@@ -33,7 +35,13 @@ export class BaseSessionRecorder {
     ) {}
 
     get recording(): boolean {
-        return this.#recorder !== null;
+        return this.#armed;
+    }
+
+    /* There is something worth saving: captured, and not still
+       capturing. */
+    get saveable(): boolean {
+        return !this.#armed && this.frameCount > 0;
     }
 
     get frameCount(): number {
@@ -48,16 +56,40 @@ export class BaseSessionRecorder {
         this.#name = name;
         this.#startedAt = at;
         this.#recorder = new ContactRecorder(name);
+        this.#frozenMS = 0;
+        this.#armed = true;
         this.parity.reset();
     }
 
-    stop(): void {
-        this.#recorder = null;
+    /* Stops capturing and **keeps** what was captured.
+     *
+     * It used to drop the recording on the floor, which made saving
+     * impossible: stop cleared the frames, so the save button saw an
+     * empty recorder and disabled itself, and the only moment the data
+     * existed was while recording — exactly when saving is not
+     * offered. Nothing in the tests caught it because none of them
+     * stopped before saving, which is the only order a person would
+     * ever use. */
+    stop(at: number): void {
+        this.#frozenMS = Math.max(0, at - this.#startedAt);
+        this.#armed = false;
+    }
+
+    /* How long this recording has run, in milliseconds. Frozen once
+       stopped, so the button can keep showing what was captured
+       instead of a number that carries on climbing. Seconds are what
+       a person at the table is actually counting — ten of them per
+       situation — so frames are the wrong unit to put on a button. */
+    elapsedMS(at: number): number {
+        return this.#armed
+            ? Math.max(0, at - this.#startedAt)
+            : this.#frozenMS;
     }
 
     /* Called once per frame while armed. Cheap enough to leave in the
        loop: one push of a frame that already exists. */
     capture(): void {
+        if (!this.#armed) return;
         this.#recorder?.add(this.bridge.contactFrame);
     }
 
