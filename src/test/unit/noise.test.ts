@@ -9,6 +9,7 @@
 import { noiseReport } from "../../puck/noise";
 import { noise } from "../../state";
 import { beforeEach, describe as suite, expect, it } from "vitest";
+import { at } from "./at";
 import type { NoiseFoot } from "../../types";
 
 const PX_PER_MM = 4;
@@ -27,12 +28,13 @@ const foot = (x: number, y: number): NoiseFoot => ({
 /** Four samples around the anchor, each `d` px off in both directions:
  *  the variance per axis is then exactly d². */
 const scatter = (f: NoiseFoot, d: number): NoiseFoot => {
-    for (const [dx, dy] of [
+    const corners: [number, number][] = [
         [d, d],
         [-d, -d],
         [d, -d],
         [-d, d],
-    ]) {
+    ];
+    for (const [dx, dy] of corners) {
         f.n++;
         f.sx += f.ax + dx;
         f.sy += f.ay + dy;
@@ -75,7 +77,7 @@ suite("de gemeten spreiding", () => {
         f.miss = 1;
         noise.feet = [f, scatter(foot(500, 400), 2)];
         const r = noiseReport(PX_PER_MM);
-        expect(r.feet[0].miss).toBeCloseTo(0.25, 5);
+        expect(at(r.feet, 0).miss).toBeCloseTo(0.25, 5);
         expect(r.miss).toBeCloseTo(0.125, 5);
     });
 
@@ -83,7 +85,7 @@ suite("de gemeten spreiding", () => {
         noise.feet = [scatter(foot(400, 400), 2), foot(500, 400)];
         const r = noiseReport(PX_PER_MM);
         expect(Number.isFinite(r.sd)).toBe(true);
-        expect(r.feet[1].sd).toBe(0);
+        expect(at(r.feet, 1).sd).toBe(0);
     });
 
     it("neemt de mediaan van de straal en de code die het vaakst kwam", () => {

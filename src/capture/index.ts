@@ -1,3 +1,4 @@
+export { cancelCapture } from "./cancelCapture";
 export { wireCapture } from "./wireCapture";
 export {
     JPEG_Q,

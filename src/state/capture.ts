@@ -12,7 +12,7 @@ export const capture = {
     recChunks: [] as Blob[],
     recBytes: 0,
     recStart: 0,
-    recTimer: 0,
+    recTimer: null as ReturnType<typeof setInterval> | null,
     recReason: "stop" as CapReason,
     /* The mime the last recording used; a time-lapse film gets it too,
        so `captureExt` can name the file. */

@@ -8,8 +8,8 @@ import type { CapReason } from "../types";
 export async function endLapse(reason: CapReason): Promise<void> {
     const lapse = capture.lapse;
     if (!lapse) return;
-    clearInterval(lapse.timer);
-    clearInterval(lapse.tick);
+    if (lapse.timer !== null) clearInterval(lapse.timer);
+    if (lapse.tick !== null) clearInterval(lapse.tick);
     const frames = lapse.frames;
     capture.lapse = null;
 

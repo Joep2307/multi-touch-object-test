@@ -71,11 +71,8 @@ const TYPES: Record<string, string> = {
     ".png": "image/png",
 };
 const server = http.createServer((req, res) => {
-    const rel =
-        decodeURIComponent((req.url ?? "/").split("?")[0]).replace(
-            /^\/+/,
-            "",
-        ) || "index.html";
+    const [asked = "/"] = (req.url ?? "/").split("?");
+    const rel = decodeURIComponent(asked).replace(/^\/+/, "") || "index.html";
     const file = path.join(serveRoot, rel);
     if (
         !file.startsWith(serveRoot) ||
@@ -91,7 +88,7 @@ const server = http.createServer((req, res) => {
     });
     fs.createReadStream(file).pipe(res);
 });
-await new Promise((r) => server.listen(0, "127.0.0.1", r));
+await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
 const BASE = "http://127.0.0.1:" + (server.address() as AddressInfo).port;
 
 const W = 1600,
@@ -209,7 +206,9 @@ async function newPage(
 
     const pinsNow = () =>
         page.evaluate(() => {
-            const k = "pucktable-" + document.getElementById("sess").value;
+            const k =
+                "pucktable-" +
+                (document.getElementById("sess") as HTMLInputElement).value;
             try {
                 return JSON.parse(localStorage.getItem(k) || "[]").length;
             } catch (e) {
@@ -219,7 +218,7 @@ async function newPage(
     const base = await pinsNow();
     const noteOpen = () =>
         page.evaluate(() => {
-            const n = document.getElementById("note");
+            const n = document.getElementById("note") as HTMLElement;
             return (
                 getComputedStyle(n).display !== "none" &&
                 n.classList.contains("opening")
@@ -268,7 +267,9 @@ async function newPage(
     await page.mouse.click(option.x, option.y);
     await page.waitForTimeout(250);
     const pickedTopic = await page.evaluate(() => {
-        const k = "pucktable-" + document.getElementById("sess").value;
+        const k =
+            "pucktable-" +
+            (document.getElementById("sess") as HTMLInputElement).value;
         return JSON.parse(localStorage.getItem(k) || "[]").at(-1)?.topic;
     });
     ok(
@@ -295,7 +296,9 @@ async function newPage(
     await page.click("#contactSave");
     await page.waitForTimeout(750);
     const contact = await page.evaluate(() => {
-        const k = "pucktable-" + document.getElementById("sess").value;
+        const k =
+            "pucktable-" +
+            (document.getElementById("sess") as HTMLInputElement).value;
         return JSON.parse(localStorage.getItem(k) || "[]").at(-1)?.contact;
     });
     ok(
@@ -416,7 +419,9 @@ async function newPage(
     await page.locator("#noteTitle").fill("Kapotte stoeptegel");
     await page.waitForTimeout(700);
     const opgeslagen = await page.evaluate(() => {
-        const k = "pucktable-" + document.getElementById("sess").value;
+        const k =
+            "pucktable-" +
+            (document.getElementById("sess") as HTMLInputElement).value;
         return (JSON.parse(localStorage.getItem(k) || "[]") as any[]).some(
             (p) => p.title === "Kapotte stoeptegel",
         );
@@ -483,7 +488,9 @@ async function newPage(
     await page.goto(BASE + "/index.html");
     await page.waitForTimeout(1200);
     const n = await page.evaluate(() => {
-        const k = "pucktable-" + document.getElementById("sess").value;
+        const k =
+            "pucktable-" +
+            (document.getElementById("sess") as HTMLInputElement).value;
         return JSON.parse(localStorage.getItem(k) || "[]").length;
     });
     ok(
@@ -508,8 +515,9 @@ async function newPage(
         "puck werkt nog na een kapotte opslag",
         await page.evaluate(
             () =>
-                getComputedStyle(document.getElementById("note")).display !==
-                "none",
+                getComputedStyle(
+                    document.getElementById("note") as HTMLElement,
+                ).display !== "none",
         ),
     );
     await ctx2.close();
@@ -520,7 +528,9 @@ async function newPage(
     const { page, ctx, errs } = await newPage("laptop");
     const pinsNow = () =>
         page.evaluate(() => {
-            const k = "pucktable-" + document.getElementById("sess").value;
+            const k =
+                "pucktable-" +
+                (document.getElementById("sess") as HTMLInputElement).value;
             try {
                 return JSON.parse(localStorage.getItem(k) || "[]").length;
             } catch (e) {
@@ -528,7 +538,7 @@ async function newPage(
             }
         });
     const base = await pinsNow();
-    const spots = [
+    const spots: [number, number][] = [
         [300, 240],
         [760, 240],
         [300, 660],
@@ -543,7 +553,9 @@ async function newPage(
         }
         await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
         await page.mouse.down();
-        await page.mouse.move(spots[i][0], spots[i][1], { steps: 10 });
+        const spot = spots[i];
+        if (!spot) throw new Error(`no drop spot ${i}`);
+        await page.mouse.move(spot[0], spot[1], { steps: 10 });
         await page.mouse.up();
         await page.waitForTimeout(250);
     }
@@ -592,6 +604,10 @@ async function newPage(
             !!(t || "").trim() || (console.log("hint leeg"), false),
         );
     } else ok("zoekveld zichtbaar in het kaartmenu", false);
+    ok(
+        "geen JS-fouten (zoeken)",
+        errs.length === 0 || (console.log(errs.slice(0, 3)), false),
+    );
     await ctx.close();
 }
 
@@ -599,11 +615,15 @@ async function newPage(
 {
     const { page, ctx, errs } = await newPage("laptop");
     // "Clear everything" is under the session analytics, not in the menu
-    await page.evaluate(() => document.getElementById("btnAnalytics").click());
+    await page.evaluate(() =>
+        (document.getElementById("btnAnalytics") as HTMLElement).click(),
+    );
     await page.waitForTimeout(500);
     const pinsNow = () =>
         page.evaluate(() => {
-            const k = "pucktable-" + document.getElementById("sess").value;
+            const k =
+                "pucktable-" +
+                (document.getElementById("sess") as HTMLInputElement).value;
             try {
                 return JSON.parse(localStorage.getItem(k) || "[]").length;
             } catch (e) {
@@ -691,7 +711,9 @@ async function newPage(
     await page.waitForTimeout(300);
     const cdp = await page.context().newCDPSession(page);
     const rect = await page.evaluate(() =>
-        document.getElementById("menu").getBoundingClientRect().toJSON(),
+        (document.getElementById("menu") as HTMLElement)
+            .getBoundingClientRect()
+            .toJSON(),
     );
     const x = rect.x + rect.width / 2,
         y0 = rect.y + rect.height * 0.7;
@@ -699,7 +721,9 @@ async function newPage(
     // table. That exact thing made the browser blind to the swipe gesture.
     const veeg = async (extra: boolean) => {
         await page.evaluate(
-            () => (document.getElementById("menu").scrollTop = 0),
+            () =>
+                ((document.getElementById("menu") as HTMLElement).scrollTop =
+                    0),
         );
         const pts = (p: { x: number; y: number; id: number }) =>
             extra ? [p, { x: 1200, y: 500, id: 9 }] : [p];
@@ -729,7 +753,9 @@ async function newPage(
                 touchPoints: [],
             });
         await page.waitForTimeout(300);
-        return page.evaluate(() => document.getElementById("menu").scrollTop);
+        return page.evaluate(
+            () => (document.getElementById("menu") as HTMLElement).scrollTop,
+        );
     };
     const alleen = await veeg(false),
         metPuck = await veeg(true);
@@ -832,7 +858,9 @@ async function newPage(
         .fill("We staan hier elke ochtend in de file.");
     await page.waitForTimeout(700);
     const bewaard = await page.evaluate(() => {
-        const k = "pucktable-" + document.getElementById("sess").value;
+        const k =
+            "pucktable-" +
+            (document.getElementById("sess") as HTMLInputElement).value;
         return (JSON.parse(localStorage.getItem(k) || "[]") as any[]).some(
             (p) => /elke ochtend in de file/.test(p.transcript || ""),
         );
@@ -846,9 +874,12 @@ async function newPage(
     await page.waitForTimeout(1500);
     const gemeld = await page.evaluate(() => ({
         status: (
-            document.getElementById("talkStatus").textContent || ""
+            (document.getElementById("talkStatus") as HTMLElement)
+                .textContent || ""
         ).trim(),
-        rec: document.getElementById("talkBtn").classList.contains("rec"),
+        rec: (
+            document.getElementById("talkBtn") as HTMLElement
+        ).classList.contains("rec"),
     }));
     ok(
         "opnemen zegt wat er gebeurt (of waarom het niet kan)",
@@ -869,7 +900,9 @@ async function newPage(
     const trays = page.locator("#puckDock .traypuck");
     const pinsNow = () =>
         page.evaluate(() => {
-            const k = "pucktable-" + document.getElementById("sess").value;
+            const k =
+                "pucktable-" +
+                (document.getElementById("sess") as HTMLInputElement).value;
             try {
                 return JSON.parse(localStorage.getItem(k) || "[]").length;
             } catch (e) {
@@ -933,32 +966,34 @@ async function newPage(
         "elk venster hangt aan zijn eigen puck",
         await page.evaluate(
             () =>
-                document.getElementById("note").dataset.anchorY !==
-                document.getElementById("note-b").dataset.anchorY,
+                (document.getElementById("note") as HTMLElement).dataset
+                    .anchorY !==
+                (document.getElementById("note-b") as HTMLElement).dataset
+                    .anchorY,
         ),
     );
     ok(
         "twee toetsenborden, één per kant",
         await page.evaluate(
             () =>
-                document
-                    .getElementById("keyboard")
-                    .classList.contains("visible") &&
-                document
-                    .getElementById("keyboard-b")
-                    .classList.contains("visible"),
+                (
+                    document.getElementById("keyboard") as HTMLElement
+                ).classList.contains("visible") &&
+                (
+                    document.getElementById("keyboard-b") as HTMLElement
+                ).classList.contains("visible"),
         ),
     );
     ok(
         "het toetsenbord van de overkant staat op zijn kop",
         await page.evaluate(
             () =>
-                document
-                    .getElementById("keyboard-b")
-                    .classList.contains("flipped") &&
-                !document
-                    .getElementById("keyboard")
-                    .classList.contains("flipped"),
+                (
+                    document.getElementById("keyboard-b") as HTMLElement
+                ).classList.contains("flipped") &&
+                !(
+                    document.getElementById("keyboard") as HTMLElement
+                ).classList.contains("flipped"),
         ),
     );
 
@@ -969,7 +1004,9 @@ async function newPage(
     ok(
         "elk venster bewaart zijn eigen bijdrage",
         await page.evaluate(() => {
-            const k = "pucktable-" + document.getElementById("sess").value;
+            const k =
+                "pucktable-" +
+                (document.getElementById("sess") as HTMLInputElement).value;
             const p = JSON.parse(localStorage.getItem(k) || "[]") as any[];
             return (
                 p.some((x) => x.title === "Kant A") &&

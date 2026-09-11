@@ -19,6 +19,7 @@ import {
     wrapAngle,
 } from "../../puck/geometry";
 import { describe as suite, expect, it } from "vitest";
+import { at } from "./at";
 import type { Point, Template } from "../../types";
 
 const N = SLOT_CODES.slots;
@@ -54,6 +55,14 @@ const best = (pts: Point[], list = PUCKS) =>
         .map((t) => ({ t, m: matchSlots(read(pts), t) }))
         .sort((a, b) => a.m.err - b.m.err);
 
+/* The winner and the runner-up. `best` ranks a list that always holds
+   more than one puck, which the compiler cannot see from here. */
+const topTwo = (pts: Point[], list = PUCKS) => {
+    const [win, second] = best(pts, list);
+    if (!win || !second) throw new Error("fewer than two pucks to rank");
+    return { win, second };
+};
+
 suite("the printed codes", () => {
     it("all have six feet", () => {
         for (const c of SLOT_CODES.codes) expect(popCount(c)).toBe(6);
@@ -66,7 +75,11 @@ suite("the printed codes", () => {
         for (let i = 0; i < SLOT_CODES.codes.length; i++)
             for (let j = i + 1; j < SLOT_CODES.codes.length; j++)
                 expect(
-                    codeDistance(SLOT_CODES.codes[i], SLOT_CODES.codes[j], N),
+                    codeDistance(
+                        at(SLOT_CODES.codes, i),
+                        at(SLOT_CODES.codes, j),
+                        N,
+                    ),
                 ).toBeGreaterThanOrEqual(4);
     });
     it("start with the anchor 0, 1, 3", () => {
@@ -90,7 +103,9 @@ suite("a puck on the glass", () => {
         for (const t of PUCKS)
             for (const deg of [0, 17, 90, 143, 250, 359]) {
                 const rot = (deg * Math.PI) / 180;
-                const [win, second] = best(lay(t, rot, 300 + deg, 700 - deg));
+                const { win, second } = topTwo(
+                    lay(t, rot, 300 + deg, 700 - deg),
+                );
                 expect(win.t.id).toBe(t.id);
                 expect(win.m.err).toBe(0);
                 expect(second.m.err - win.m.err).toBeGreaterThanOrEqual(2);
@@ -99,34 +114,34 @@ suite("a puck on the glass", () => {
     it("reports the angle it was turned by", () => {
         for (const deg of [0, 17, 90, 143, 250]) {
             const rot = (deg * Math.PI) / 180;
-            const m = matchSlots(read(lay(PUCKS[0], rot)), PUCKS[0]);
+            const m = matchSlots(read(lay(at(PUCKS, 0), rot)), at(PUCKS, 0));
             expect(Math.abs(wrapAngle(m.angle - rot))).toBeLessThan(0.02);
         }
     });
     it("survives a foot that trembles half a slot", () => {
-        const pts = nudge(nudge(lay(PUCKS[2], 0.7), 1, 9), 4, -9);
-        const [win] = best(pts);
-        expect(win.t.id).toBe(PUCKS[2].id);
+        const pts = nudge(nudge(lay(at(PUCKS, 2), 0.7), 1, 9), 4, -9);
+        const { win } = topTwo(pts);
+        expect(win.t.id).toBe(at(PUCKS, 2).id);
         expect(win.m.err).toBe(0);
     });
     it("survives a foot that loses contact", () => {
         for (const t of PUCKS) {
             const pts = lay(t, 1.2).filter((_, i) => i !== 2);
-            const [win, second] = best(pts);
+            const { win, second } = topTwo(pts);
             expect(win.t.id).toBe(t.id);
             expect(win.m.miss).toBe(1);
             expect(second.m.err - win.m.err).toBeGreaterThanOrEqual(2);
         }
     });
     it("survives a finger resting on the same circle", () => {
-        const t = PUCKS[0],
+        const t = at(PUCKS, 0),
             R = 34 * PX_PER_MM,
             a = (2 * 30 * Math.PI) / 180; // slot 2, which is empty
         const pts = [
             ...lay(t, 0),
             { x: 500 + R * Math.cos(a), y: 400 + R * Math.sin(a) },
         ];
-        const [win] = best(pts);
+        const { win } = topTwo(pts);
         expect(win.t.id).toBe(t.id);
         expect(win.m.extra).toBe(1);
     });
@@ -152,7 +167,7 @@ suite("what must not happen", () => {
                 r = 34 * PX_PER_MM;
             return { x: 500 + r * Math.cos(a), y: 400 + r * Math.sin(a) };
         });
-        const [win] = best(rnd);
+        const { win } = topTwo(rnd);
         expect(win.m.err).toBeGreaterThan(CFG.slotErrMax);
     });
     it("is exact or clearly wrong when all the feet are there", () => {
@@ -163,13 +178,13 @@ suite("what must not happen", () => {
             }
     });
     it("keeps the same code on two rings apart", () => {
-        const small = tpl(SLOT_CODES.codes[0], 26);
+        const small = tpl(at(SLOT_CODES.codes, 0), 26);
         const pts = lay(small, 0.9);
         const d = read(pts);
         expect(sizeErr(d.radius, 26, PX_PER_MM)).toBeLessThan(0.02);
         expect(sizeErr(d.radius, 34, PX_PER_MM)).toBeGreaterThan(0.18);
         /* The code itself cannot tell them apart -- that is what the ring
          is for. */
-        expect(matchSlots(d, tpl(SLOT_CODES.codes[0], 34)).err).toBe(0);
+        expect(matchSlots(d, tpl(at(SLOT_CODES.codes, 0), 34)).err).toBe(0);
     });
 });

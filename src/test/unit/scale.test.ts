@@ -51,6 +51,15 @@ const tpl = (extra: Partial<Template> = {}): Template => ({
     ...extra,
 });
 
+/* A triangle puck: no ring of feet, a longest side instead. Its own
+   builder rather than `tpl({ angles: undefined })`, which would leave
+   both keys in place holding undefined. */
+const triTpl = (longestMM: number): Template => ({
+    id: "puck-01",
+    verdict: "good",
+    longestMM,
+});
+
 /* One reading, repeated until the weighted average has settled. */
 const settle = (px: number, mm: number, conf = 1, times = 600): void => {
     for (let i = 0; i < times; i++) observeScale({ px, mm, conf });
@@ -121,7 +130,7 @@ suite("which puck may act as a ruler", () => {
     });
 
     it("reads a triangle from its longest side", () => {
-        const t = tpl({ angles: undefined, ringMM: undefined, longestMM: 62 });
+        const t = triTpl(62);
         expect(readScale(t, triad(128), 1)?.mm).toBe(62);
     });
 
@@ -134,11 +143,7 @@ suite("which puck may act as a ruler", () => {
     });
 
     it("refuses a known length too short to measure a screen with", () => {
-        const small = tpl({
-            angles: undefined,
-            ringMM: undefined,
-            longestMM: SCALE.minMM - 1,
-        });
+        const small = triTpl(SCALE.minMM - 1);
         expect(readScale(small, triad(20), 1)).toBeNull();
     });
 

@@ -9,11 +9,15 @@
  */
 import { describe, dist, padsFor, wrapAngle } from "../../puck/geometry";
 import { loadWasmForTest } from "./loadWasmForTest";
+import { threePoints } from "./threePoints";
 import { beforeAll, describe as suite, expect, it } from "vitest";
-import type { Point, Template } from "../../types";
+import type { Point, Shape, Template } from "../../types";
+
+/** A blueprint puck, which is a triangle: `ratios` is always there. */
+type TriTemplate = Template & { ratios: [number, number] };
 
 /** The four pucks from the blueprint, as they appear in TPL_FACTORY. */
-const TEMPLATES: Template[] = [
+const TEMPLATES: [TriTemplate, TriTemplate, TriTemplate, TriTemplate] = [
     { id: "puck-01", ratios: [0.62, 0.81], verdict: "good" },
     { id: "puck-02", ratios: [0.48, 0.76], verdict: "bad" },
     { id: "puck-03", ratios: [0.7, 0.93], verdict: "talk" },
@@ -30,7 +34,20 @@ const move = (p: Point, dx: number, dy: number): Point => ({
     x: p.x + dx,
     y: p.y + dy,
 });
-const tri = (pts: Point[]) => describe(pts[0], pts[1], pts[2])!;
+/* Three sides, for the same reason threePoints() exists. */
+const threeSides = (sides: number[]): [number, number, number] => {
+    const [a, b, c] = sides;
+    if (a === undefined || b === undefined || c === undefined) {
+        throw new Error(`expected three sides, got ${sides.length}`);
+    }
+    return [a, b, c];
+};
+
+const tri = (pts: Point[]): Shape => {
+    const shape = describe(...threePoints(pts));
+    if (!shape) throw new Error("describe() called these three no triangle");
+    return shape;
+};
 
 beforeAll(loadWasmForTest);
 
@@ -53,19 +70,13 @@ suite("padsFor", () => {
     it("bouwt precies de zijden die het sjabloon voorschrijft", () => {
         for (const tpl of TEMPLATES) {
             const L = 60;
-            const [a, b, c] = padsFor(tpl);
-            const zijden = [dist(a, b), dist(b, c), dist(c, a)].sort(
-                (x, y) => x - y,
+            const [a, b, c] = threePoints(padsFor(tpl));
+            const [kort, mid, lang] = threeSides(
+                [dist(a, b), dist(b, c), dist(c, a)].sort((x, y) => x - y),
             );
-            expect(zijden[2]).toBeCloseTo(L, 9);
-            expect(zijden[0] / zijden[2]).toBeCloseTo(
-                Math.min(...tpl.ratios),
-                9,
-            );
-            expect(zijden[1] / zijden[2]).toBeCloseTo(
-                Math.max(...tpl.ratios),
-                9,
-            );
+            expect(lang).toBeCloseTo(L, 9);
+            expect(kort / lang).toBeCloseTo(Math.min(...tpl.ratios), 9);
+            expect(mid / lang).toBeCloseTo(Math.max(...tpl.ratios), 9);
         }
     });
 
@@ -73,8 +84,10 @@ suite("padsFor", () => {
         const klein = padsFor(TEMPLATES[0], 0.5);
         const groot = padsFor(TEMPLATES[0]);
         klein.forEach((p, i) => {
-            expect(groot[i].x).toBeCloseTo(p.x * 2, 9);
-            expect(groot[i].y).toBeCloseTo(p.y * 2, 9);
+            const g = groot[i];
+            if (!g) throw new Error(`no pad ${i} in the full-size puck`);
+            expect(g.x).toBeCloseTo(p.x * 2, 9);
+            expect(g.y).toBeCloseTo(p.y * 2, 9);
         });
     });
 });

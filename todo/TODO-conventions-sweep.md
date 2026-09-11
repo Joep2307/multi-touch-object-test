@@ -254,10 +254,9 @@ The enabling phase. Small, and it must land before any barrel does.
       the smoke run opening the capture bar and counting its three
       buttons as before.
 
-Follow-up, not in this plan: nothing under `src/` calls
-`cancelCapture`. The old `app.js` called `cancelAll` when a session
-was wiped; the conversion dropped the call. A running recording now
-survives a wipe. Worth a line in `TODO.md`.
+Found here, fixed in phase 7: nothing called `cancelCapture`. Not a
+conversion slip — `legacy/app.ts` never called `cancelAll` either, so
+the function has been waiting for its call since it was written.
 
 ## Phase 3 — One symbol per file
 
@@ -349,11 +348,10 @@ Three things the build learned that the sketch did not know:
 - [x] Check: 539 unit tests, tsc (repo and core), lint, spell,
       `npm run build`, `npm run smoke` green.
 
-Not typechecked, before or after: the unit tests outside
-`src/test/unit/core/`. `tsconfig.json` excludes `src/test`, and
-`tsconfig.core.json` includes only the core tests. Vitest transpiles
-without checking. A `tsconfig.test.json` would close that; a
-follow-up, not this plan.
+Not typechecked at the time: the unit tests outside
+`src/test/unit/core/`. `tsconfig.json` excludes `src/test` and
+`tsconfig.core.json` includes only the core tests, and Vitest
+transpiles without checking. Closed in phase 7.
 
 ## Phase 5 — 79 columns
 
@@ -440,6 +438,96 @@ prose; then the two lines Prettier itself produces too long.
 - [x] `project-words.txt`: one new Dutch word.
 - [x] Final: `npm run check`, `npm run build` and `npm run smoke` green.
 
+## Phase 7 — The two things the sweep uncovered
+
+Not planned. Both came out of the work above, and both were left open
+when the six phases finished. **Done 11 September 2026.**
+
+### `cancelCapture` was never called
+
+The capture module has had a "stop everything" since it was written,
+with a comment saying what it is for: when a session is wiped or
+reset, nothing may keep running. Nothing ever called it — not the
+module split, and not `legacy/app.ts` before it, which exported
+`cancelAll` and never used it either.
+
+What that cost at the table: a recording begun at two o'clock kept
+running straight through "clear everything", and delivered a quarter
+of an hour later a film of a session nobody could place any more.
+
+- [x] `src/ui/onWipe.ts` calls `cancelCapture()` on the second tap,
+      the one that actually wipes. Stopping is deliberately not
+      discarding — the recorder hands over what it has and
+      `wireCapture` saves it, because a wipe at the end of an
+      afternoon should not cost the film.
+- [x] `doReset` needs nothing: it ends in `location.reload()`, which
+      takes the recorder with it. Adding a call there would only look
+      symmetrical; the asynchronous stop could not finish before the
+      page went away.
+- [x] `src/test/unit/capture.test.ts` — five tests, under jsdom: the
+      time-lapse timers are cleared, the buttons are told so the clock
+      stops, a running recorder is asked to stop rather than dropped,
+      nothing running is a no-op, and the wipe path end to end.
+      Checked against the unfixed `onWipe`: the last one fails, the
+      other four pass.
+- [x] `cancelCapture` joined the `src/capture/` barrel, which until now
+      exported only `wireCapture` — the rest of the folder had no
+      reader outside it.
+
+### The tests were not typechecked
+
+`tsconfig.json` excludes `src/test`, `tsconfig.core.json` includes only
+the core tests, and Vitest transpiles without checking. So every test
+outside `src/test/unit/core/` was unchecked, and a fixture could drift
+from the type it claimed to be with nothing to say so.
+
+- [x] `tsconfig.test.json`: `src/test`, with `node` added to `types`
+      (the tests read fixtures off the disk and the smoke test starts a
+      server) and `resolveJsonModule` for the recorded contact
+      fixtures. Wired into `npm run check` as `typecheck:test` and into
+      CI as its own step. `@types/node` is a new devDependency, the
+      first one this repo has needed.
+- [x] It found 124 errors on the first run. Four were real:
+
+`bridge.test.ts` and `recorder.test.ts` each build a `Detection` with no
+`feet`, a field that has been required since the bridge started measuring
+objects from the actual feet. Both fixtures now derive `contactIndices`
+and `feet` from one list of contacts, so the two cannot drift apart.
+
+`bridge.test.ts` gave a `Template` a numeric `learnedAt` where the type
+says an ISO date string, behind an `as Template` cast that existed to
+silence exactly this. The cast is gone.
+
+`scale.test.ts` passed `{ angles: undefined, ringMM: undefined }` to build
+a triangle, which leaves both keys present holding undefined — what
+`exactOptionalPropertyTypes` was turned on to catch. A triangle now has
+its own builder.
+
+`smoke.ts` block 6 collected the page's JS errors and never asserted on
+them, alone among the twelve blocks. The unused-binding error is what
+noticed; the assertion is now there, and it passes.
+
+- [x] The rest were `noUncheckedIndexedAccess` on array indexing, which
+      the tests inherit from `tsconfig.json` and keep. Two helpers say
+      the assumption once instead of at every site: `src/test/unit/at.ts`
+      (the element at `i`, or a failure naming the index) and
+      `threePoints.ts` (the three feet of a triangular puck). Where a
+      list has a known length the type now says so — the four blueprint
+      pucks are a 4-tuple whose `ratios` are required, the four drop
+      spots in the smoke test are `[number, number][]`.
+- [x] In the smoke test, `document.getElementById(...)` inside a
+      `page.evaluate()` callback is cast, the way `src/dom/el.ts` casts
+      for the same reason: a missing id is a mistake in `index.html` and
+      is allowed to fail hard. The callback is serialised and cannot
+      close over `el`, so the cast is written out at each site.
+- [x] One bug of my own, caught by the same config: `setInterval` in
+      `src/capture/` returns a `Timeout` under Node's types and a number
+      in the browser, and the module typed its timers as `number`. They
+      are `ReturnType<typeof setInterval> | null` now, which is what
+      `src/state/talk.ts` already used.
+- [x] Check: `npm run check` (566 tests, four typecheck passes),
+      `npm run build`, `npm run smoke` green.
+
 ---
 
 ## Verification, per phase
@@ -452,6 +540,7 @@ prose; then the two lines Prettier itself produces too long.
 | 4     | yes   | yes   | yes   | barrels + conventions tests      |
 | 5     | yes   | yes   | —     | literal-identity verifier        |
 | 6     | yes   | yes   | yes   | —                                |
+| 7     | yes   | yes   | yes   | the fix fails without the change |
 
 ## Risks
 

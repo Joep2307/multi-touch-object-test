@@ -18,6 +18,7 @@ import { KG_PHRASES } from "../../kg";
 import { readFileSync } from "node:fs";
 import { URL, fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { at } from "./at";
 import type { Lang } from "../../types";
 
 const LANGS = Object.keys(L) as Lang[];
@@ -34,7 +35,7 @@ const keysInHtml = (): string[] => [
             ...html.matchAll(
                 /data-i18n(?:-html|-ph|-aria|-title|-label)?="([^"]+)"/g,
             ),
-        ].map((m) => m[1]),
+        ].map((m) => at(m, 1)),
     ),
 ];
 

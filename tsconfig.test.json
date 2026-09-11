@@ -1,0 +1,27 @@
+/* The tests, typechecked.
+ *
+ *   npm run typecheck        src/ and exe/, minus the tests
+ *   npm run typecheck:core   src/core/ with the DOM taken away
+ *   npm run typecheck:test   src/test/, this file
+ *
+ * Vitest transpiles and does not typecheck, and tsconfig.json excludes
+ * `src/test` because the tests need Node's types and the app does not.
+ * Without this file a test could hand a function the wrong argument and
+ * nothing would say so until the assertion failed for the wrong reason
+ * — or, worse, passed for one.
+ *
+ * `types` adds `node` on top of what tsconfig.json has: the tests read
+ * fixtures off the disk, and the smoke test starts a server and a
+ * browser. `resolveJsonModule` is for the recorded contact fixtures the
+ * core tests import directly.
+ */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node"],
+    "resolveJsonModule": true,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src/test"],
+  "exclude": ["node_modules", "dist"]
+}

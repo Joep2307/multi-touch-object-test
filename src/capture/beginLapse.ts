@@ -8,8 +8,8 @@ import type { Lapse } from "../types";
 export function beginLapse(): void {
     if (!capture.cv || capture.lapse || capture.busy) return;
     const lapse: Lapse = {
-        timer: 0,
-        tick: 0,
+        timer: null,
+        tick: null,
         frames: [],
         bytes: 0,
         start: Date.now(),

@@ -112,8 +112,8 @@ describe("learning a puck again", () => {
         const relearned: Template = {
             ...tpl,
             ringMM: 41,
-            learnedAt: 12345,
-        } as Template;
+            learnedAt: "2026-09-11T09:00:00.000Z",
+        };
         detect(relearned);
         const after = bridge.kinds.get("learn-me" as never);
         expect(after?.signatures[0].geometry.footRadiusMM).toBe(41);
@@ -322,7 +322,7 @@ const bridgeContacts = (
 const assignment = (
     trackId: string,
     template: Template,
-    contactIndices: readonly number[],
+    contacts: readonly TrackBridgeContact[],
     x: number,
     y: number,
 ): TrackAssignment => {
@@ -332,7 +332,16 @@ const assignment = (
         x,
         y,
         angle: 0,
-        contactIndices,
+        contactIndices: contacts.map((_, index) => index),
+        /* The same feet those indices name, which is what the bridge
+           measures the object from. Taking both from one list keeps
+           them in step; `recognise` does the same thing from the
+           contacts it was handed. */
+        feet: contacts.map((contact, index) => ({
+            id: index,
+            x: contact.x,
+            y: contact.y,
+        })),
     };
     return { detection, trackId, visible: true };
 };
@@ -342,13 +351,7 @@ describe("TrackBridge", () => {
         const bridge = new TrackBridge(4);
         const template = ring();
         const contacts = bridgeContacts(400, 300, "real");
-        const match = assignment(
-            "track-1",
-            template,
-            contacts.map((_, index) => index),
-            400,
-            300,
-        );
+        const match = assignment("track-1", template, contacts, 400, 300);
 
         bridge.update(100, contacts, [match]);
         const physical = bridge.physicalForTrack("track-1");
@@ -369,9 +372,8 @@ describe("TrackBridge", () => {
         const bridge = new TrackBridge(4);
         const template = ring();
         const first = bridgeContacts(400, 300, "first");
-        const indices = first.map((_, index) => index);
         bridge.update(0, first, [
-            assignment("track-old", template, indices, 400, 300),
+            assignment("track-old", template, first, 400, 300),
         ]);
         const physical = bridge.physicalForTrack("track-old");
 
@@ -379,7 +381,7 @@ describe("TrackBridge", () => {
         expect(physical?.presence.state).toBe("lifted");
         const returned = bridgeContacts(405, 302, "returned");
         bridge.update(4_000, returned, [
-            assignment("track-new", template, indices, 405, 302),
+            assignment("track-new", template, returned, 405, 302),
         ]);
 
         expect(bridge.physicalForTrack("track-new")).toBe(physical);
@@ -394,13 +396,7 @@ describe("TrackBridge", () => {
         const template = ring();
         const contacts = bridgeContacts(400, 300, "sim", true);
         bridge.update(0, contacts, [
-            assignment(
-                "track-sim",
-                template,
-                contacts.map((_, index) => index),
-                400,
-                300,
-            ),
+            assignment("track-sim", template, contacts, 400, 300),
         ]);
         const physical = bridge.physicalForTrack("track-sim");
         expect(physical).toBeInstanceOf(SimulatedPuck);

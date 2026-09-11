@@ -161,8 +161,14 @@ en alle drie worden ze door een test bewaakt
 - **79 kolommen**, ook waar Prettier niet komt: commentaar, teksten
   tussen aanhalingstekens, de streepjeslijnen in een kop.
 
-Daar hoort een vierde bij die geen test maar een gewoonte is: **niets
-doet werk bij het laden.** `src/main.ts` is het enige bestand dat iets
+Ook de tests worden typegecontroleerd, met een eigen `tsconfig.test.json`
+(`npm run typecheck:test`): Vitest zet TypeScript alleen om en kijkt er
+niet naar, en een proefopstelling die niet meer past bij het type dat hij
+zegt te zijn hoort op te vallen voordat de test om de verkeerde reden
+slaagt.
+
+Daar hoort een vierde afspraak bij die geen test maar een gewoonte is:
+**niets doet werk bij het laden.** `src/main.ts` is het enige bestand dat iets
 dóet zodra het geladen wordt; elk ander bestand exporteert één ding en
 wacht tot het geroepen wordt. `src/test/unit/barrels.test.ts` laadt elke
 barrel afzonderlijk onder Node — zonder pagina — en dat lukt alleen als

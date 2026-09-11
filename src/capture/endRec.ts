@@ -6,8 +6,8 @@ import { stopTracks } from "./stopTracks";
 export function endRec(): void {
     const r = capture.rec;
     capture.rec = null;
-    clearInterval(capture.recTimer);
-    capture.recTimer = 0;
+    if (capture.recTimer !== null) clearInterval(capture.recTimer);
+    capture.recTimer = null;
     stopTracks(r);
     const chunks = capture.recChunks;
     capture.recChunks = [];

@@ -47,6 +47,9 @@ jobs:
       - name: Typecontrole van de kern (strengere vlaggen)
         run: npm run typecheck:core
 
+      - name: Typecontrole van de tests
+        run: npm run typecheck:test
+
       - name: Eenheidstests (Vitest)
         run: npm run test
 

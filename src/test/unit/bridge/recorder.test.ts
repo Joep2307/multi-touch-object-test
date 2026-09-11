@@ -43,6 +43,13 @@ const detection = (cx: number, cy: number): Detection => ({
     y: cy,
     angle: 0,
     contactIndices: [0, 1, 2, 3, 4],
+    /* The same five feet the indices name. `recognise` fills these in
+       from the contacts it was given; here the index is the id. */
+    feet: contacts(cx, cy).map((contact, i) => ({
+        id: i,
+        x: contact.x,
+        y: contact.y,
+    })),
 });
 
 const rig = () => {

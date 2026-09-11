@@ -15,6 +15,7 @@ import {
     setKgLang,
 } from "../../kg";
 import { afterEach, describe, expect, it } from "vitest";
+import { at } from "./at";
 import type { KgNode } from "../../types";
 
 /* A handful of nodes around the Grote Kerk in Breda. The distances are
@@ -71,7 +72,7 @@ describe("nearby", () => {
 
     it("meet de afstand die het teruggeeft", () => {
         kg.nodes = [opNoord(500, { id: "a" })];
-        expect(nearby(KERK.lat, KERK.lon)[0].dist).toBeCloseTo(500, 0);
+        expect(at(nearby(KERK.lat, KERK.lon), 0).dist).toBeCloseTo(500, 0);
     });
 
     it("laat wat buiten de straal ligt weg", () => {
@@ -97,18 +98,18 @@ describe("nearby", () => {
             opNoord(100, { id: "dichtbij", themes: ["Groen"] }),
             opNoord(300, { id: "passend", themes: ["Verkeer"] }),
         ];
-        expect(nearby(KERK.lat, KERK.lon)[0].node.id).toBe("dichtbij");
+        expect(at(nearby(KERK.lat, KERK.lon), 0).node.id).toBe("dichtbij");
         // 300 m − 250 m bonus < 100 m: the matching topic wins.
         const met = nearby(KERK.lat, KERK.lon, { theme: "verkeer" });
-        expect(met[0].node.id).toBe("passend");
-        expect(met[0].match).toBe(true);
+        expect(at(met, 0).node.id).toBe("passend");
+        expect(at(met, 0).match).toBe(true);
         expect(met).toHaveLength(2);
     });
 
     it("trekt zich niets aan van hoofdletters of spaties in het thema", () => {
         kg.nodes = [opNoord(300, { id: "passend", themes: ["Verkeer"] })];
         expect(
-            nearby(KERK.lat, KERK.lon, { theme: "  VERKEER " })[0].match,
+            at(nearby(KERK.lat, KERK.lon, { theme: "  VERKEER " }), 0).match,
         ).toBe(true);
     });
 

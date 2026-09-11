@@ -6,8 +6,8 @@ export function cancelCapture(): void {
     if (capture.rec) finishRec("stop");
     const lapse = capture.lapse;
     if (lapse) {
-        clearInterval(lapse.timer);
-        clearInterval(lapse.tick);
+        if (lapse.timer !== null) clearInterval(lapse.timer);
+        if (lapse.tick !== null) clearInterval(lapse.tick);
         capture.lapse = null;
         capture.events.change?.();
     }
