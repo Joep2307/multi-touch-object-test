@@ -20,6 +20,7 @@ import {
     DirectionPolicy,
     MotionHistoryPolicy,
     MovePolicy,
+    FootprintCompletionPolicy,
     PositionPolicy,
     PxPerMMEstimator,
     PxPerMMPolicy,
@@ -56,6 +57,7 @@ import type {
 
 const POLICIES: BasePolicies = {
     position: new PositionPolicy(),
+    completion: new FootprintCompletionPolicy(),
     direction: new DirectionPolicy(),
     move: new MovePolicy(),
     rotate: new RotatePolicy(),
@@ -335,6 +337,7 @@ const EMPTY_SNAPSHOT: BaseSnapshot = {
     position: {
         sensed: true,
         complete: true,
+        held: false,
         contactCount: 3,
         expectedCount: 3,
         centre: { x: 0, y: 0 },

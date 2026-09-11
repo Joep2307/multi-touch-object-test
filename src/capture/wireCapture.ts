@@ -1,13 +1,21 @@
-import * as cap from "../../capture";
 import { el } from "../dom/el";
 import { tr } from "../i18n/tr";
 import { MV } from "../map/MV";
 import { tiles } from "../state/tiles";
 import { view } from "../state/view";
+import type { CapKind } from "../types/CapKind";
+import type { CapReason } from "../types/CapReason";
 import type { Side } from "../types/Side";
 import { sidesActive } from "../ui/sidesActive";
 import { resetPanelOffset } from "../ui/panels/resetPanelOffset";
 import { closeMenu } from "../ui/menu/closeMenu";
+import { canFilm } from "./canFilm";
+import { captureExt } from "./captureExt";
+import { captureShot } from "./captureShot";
+import { captureState } from "./captureState";
+import { initCapture } from "./initCapture";
+import { toggleLapse } from "./toggleLapse";
+import { toggleRec } from "./toggleRec";
 
 const BUTTONS = [
     ["btnCapA", "a"],
@@ -26,7 +34,7 @@ export function wireCapture(): { close: () => void; reorient: () => void } {
             String(seconds % 60).padStart(2, "0")
         );
     };
-    const saveCapture = (kind: cap.CapKind, blob: Blob): void => {
+    const saveCapture = (kind: CapKind, blob: Blob): void => {
         const stamp = new Date()
             .toISOString()
             .slice(0, 16)
@@ -45,7 +53,7 @@ export function wireCapture(): { close: () => void; reorient: () => void } {
             label +
             "-" +
             stamp +
-            (kind === "shot" ? ".png" : cap.ext(blob));
+            (kind === "shot" ? ".png" : captureExt(blob));
         link.click();
         setTimeout(() => URL.revokeObjectURL(link.href), 60000);
         message = tr(
@@ -53,7 +61,7 @@ export function wireCapture(): { close: () => void; reorient: () => void } {
             Math.max(0.1, Math.round(blob.size / 104857.6) / 10),
         );
     };
-    const reasonText = (reason: cap.CapReason): string =>
+    const reasonText = (reason: CapReason): string =>
         reason === "besmet"
             ? tr("capTainted")
             : reason === "leeg"
@@ -62,8 +70,8 @@ export function wireCapture(): { close: () => void; reorient: () => void } {
                 ? tr("capNoFilm")
                 : tr("capFailed");
     const paint = (): void => {
-        const state = cap.state();
-        const film = cap.canFilm();
+        const state = captureState();
+        const film = canFilm();
         for (const [id, buttonSide] of BUTTONS) {
             const button = el(id);
             button.classList.toggle("on", side === buttonSide);
@@ -114,7 +122,7 @@ export function wireCapture(): { close: () => void; reorient: () => void } {
         if (side) open(side === "b" && !sidesActive() ? "a" : side);
     };
 
-    cap.init(view.cv, {
+    initCapture(view.cv, {
         change: paint,
         done: (kind, blob, reason) => {
             if (blob) {
@@ -131,7 +139,7 @@ export function wireCapture(): { close: () => void; reorient: () => void } {
         message = "";
         paint();
         try {
-            saveCapture("shot", await cap.shot());
+            saveCapture("shot", await captureShot());
         } catch {
             message = tiles.tainted.has(MV.set)
                 ? tr("capTainted")
@@ -141,16 +149,16 @@ export function wireCapture(): { close: () => void; reorient: () => void } {
     };
     el("btnRec").onclick = () => {
         message = "";
-        const running = cap.state().rec;
-        cap.toggleRec();
-        if (!running && cap.state().rec) close();
+        const running = captureState().rec;
+        toggleRec();
+        if (!running && captureState().rec) close();
         else paint();
     };
     el("btnLapse").onclick = () => {
         message = "";
-        const running = cap.state().lapse;
-        cap.toggleLapse();
-        if (!running && cap.state().lapse) close();
+        const running = captureState().lapse;
+        toggleLapse();
+        if (!running && captureState().lapse) close();
         else paint();
     };
     paint();

@@ -29,14 +29,8 @@ export default [
             "public/fixtures/",
             "vendor/",
             "Claude outputs/",
-            /* Pre-module migration sources and smoke scripts. The running
-               app and maintained tests live under src/ and exe/. */
-            "app.ts",
-            "capture.ts",
-            "globals.d.ts",
-            "kg.ts",
-            "speech.ts",
-            "test/",
+            /* The historical pre-module snapshot; see legacy/README.md. */
+            "legacy/",
         ],
     },
 

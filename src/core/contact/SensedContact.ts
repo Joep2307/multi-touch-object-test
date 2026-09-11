@@ -17,6 +17,15 @@
  * `firstSeen` is what makes `Tap` possible without any trait having to
  * keep its own history: how long something has been down is
  * `lastSeen - firstSeen`, and it survives a dropped frame.
+ *
+ * `reconstructed` marks a foot no driver reported: `FootprintCompletion`
+ * worked out where it must be from the feet that are still down and the
+ * last complete frame. Absent means real, so a source cannot
+ * accidentally claim one — only the completion sets it. Every trait
+ * that measures a shape reads it as an ordinary foot, which is the
+ * point; the two that must not are the scale estimator, which would be
+ * feeding its own output back, and the rotation source, which only
+ * reports what it actually measured.
  */
 export type SensedContact = {
     readonly id: number;
@@ -25,4 +34,5 @@ export type SensedContact = {
     readonly radiusPX: number;
     readonly firstSeen: number;
     readonly lastSeen: number;
+    readonly reconstructed?: boolean;
 };

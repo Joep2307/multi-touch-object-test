@@ -9,6 +9,7 @@ import type { PositionSnapshot } from "./PositionSnapshot";
 const EMPTY: PositionSnapshot = {
     sensed: false,
     complete: false,
+    held: false,
     contactCount: 0,
     expectedCount: 0,
     centre: null,
@@ -33,6 +34,12 @@ const EMPTY: PositionSnapshot = {
  * to make the reading untrusted, which is the behaviour wanted — a
  * hand with three fingers at roughly the right spread should not
  * become a puck because two of the three checks passed.
+ *
+ * A footprint that arrives with a reconstructed foot in it is scored
+ * exactly like any other and then discounted once, at the end. The
+ * trait deliberately learns nothing else about holding: the shape it
+ * was handed is a whole footprint, which is what
+ * `FootprintCompletion` is for.
  */
 export class Position extends Trait<PositionSnapshot> {
     override readonly id = "position";
@@ -48,6 +55,7 @@ export class Position extends Trait<PositionSnapshot> {
     override update(sample: BaseSample): void {
         const points = sample.contacts.points;
         const expected = sample.spec.expectedCount;
+        const held = points.some((point) => point.reconstructed === true);
         if (points.length < this.policy.minFeet) {
             this.#snapshot = {
                 ...EMPTY,
@@ -67,17 +75,27 @@ export class Position extends Trait<PositionSnapshot> {
             return;
         }
 
-        const { confidence, shapeConfidence } = scoreFootprint(
+        const scored = scoreFootprint(
             fit,
             points.length,
             sample.spec,
             sample.pxPerMM,
             this.policy,
         );
+        const shapeConfidence = scored.shapeConfidence;
+        const confidence = held
+            ? scored.confidence * this.policy.heldConfidence
+            : scored.confidence;
 
         this.#snapshot = {
             sensed: confidence > CONFIDENCE_MIN,
-            complete: points.length >= expected,
+            /* Never complete while a foot was reconstructed, however
+               many points arrived. `complete` is what says the reading
+               is whole enough to calibrate the table's scale from, and
+               a reconstructed foot carries the scale it was
+               reconstructed with. */
+            complete: !held && points.length >= expected,
+            held,
             contactCount: points.length,
             expectedCount: expected,
             centre: fit.centre,

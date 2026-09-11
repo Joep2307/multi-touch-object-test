@@ -1,6 +1,10 @@
+export { applyRigidMotion } from "./applyRigidMotion";
 export { Base } from "./Base";
+export { FootprintCompletion } from "./FootprintCompletion";
+export { FootprintCompletionPolicy } from "./FootprintCompletionPolicy";
 export { footprintFrom } from "./footprintFrom";
 export { Policy } from "./Policy";
+export { rigidMotionBetween } from "./rigidMotionBetween";
 export { Trait } from "./Trait";
 export * from "./acceleration";
 export * from "./direction";
@@ -12,5 +16,6 @@ export * from "./tap";
 export type { BaseSample } from "./BaseSample";
 export type { BaseSnapshot } from "./BaseSnapshot";
 export type { FootprintSpec } from "./FootprintSpec";
+export type { RigidMotion } from "./RigidMotion";
 export type { ScreenBounds } from "./ScreenBounds";
 export type { Vec2 } from "./Vec2";

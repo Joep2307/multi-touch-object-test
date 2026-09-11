@@ -28,6 +28,15 @@ import type { Vec2 } from "../Vec2";
  * recording to **none**, and costs nothing — the heading is reported
  * on exactly as many frames as before.
  *
+ * The choice is dropped for exactly one reason: **the chosen foot has
+ * left the contact set**. Not because one frame measured too evenly to
+ * call an apex — the real pucks sit at 6% against a 0.06 threshold, so
+ * a frame dipping under it is the ordinary case, and re-picking from
+ * scratch afterwards is precisely what holding the choice was added to
+ * prevent. Measured: headings of 0, then nothing, then **240** on three
+ * consecutive frames, where without the middle frame the same puck
+ * reads 0 and 0. Such a frame reports no heading and keeps its nose.
+ *
  * What this does **not** fix is the same puck put down again naming a
  * different foot. That is not a measurement that can be improved; the
  * information is not in the footprint. One of the real pucks has
@@ -81,15 +90,19 @@ export class ApexHeadingSource extends HeadingSource {
             }
         }
 
-        /* Too even to orient: any of the three feet would do, so the
-           nose would jump between them frame to frame. */
-        if (apex < 0 || best < this.policy.minApexAsymmetry) {
-            this.#chosen = null;
-            return null;
-        }
-
-        /* Held, if the foot we named last time is still down. */
+        /* Held, if the foot we named last time is still down — and
+           forgotten the moment it is not. This is the only thing that
+           ends a choice, and it is checked before the asymmetry below
+           so that a frame too even to read keeps its nose. */
         const held = points.findIndex((q) => q.id === this.#chosen);
+        if (held < 0) this.#chosen = null;
+
+        /* Too even to orient: any of the three feet would do, so a
+           nose picked here would jump between them frame to frame.
+           Silent for this frame, which is not the same as having no
+           nose. */
+        if (apex < 0 || best < this.policy.minApexAsymmetry) return null;
+
         const p = points[held >= 0 ? held : apex];
         if (p === undefined) return null;
         this.#chosen = p.id;

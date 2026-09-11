@@ -1,0 +1,9 @@
+export { canFilm } from "./canFilm";
+export { cancelCapture } from "./cancelCapture";
+export { captureExt } from "./captureExt";
+export { captureShot } from "./captureShot";
+export { captureState } from "./captureState";
+export { initCapture } from "./initCapture";
+export { toggleLapse } from "./toggleLapse";
+export { toggleRec } from "./toggleRec";
+export { wireCapture } from "./wireCapture";

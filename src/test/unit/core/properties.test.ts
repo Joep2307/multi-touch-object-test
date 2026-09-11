@@ -792,6 +792,7 @@ const positionSnapshot = (
 ): PositionSnapshot => ({
     sensed: true,
     complete,
+    held: false,
     contactCount: 3,
     expectedCount: 3,
     centre: { x: 0, y: 0 },

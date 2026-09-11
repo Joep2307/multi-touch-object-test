@@ -19,7 +19,10 @@ import type { PxPerMMPolicy } from "./PxPerMMPolicy";
  * wrongly is worse than a fixed one that is slightly off:
  *
  *   - only `complete` readings count, so a puck with a foot missing
- *     cannot shrink the whole table;
+ *     cannot shrink the whole table, and neither can one holding on
+ *     with a reconstructed foot: that foot carries the very scale
+ *     being calibrated, and feeding it back is the loop this class
+ *     exists to avoid;
  *   - only readings whose *shape* agreement is above
  *     `minConfidence` count, so a hand that happened to fit a circle
  *     cannot either;
@@ -53,7 +56,7 @@ export class PxPerMMEstimator {
     /* Feed one frame's reading. Returns the scale to use next frame,
        which is also what `value` reports. */
     observe(snapshot: PositionSnapshot, sample: BaseSample): number {
-        if (!snapshot.complete) return this.#value;
+        if (!snapshot.complete || snapshot.held) return this.#value;
         /* Gated on `shapeConfidence`, never on `confidence`.
            `confidence` includes the size check, and the size check is
            computed from the very scale being calibrated: a seed more

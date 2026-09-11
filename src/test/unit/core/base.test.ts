@@ -17,6 +17,8 @@ import {
     footprintFrom,
     DirectionPolicy,
     DirectionRay,
+    FootprintCompletion,
+    FootprintCompletionPolicy,
     GapHeadingSource,
     Move,
     MovePolicy,
@@ -88,6 +90,7 @@ const makeBase = (seed = 4): Base => {
         new MotionHistory(move, new MotionHistoryPolicy()),
         new Acceleration(move, new AccelerationPolicy()),
         new PxPerMMEstimator(seed, new PxPerMMPolicy()),
+        new FootprintCompletion(new FootprintCompletionPolicy()),
     );
 };
 
@@ -212,10 +215,133 @@ describe("Position", () => {
     });
 });
 
+describe("FootprintCompletion", () => {
+    const whole = (at: number, cx = 400, cy = 300) =>
+        set(feet(cx, cy, 160, [0, 132, 228]), at);
+
+    /* A completion that has already watched one whole frame, which is
+       the precondition for every reconstruction. */
+    const watching = () => {
+        const completion = new FootprintCompletion(
+            new FootprintCompletionPolicy(),
+        );
+        const position = new Position(
+            new CentroidSolver(),
+            new PositionPolicy(),
+        );
+        const contacts = whole(0);
+        position.update({ at: 0, contacts, spec: SPEC, pxPerMM: 4 });
+        completion.remember(contacts, position.snapshot());
+        return completion;
+    };
+
+    it("puts the missing foot back where the puck took it", () => {
+        const completion = watching();
+        /* The same puck, shifted 40 px, with its third foot gone. */
+        const moved = whole(16, 440, 300);
+        const two = { at: 16, points: moved.points.slice(0, 2) };
+        const done = completion.complete(two, SPEC);
+        expect(done.points).toHaveLength(3);
+        const third = done.points[2];
+        expect(third?.reconstructed).toBe(true);
+        expect(third?.x).toBeCloseTo(moved.points[2]?.x ?? NaN, 6);
+        expect(third?.y).toBeCloseTo(moved.points[2]?.y ?? NaN, 6);
+        /* The same foot, so it keeps its id and the nose stays the
+           nose. */
+        expect(third?.id).toBe(moved.points[2]?.id);
+    });
+
+    it("never establishes a footprint it has not seen whole", () => {
+        const completion = new FootprintCompletion(
+            new FootprintCompletionPolicy(),
+        );
+        const two = { at: 0, points: whole(0).points.slice(0, 2) };
+        expect(completion.complete(two, SPEC).points).toHaveLength(2);
+    });
+
+    it("refuses a finger that lands at the wrong distance", () => {
+        const completion = watching();
+        const points = whole(16).points.slice(0, 2);
+        const first = points[0];
+        const second = points[1];
+        if (first === undefined || second === undefined) throw new Error("!");
+        /* The right ids, well outside `rigidTolerance` of the distance
+           those two feet were apart. A puck is rigid; this is not one. */
+        const stretched = [first, { ...second, x: second.x + 60 }];
+        const done = completion.complete({ at: 16, points: stretched }, SPEC);
+        expect(done.points).toHaveLength(2);
+    });
+
+    it("does not reconstruct across a gap", () => {
+        const completion = watching();
+        const late = whole(500);
+        const two = { at: 500, points: late.points.slice(0, 2) };
+        expect(completion.complete(two, SPEC).points).toHaveLength(2);
+    });
+
+    it("leaves a whole frame exactly as it found it", () => {
+        const completion = watching();
+        const contacts = whole(16);
+        expect(completion.complete(contacts, SPEC)).toBe(contacts);
+    });
+
+    it("forgets its reference when it is reset", () => {
+        const completion = watching();
+        completion.reset();
+        const two = { at: 16, points: whole(16).points.slice(0, 2) };
+        expect(completion.complete(two, SPEC).points).toHaveLength(2);
+    });
+
+    it("does not let a held frame move the table's scale", () => {
+        /* The loop the estimator's whole design avoids: a
+           reconstructed foot carries the scale it was reconstructed
+           with, so a reading taken from it would confirm whatever the
+           scale already said. */
+        const completion = watching();
+        const position = new Position(
+            new CentroidSolver(),
+            new PositionPolicy(),
+        );
+        const estimator = new PxPerMMEstimator(3.8, new PxPerMMPolicy());
+        const two = { at: 16, points: whole(16).points.slice(0, 2) };
+        const sample = {
+            at: 16,
+            contacts: completion.complete(two, SPEC),
+            spec: SPEC,
+            pxPerMM: 3.8,
+        };
+        position.update(sample);
+        expect(position.snapshot().held).toBe(true);
+        estimator.observe(position.snapshot(), sample);
+        expect(estimator.value).toBe(3.8);
+        expect(estimator.sampleCount).toBe(0);
+    });
+
+    it("scores a held reading below a whole one", () => {
+        const completion = watching();
+        const position = new Position(
+            new CentroidSolver(),
+            new PositionPolicy(),
+        );
+        const two = { at: 16, points: whole(16).points.slice(0, 2) };
+        position.update({
+            at: 16,
+            contacts: completion.complete(two, SPEC),
+            spec: SPEC,
+            pxPerMM: 4,
+        });
+        const heldConfidence = position.snapshot().confidence;
+        position.update({ at: 32, contacts: whole(32), spec: SPEC, pxPerMM: 4 });
+        expect(heldConfidence).toBeLessThan(position.snapshot().confidence);
+        expect(heldConfidence).toBeGreaterThan(0);
+    });
+});
+
 describe("PxPerMMEstimator", () => {
     const good = (fittedRadiusPX: number) => ({
         sensed: true,
         complete: true,
+        held: false,
         contactCount: 3,
         expectedCount: 3,
         centre: { x: 0, y: 0 },

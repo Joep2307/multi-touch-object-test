@@ -1,5 +1,6 @@
 import type { AccelerationPolicy } from "../base/acceleration";
 import type { DirectionPolicy } from "../base/direction/DirectionPolicy";
+import type { FootprintCompletionPolicy } from "../base/FootprintCompletionPolicy";
 import type { MovePolicy } from "../base/move/MovePolicy";
 import type { PositionPolicy } from "../base/position/PositionPolicy";
 import type { RotatePolicy } from "../base/rotate/RotatePolicy";
@@ -18,6 +19,7 @@ import type { MotionHistoryPolicy } from "../base/motion";
  */
 export type BasePolicies = {
     readonly position: PositionPolicy;
+    readonly completion: FootprintCompletionPolicy;
     readonly direction: DirectionPolicy;
     readonly move: MovePolicy;
     readonly rotate: RotatePolicy;

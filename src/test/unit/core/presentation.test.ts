@@ -54,6 +54,7 @@ const token = (
         position: { x, y: 400 },
         directionDeg: 90,
         directionKnown: true,
+        held: false,
         sizePX: 320,
     },
     motion: null,
@@ -221,6 +222,7 @@ describe("RegionTracker", () => {
             position: { x: xMM * PX_PER_MM, y: 100 * PX_PER_MM },
             directionDeg: 0,
             directionKnown: true,
+            held: false,
             sizePX: 320,
         },
     });

@@ -12,10 +12,18 @@ import type { Vec2 } from "../base/Vec2";
  * `sizePX` is the object's outer edge at the table's current scale,
  * from the kind — never the measurement. A ring drawn from what was
  * measured breathes with sensor noise.
+ *
+ * `held` says this pose was read from a footprint one of whose feet
+ * was reconstructed rather than reported. The object is there and the
+ * pose is real — that is what reconstructing it is for — but a drawing
+ * may honestly say so, which is what the old table does at 35% alpha
+ * for the same reason. Its natural companion is `status`: a held
+ * object is `detected`, not `missing`.
  */
 export type InstancePose = {
     readonly position: Vec2 | null;
     readonly directionDeg: number;
     readonly directionKnown: boolean;
     readonly sizePX: number;
+    readonly held: boolean;
 };

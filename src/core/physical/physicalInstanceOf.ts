@@ -69,6 +69,7 @@ export function physicalInstanceOf(
         directionDeg: snapshot.direction.headingDeg,
         directionKnown: snapshot.direction.known,
         sizePX: physical.outerDiameterPX(),
+        held: snapshot.position.held,
     };
     const motion: InstanceMotion = {
         velocity: snapshot.acceleration.velocity,

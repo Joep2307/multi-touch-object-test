@@ -29,6 +29,17 @@ const EMPTY: RotateSnapshot = {
  * than recording that it stopped, and that distinction is the whole
  * reason `step` is nullable.
  *
+ * **Every step is accumulated, dead zone or not.** The dead zone says
+ * whether the object is *being turned* right now, which is a question
+ * about this frame and belongs to `turning` and `deltaFrameDeg`; it is
+ * not a licence to throw the measurement away. Dropping sub-dead-zone
+ * steps from the total meant a turn slower than 24 degrees a second at
+ * sixty frames never accumulated at all: 0.3 degrees a frame for three
+ * hundred frames — a real 90-degree turn over five seconds — reported
+ * zero. Noise is zero-mean, so summing it goes nowhere; what decides
+ * whether a turn *means* anything is the gesture threshold, which is a
+ * programme's business rather than a trait's.
+ *
  * `fromHeadingDeg` is where the object was pointing when it was put
  * down, which is what makes "turn a bit further" mean the same thing
  * wherever it landed. It comes from `Direction` and is the only thing
@@ -69,7 +80,7 @@ export class Rotate extends Trait<RotateSnapshot> {
         }
 
         const turning = Math.abs(step) > this.policy.deadZoneDeg;
-        const total = this.#snapshot.deltaTotalDeg + (turning ? step : 0);
+        const total = this.#snapshot.deltaTotalDeg + step;
         this.#snapshot = {
             turning,
             deltaFrameDeg: turning ? step : 0,

@@ -6,21 +6,37 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+    Acceleration,
+    AccelerationPolicy,
     ApexHeadingSource,
+    Base,
     CentroidSolver,
     footprintFrom,
     Direction,
     DirectionPolicy,
+    FootprintCompletion,
+    FootprintCompletionPolicy,
+    MotionHistory,
+    MotionHistoryPolicy,
     Move,
     MovePolicy,
+    PointMatchRotationSource,
     Position,
     PositionPolicy,
+    PxPerMMEstimator,
+    PxPerMMPolicy,
     Rotate,
     HeadingRotationSource,
     RotatePolicy,
     Tap,
     shortestAngleDiffDeg,
 } from "../../../core/base";
+import {
+    GestureRecogniser,
+    defaultGestureDefinitions,
+} from "../../../core/gesture";
+import { Presence, PresencePolicy } from "../../../core/physical";
+import type { GestureResult } from "../../../core/gesture";
 import type { SensedContact } from "../../../core/contact";
 import type { FootprintSpec } from "../../../core/base";
 
@@ -256,5 +272,166 @@ describe("Tap", () => {
         r.step(feet(400, 300, 0, 800, 0), 800);
         r.step([], 820);
         expect(r.tap.snapshot().dwellMS).toBe(820);
+    });
+});
+
+/* ── Holding a puck on two feet ──────────────────────────────────
+ *
+ * Three feet are present on only 57 to 64 per cent of frames in every
+ * one of the seven recordings made at the table on 9 September 2026.
+ * Everything below is what that costs when a two-foot frame is treated
+ * as a lift, and what `FootprintCompletion` buys back.
+ *
+ * Driven through a whole `Base` rather than the loose traits above,
+ * because the completion runs in `Base.update` before any trait sees
+ * the frame — which is the point of it.
+ */
+type HeldRig = {
+    readonly base: Base;
+    readonly gestures: GestureResult[];
+    step: (points: readonly SensedContact[], at: number) => void;
+};
+
+/* The triad wiring `BaseFactory` builds for a real puck: an apex for
+   the nose, point matching for the turn. */
+const heldRig = (): HeldRig => {
+    const position = new Position(new CentroidSolver(), new PositionPolicy());
+    const direction = new Direction(
+        position,
+        new ApexHeadingSource(new DirectionPolicy()),
+    );
+    const move = new Move(position, new MovePolicy());
+    const base = new Base(
+        position,
+        direction,
+        move,
+        new Rotate(
+            new PointMatchRotationSource(new RotatePolicy()),
+            new RotatePolicy(),
+            direction,
+        ),
+        new Tap(position),
+        new MotionHistory(move, new MotionHistoryPolicy()),
+        new Acceleration(move, new AccelerationPolicy()),
+        new PxPerMMEstimator(4, new PxPerMMPolicy()),
+        new FootprintCompletion(new FootprintCompletionPolicy()),
+    );
+    const recogniser = new GestureRecogniser(defaultGestureDefinitions());
+    const presence = new Presence(new PresencePolicy());
+    const gestures: GestureResult[] = [];
+    return {
+        base,
+        gestures,
+        step(points, at) {
+            base.update(at, { at, points }, SPEC);
+            const state = presence.update(
+                base.position.snapshot().sensed,
+                at,
+            );
+            gestures.push(...recogniser.update(base.snapshot(at), state));
+        },
+    };
+};
+
+const FRAME_MS = 16;
+
+describe("FootprintCompletion", () => {
+    it("keeps a swipe alive through a two-foot frame", () => {
+        /* 300 px of drag with one frame in the middle where the table
+           only saw two feet. Before the completion this reported
+           `deltaTotal` {0, 0} and fired nothing at all: `Move` reset,
+           and a swipe is judged from `from` and `to` on the frame the
+           movement stops. */
+        const r = heldRig();
+        let at = 0;
+        for (let f = 0; f < 20; f += 1) {
+            const points = feet(400 + f * 15, 300, 0, at);
+            r.step(f === 10 ? points.slice(0, 2) : points, at);
+            at += FRAME_MS;
+        }
+        /* Stand still, so the movement stops and the swipe is
+           judged. */
+        for (let f = 0; f < 10; f += 1) {
+            r.step(feet(400 + 19 * 15, 300, 0, at), at);
+            at += FRAME_MS;
+        }
+        expect(r.gestures.map((g) => g.gesture)).toContain("swipe");
+        expect(r.base.move.snapshot().deltaTotal.x).toBeGreaterThan(250);
+    });
+
+    it("is not a tap when the feet land staggered", () => {
+        /* One foot first, the other two a frame later, then a 240 px
+           drag. `Tap` took its start centre from the first *down*
+           frame, which had no centre to take, so `movedPX` stayed at
+           zero for the whole press and a drag was reported as a tap. */
+        const r = heldRig();
+        const first = feet(400, 300, 0, 0, 0);
+        r.step(first.slice(0, 1), 0);
+        let at = FRAME_MS;
+        for (let f = 0; f < 16; f += 1) {
+            r.step(feet(400 + f * 15, 300, 0, at, 0), at);
+            at += FRAME_MS;
+        }
+        r.step([], at);
+        expect(r.base.tap.snapshot().movedPX).toBeGreaterThan(200);
+        expect(r.gestures.map((g) => g.gesture)).not.toContain("tap");
+    });
+
+    it("accumulates the whole turn through a dropout", () => {
+        const r = heldRig();
+        let at = 0;
+        let expected = 0;
+        for (let f = 0; f < 30; f += 1) {
+            const points = feet(400, 300, f * 3, 0, at);
+            r.step(f === 15 ? points.slice(0, 2) : points, at);
+            expected = f * 3;
+            at += FRAME_MS;
+        }
+        /* The last frame's rotation, not one frame's worth less: the
+           dropout frame turned too, and the two feet that were there
+           said by how much. */
+        expect(r.base.rotate.snapshot().deltaTotalDeg).toBeCloseTo(
+            expected,
+            3,
+        );
+    });
+
+    it("puts the missing foot where the real one comes back", () => {
+        const r = heldRig();
+        let at = 0;
+        for (let f = 0; f < 5; f += 1) {
+            r.step(feet(400, 300, f * 2, 0, at), at);
+            at += FRAME_MS;
+        }
+        /* One frame on two feet, and then the third foot returns. Its
+           reconstructed place and its real one must agree, because
+           everything measured in between was measured from it. */
+        const withoutThird = feet(430, 320, 12, 0, at).slice(0, 2);
+        r.step(withoutThird, at);
+        const held = r.base.position.snapshot();
+        expect(held.held).toBe(true);
+        expect(held.sensed).toBe(true);
+        expect(held.complete).toBe(false);
+
+        const centreHeld = held.centre;
+        at += FRAME_MS;
+        r.step(feet(430, 320, 12, 0, at), at);
+        const whole = r.base.position.snapshot();
+        expect(whole.held).toBe(false);
+        expect(centreHeld?.x).toBeCloseTo(whole.centre?.x ?? NaN, 1);
+        expect(centreHeld?.y).toBeCloseTo(whole.centre?.y ?? NaN, 1);
+    });
+
+    it("never establishes a puck on two feet", () => {
+        /* No complete frame has ever been seen, so there is nothing to
+           reconstruct from. Two fingers are two fingers. */
+        const r = heldRig();
+        let at = 0;
+        for (let f = 0; f < 10; f += 1) {
+            r.step(feet(400, 300, 0, 0, at).slice(0, 2), at);
+            at += FRAME_MS;
+        }
+        expect(r.base.position.snapshot().sensed).toBe(false);
+        expect(r.base.position.snapshot().held).toBe(false);
     });
 });

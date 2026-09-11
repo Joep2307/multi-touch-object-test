@@ -2,6 +2,7 @@ import { Acceleration } from "../base/acceleration/Acceleration";
 import { ApexHeadingSource } from "../base/direction/ApexHeadingSource";
 import { Base } from "../base/Base";
 import { Direction } from "../base/direction/Direction";
+import { FootprintCompletion } from "../base/FootprintCompletion";
 import { GapHeadingSource } from "../base/direction/GapHeadingSource";
 import { HeadingRotationSource } from "../base/rotate/HeadingRotationSource";
 import { Move } from "../base/move/Move";
@@ -59,6 +60,12 @@ export class BaseFactory {
             new MotionHistory(move, this.policies.motionHistory),
             new Acceleration(move, this.policies.acceleration),
             this.pxPerMM,
+            /* One per object, unlike the scale estimator. How big a
+               pixel is, is a fact about the screen; which feet were
+               last seen together is a fact about one puck, and sharing
+               it would have two pucks reconstructing each other's
+               missing feet. */
+            new FootprintCompletion(this.policies.completion),
         );
     }
 

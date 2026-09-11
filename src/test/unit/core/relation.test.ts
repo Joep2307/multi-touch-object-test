@@ -30,6 +30,7 @@ const puck = (
         position: { x, y: 300 },
         directionDeg: 0,
         directionKnown: true,
+        held: false,
         sizePX,
     },
     motion: null,

@@ -221,42 +221,40 @@ The enabling phase. Small, and it must land before any barrel does.
 
 ## Phase 2 — Code out of the root
 
-- [ ] Create `legacy/` and move the snapshot into it intact:
-      `app.ts`, `capture.ts`, `kg.ts`, `speech.ts`, `globals.d.ts`,
-      `index.html`, `styles.css`, `test/smoke.mjs`, `test/taal.mjs`.
-      Add `legacy/README.md` (five lines: what it is, when it was
-      frozen, that nothing imports it). The `test/*.mjs` there load
-      `./index.html` and `./app.ts` relatively, so they stay coherent.
-- [ ] `.prettierignore`, `cspell.config.js`, `.gitignore` if it
-      mentions any of them, `eslint.config.js` `ignores`: replace the
-      eight root entries with `legacy/`.
-- [ ] Re-implement the capture module under `src/capture/`, one
-      symbol per file, comments in English. The pieces:
-- [ ] `src/types/CapKind.ts`, `CapReason.ts`, `CapEvents.ts`.
-- [ ] `src/state/capture.ts`: the module's private state (`cv`,
-      `events`, `rec`, `recChunks`, `recBytes`, `recStart`,
-      `recTimer`, `recReason`, `recMime`, `lapse`, `busy`) as one
-      mutable object, the way `src/state/talk.ts` holds the talk
-      session. `Lapse` becomes `src/types/Lapse.ts`.
-- [ ] `src/capture/constants.ts`: `SHOT_MAX_W`, `LAPSE_MAX_W`,
-      `JPEG_Q`, `LAPSE_EVERY_MS`, `LAPSE_PLAY_FPS`,
-      `LAPSE_MAX_FRAMES`, `LAPSE_MAX_BYTES`, `REC_FPS`,
-      `REC_BITRATE`, `REC_MAX_MS`, `REC_MAX_BYTES`, `MIMES`.
-- [ ] Public: `initCapture.ts`, `canFilm.ts`, `captureState.ts`,
-      `captureExt.ts`, `captureShot.ts`, `toggleRec.ts`,
-      `toggleLapse.ts`, `cancelCapture.ts`. (`state`, `ext`, `shot`
-      and `cancelAll` are renamed: a barrel cannot export a `state`
-      next to `src/state/`, and `shot` reads as a noun.)
-- [ ] Private: `pickMime.ts`, `scaledCanvas.ts`, `beginRec.ts`,
-      `finishRec.ts`, `endRec.ts`, `stopTracks.ts`, `beginLapse.ts`,
-      `grabFrame.ts`, `endLapse.ts`, `buildLapse.ts`, `wait.ts`.
-- [ ] `src/capture/index.ts` exporting the public eight.
-- [ ] `src/capture/wireCapture.ts`: import the new names; the
-      `cap.` namespace goes.
-- [ ] `project-words.txt`: any new identifiers cspell trips on.
-- [ ] Check: `npm run check`, `npm run build`, `npm run smoke`
-      (the smoke test presses the record button and expects the
-      no-microphone explanation; that path now runs the new module).
+**Done 11 September 2026.**
+
+- [x] `legacy/` holds the snapshot intact: `app.ts`, `capture.ts`,
+      `kg.ts`, `speech.ts`, `globals.d.ts`, `index.html`,
+      `styles.css`, `test/smoke.mjs`, `test/taal.mjs` (`git mv`, so
+      history follows), plus a `README.md` saying what it is.
+- [x] `.prettierignore`, `cspell.config.js` and `eslint.config.js`
+      name `legacy/` instead of the eight root files. `.gitignore`
+      never mentioned them.
+- [x] The capture module re-implemented under `src/capture/`, one
+      symbol per file, comments in English, the essay from the top of
+      the old file kept whole at the top of `initCapture.ts`. Two
+      departures from the sketch above: the film assembler kept its
+      old name `renderLapse` rather than `buildLapse`, and
+      `captureState()` returns a named `CaptureStatus` type
+      (`src/types/CaptureStatus.ts`) rather than an inline literal.
+      `src/types/` gained `CapKind`, `CapReason`, `CapEvents`,
+      `Lapse`, `CaptureStatus`; `src/state/capture.ts` holds the
+      module's state. The `any` casts of the old file are gone —
+      `captureStream` and `CanvasCaptureMediaStreamTrack` are in the
+      DOM lib — and `getContext("2d")!` became a null check.
+- [x] `src/capture/wireCapture.ts` imports the new names; the `cap.`
+      namespace is gone with the root file.
+- [x] `src/capture/index.ts` exports the public eight and
+      `wireCapture`.
+- [x] Check: tsc (whole repo and core), lint, format, spell and 490
+      unit tests green; `npm run build` and `npm run smoke` green,
+      the smoke run opening the capture bar and counting its three
+      buttons as before.
+
+Follow-up, not in this plan: nothing under `src/` calls
+`cancelCapture`. The old `app.js` called `cancelAll` when a session
+was wiped; the conversion dropped the call. A running recording now
+survives a wipe. Worth a line in `TODO.md`.
 
 ## Phase 3 — One symbol per file
 

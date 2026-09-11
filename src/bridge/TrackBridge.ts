@@ -1,6 +1,7 @@
 import {
     AccelerationPolicy,
     DirectionPolicy,
+    FootprintCompletionPolicy,
     MovePolicy,
     PositionPolicy,
     PxPerMMEstimator,
@@ -296,6 +297,7 @@ export class TrackBridge {
 function defaultPolicies(): BasePolicies {
     return {
         position: new PositionPolicy(),
+        completion: new FootprintCompletionPolicy(),
         direction: new DirectionPolicy(),
         move: new MovePolicy(),
         rotate: new RotatePolicy(),

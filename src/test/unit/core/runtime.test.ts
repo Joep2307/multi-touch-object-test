@@ -27,6 +27,7 @@ import {
     PhysicalEventPolicy,
     PhysicalRegistry,
     ContactStatusTracker,
+    FootprintCompletionPolicy,
     PositionPolicy,
     Presence,
     PresencePolicy,
@@ -52,6 +53,7 @@ const programme = file as unknown as ProgrammeDefinition;
 const PX_PER_MM = 4;
 const POLICIES: BasePolicies = {
     position: new PositionPolicy(),
+    completion: new FootprintCompletionPolicy(),
     direction: new DirectionPolicy(),
     move: new MovePolicy(),
     rotate: new RotatePolicy(),

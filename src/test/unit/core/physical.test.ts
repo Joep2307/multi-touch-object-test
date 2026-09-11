@@ -32,6 +32,7 @@ import {
     DirectionPolicy,
     footprintFrom,
     MovePolicy,
+    FootprintCompletionPolicy,
     PositionPolicy,
     PxPerMMEstimator,
     PxPerMMPolicy,
@@ -53,6 +54,7 @@ import type { StateId } from "../../../core/behaviour";
 
 const POLICIES: BasePolicies = {
     position: new PositionPolicy(),
+    completion: new FootprintCompletionPolicy(),
     direction: new DirectionPolicy(),
     move: new MovePolicy(),
     rotate: new RotatePolicy(),

@@ -2,6 +2,7 @@ import type { BaseSample } from "./BaseSample";
 import type { BaseSnapshot } from "./BaseSnapshot";
 import type { ContactSet } from "../contact/ContactSet";
 import type { Direction } from "./direction/Direction";
+import type { FootprintCompletion } from "./FootprintCompletion";
 import type { FootprintSpec } from "./FootprintSpec";
 import type { Acceleration } from "./acceleration/Acceleration";
 import type { Move } from "./move/Move";
@@ -32,6 +33,13 @@ import type { Tap } from "./tap/Tap";
  * already computed — `Move`'s smoothed displacement, never the raw
  * frame. That ordering is what makes the tier boundary real rather
  * than a convention.
+ *
+ * Before any of them runs, `FootprintCompletion` fills in whatever feet
+ * the frame is short of. It is here rather than inside a trait so that
+ * every trait sees one whole footprint and none of them has to learn
+ * that holding on exists — and because `Direction`'s source reads the
+ * frame's points directly, so putting it in `Position` would leave the
+ * heading measuring a different set from the centre.
  */
 export class Base {
     constructor(
@@ -43,16 +51,21 @@ export class Base {
         readonly motionHistory: MotionHistory,
         readonly acceleration: Acceleration,
         readonly pxPerMM: PxPerMMEstimator,
+        readonly completion: FootprintCompletion,
     ) {}
 
     update(at: number, contacts: ContactSet, spec: FootprintSpec): void {
         const sample: BaseSample = {
             at,
-            contacts,
+            contacts: this.completion.complete(contacts, spec),
             spec,
             pxPerMM: this.pxPerMM.value,
         };
         this.position.update(sample);
+        /* After `Position`, because whether this frame is worth
+           keeping as a reference is `Position`'s answer, and asking
+           first would judge it on the previous frame's evidence. */
+        this.completion.remember(sample.contacts, this.position.snapshot());
         this.pxPerMM.observe(this.position.snapshot(), sample);
         this.direction.update(sample);
         this.move.update(sample);
@@ -96,5 +109,6 @@ export class Base {
         this.motionHistory.reset();
         this.acceleration.reset();
         this.pxPerMM.reset();
+        this.completion.reset();
     }
 }

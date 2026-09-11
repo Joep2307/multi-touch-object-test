@@ -30,6 +30,11 @@ const EMPTY: TapSnapshot = {
  * `dwellMS` and `movedPX` survive the release, so the frame the object
  * comes off the glass carries the completed episode. Anything reading
  * the down-to-up edge gets the whole story from one snapshot.
+ *
+ * The centre a press is measured from is the first one there **is**,
+ * which is not always the first frame something was down. Both halves
+ * of the interval come from the object rather than from the frame the
+ * trait happened to notice it in, and for the same reason.
  */
 export class Tap extends Trait<TapSnapshot> {
     override readonly id = "tap";
@@ -57,9 +62,15 @@ export class Tap extends Trait<TapSnapshot> {
         }
         if (this.#downAt === null) {
             this.#downAt = firstSeen;
-            this.#startCentre = centre;
             this.#movedPX = 0;
         }
+        /* From the first frame that *has* a centre, not from the first
+           frame something was down. Feet rarely land together: one
+           touch arrives, `Position` has too few to solve, and taking
+           the centre there left `#startCentre` null for the whole
+           press — so `movedPX` stayed at zero and a 240 px drag was
+           reported as a tap. */
+        this.#startCentre ??= centre;
         if (this.#startCentre !== null && centre !== null) {
             const d = Math.hypot(
                 centre.x - this.#startCentre.x,

@@ -74,25 +74,34 @@ sure of, and it is ignored.
 
 Each phase leaves the table running.
 
-1. **State and arithmetic.** `SCALE`, `ScaleReading`, `scale`,
-   `syncPxPerMM`, `observeScale`, `readScale`, with unit tests. Nothing
-   calls them yet, so the table behaves exactly as before.
-2. **Wiring.** `Detection` carries the reading, the recogniser fills it,
-   `track` feeds it, `resize` seeds it. The scale now corrects itself
-   within a session.
-3. **Persistence.** Save and restore `k`, restore before the first
-   resize. A table that has seen a puck once starts calibrated for
-   every session after.
+1. [x] **State and arithmetic.** `SCALE`, `ScaleReading`, `scale`,
+       `syncPxPerMM`, `observeScale`, `readScale`, with unit tests. Nothing
+       calls them yet, so the table behaves exactly as before.
+2. [x] **Wiring.** `Detection` carries the reading, the recogniser fills it,
+       `track` feeds it, `resize` seeds it. The scale now corrects itself
+       within a session.
+3. [x] **Persistence.** Save and restore `k`, restore before the first
+       resize. A table that has seen a puck once starts calibrated for
+       every session after.
 
 ## Verification
 
-- Unit tests: a reading corrects the scale; a run of bad readings cannot
-  move it past the clamp; a learned template is refused; a `held`
-  detection carries nothing; a resize keeps `k` and changes `pxPerMM`.
-- Against the recordings: replay a fixture and assert the learned `k`
-  lands within a fraction of a per cent of the 2.24 % the measurement
-  found by hand.
-- On the glass: this is the one that matters, and it needs a puck.
+All three phases landed on 11 September 2026. `npm run check` is green:
+typecheck, core typecheck, lint, format, spell, 477 tests.
+
+- [x] Unit tests: a reading corrects the scale; a run of bad readings cannot
+      move it past the clamp; a learned template is refused; a `held`
+      detection carries nothing; a resize keeps `k` and changes `pxPerMM`.
+- [x] Against the recordings: replay a fixture and assert the learned `k`
+      lands within a fraction of a per cent of the 2.24 % the measurement
+      found by hand. `scale.test.ts` replays table-19 and the table works
+      the correction out on its own: 460 readings take it to 1.024, and
+      `pxPerMM` from 2.0169 to 2.065. It feeds the readings rather than
+      driving the recogniser, because the pucks in that recording are not
+      templates this build carries.
+- [ ] On the glass: this is the one that matters, and it needs a puck.
+      Put a known puck down, and the ring should sit on its rim within
+      the first second. `localStorage` keeps the answer afterwards.
 
 ## Open
 
@@ -100,6 +109,12 @@ Each phase leaves the table running.
   clamp is anchored to. A wildly wrong diagonal (a 24 in screen declared
   as 43) is outside ±12 % and the table cannot correct it. That is the
   intended failure: a calibrator that accepts anything is not a guard.
+- A table whose pucks have all been learned has no ruler left, and
+  stays on the seed. That is the design working rather than failing: a
+  learned template's millimetres came from the scale, so it can only
+  confirm it. It does mean the correction is worth most on a table
+  running the four pucks from the build drawing, which is the case the
+  measurement above was taken from.
 - The core's `PxPerMMEstimator` does this per object and will replace
   this once it draws. Same policy numbers on purpose, so the two agree
   when the parity check compares them.
