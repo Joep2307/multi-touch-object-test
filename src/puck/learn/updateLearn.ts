@@ -172,7 +172,8 @@ export function updateLearn(now: number): void {
      as two separate names and not as one `d` with a flag: that way nobody
      -- TypeScript nor the reader -- has to work out which half is meant. */
     const metRing = ring ? describeRing(pts) : null;
-    const metTri = ring ? null : describe(pts[0], pts[1], pts[2]);
+    const [t0, t1, t2] = pts;
+    const metTri = ring || !t0 || !t1 || !t2 ? null : describe(t0, t1, t2);
     const d = metRing || metTri; // only for what they share: cx and cy
     if (!d) return;
     // Five points that don't lie on one circle are fingers, not a puck.

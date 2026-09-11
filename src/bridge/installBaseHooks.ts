@@ -1,4 +1,5 @@
 import { download } from "../dom/download";
+import type { BaseRuntime } from "./BaseRuntime";
 import type { BaseSessionRecorder } from "./BaseSessionRecorder";
 
 /* The controls for a recording session, on the same pattern as
@@ -12,7 +13,14 @@ import type { BaseSessionRecorder } from "./BaseSessionRecorder";
  *
  * Nothing here runs unless `?base` is on the URL.
  */
-export function installBaseHooks(recorder: BaseSessionRecorder): void {
+export function installBaseHooks(
+    recorder: BaseSessionRecorder,
+    /* Asked for on every call rather than captured once. The frame
+       loop throws its runtime away if the diagnostic ever fails, and a
+       hook holding the old one would go on cheerfully reporting a
+       model that had stopped running. */
+    runtime: () => BaseRuntime | null,
+): void {
     const startedAt = (): number => performance.now();
 
     const start = (name = "table"): string => {
@@ -49,6 +57,7 @@ export function installBaseHooks(recorder: BaseSessionRecorder): void {
         },
         save,
         parity,
+        model: () => runtime()?.summary() ?? "model: stopped",
         get recording() {
             return recorder.recording;
         },

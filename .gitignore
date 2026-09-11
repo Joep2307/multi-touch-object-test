@@ -7,7 +7,7 @@ dist.oud/
 coverage/
 
 # De Rust-crate voor de puckmeetkunde. De gebouwde .wasm gaat wél mee in
-# git (de NUC heeft geen cargo, zie TODO.md); wat cargo eromheen bouwt niet.
+# git (de NUC heeft geen cargo, zie todo/TODO.md); wat cargo eromheen bouwt niet.
 src/wasm/**/target/
 
 # ── Stand van de tafel zelf ──────────────────────────────────────────

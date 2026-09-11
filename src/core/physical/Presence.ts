@@ -16,6 +16,7 @@ import type { PresenceState } from "./PresenceState";
  */
 export class Presence {
     #state: PresenceState = "unseen";
+    #firstSensedAt: number | null = null;
     #lastSensedAt: number | null = null;
     #sinceAt = 0;
 
@@ -29,6 +30,14 @@ export class Presence {
        this been lying here" question measures from. */
     get sinceAt(): number {
         return this.#sinceAt;
+    }
+
+    /* When this object was first seen at all, which is not
+       `sinceAt`: a puck lifted and put back keeps the moment it
+       arrived, because it is the same object and its history is the
+       reason `lifted` exists. */
+    get firstSensedAt(): number | null {
+        return this.#firstSensedAt;
     }
 
     get lastSensedAt(): number | null {
@@ -52,6 +61,7 @@ export class Presence {
            physical rather than silently reviving discarded identity. */
         if (this.#state === "gone") return this.#state;
         if (sensed) {
+            this.#firstSensedAt ??= at;
             this.#lastSensedAt = at;
             this.#enter("placed", at);
             return this.#state;
@@ -75,6 +85,7 @@ export class Presence {
 
     reset(): void {
         this.#state = "unseen";
+        this.#firstSensedAt = null;
         this.#lastSensedAt = null;
         this.#sinceAt = 0;
     }

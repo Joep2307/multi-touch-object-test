@@ -33,8 +33,9 @@ export function drawPuck(
     ctx.save();
     ctx.globalAlpha = t.state === "incomplete" ? 0.35 : 1;
     for (let k = 0; t.ring && k < n; k++) {
-        const item = items[k],
-            off = item.disabled;
+        const item = items[k];
+        if (!item) continue;
+        const off = item.disabled;
         const a0 = ringStart(n) + (k / n) * Math.PI * 2 + 0.03,
             a1 = ringStart(n) + ((k + 1) / n) * Math.PI * 2 - 0.03;
         ctx.beginPath();

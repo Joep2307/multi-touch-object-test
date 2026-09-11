@@ -4,11 +4,15 @@ import type { PuckTouch } from "../types/PuckTouch";
    one finger slides the puck, two fingers only twist it — the puck stays put. */
 export function basePuckTouch(pt: PuckTouch): void {
     const p = [...pt.ptrs.values()];
+    const [p0, p1] = p;
     pt.baseRot = pt.puck.rot;
     if (p.length === 1) {
-        pt.dx = p[0].x - pt.puck.x;
-        pt.dy = p[0].y - pt.puck.y;
+        pt.dx = (p0?.x ?? 0) - pt.puck.x;
+        pt.dy = (p0?.y ?? 0) - pt.puck.y;
     } else {
-        pt.baseAngle = Math.atan2(p[1].y - p[0].y, p[1].x - p[0].x);
+        pt.baseAngle = Math.atan2(
+            (p1?.y ?? 0) - (p0?.y ?? 0),
+            (p1?.x ?? 0) - (p0?.x ?? 0),
+        );
     }
 }

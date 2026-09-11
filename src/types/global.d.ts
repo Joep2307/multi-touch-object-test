@@ -35,6 +35,11 @@ declare global {
             stop: () => string;
             save: () => string;
             parity: () => string;
+            /* What the new model made of the session so far, as the
+               overlay shows it. A string rather than the objects
+               behind it: this is a window a test and a person look
+               through, not a handle to drive the model with. */
+            model: () => string;
             readonly recording: boolean;
             readonly frames: number;
         };

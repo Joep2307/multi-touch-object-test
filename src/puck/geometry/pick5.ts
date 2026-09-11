@@ -12,7 +12,9 @@ export function pick5(idx: number[]): number[][] {
             return;
         }
         for (let i = start; i < a.length; i++) {
-            cur.push(a[i]);
+            const index = a[i];
+            if (index === undefined) continue;
+            cur.push(index);
             walk(i + 1);
             cur.pop();
         }

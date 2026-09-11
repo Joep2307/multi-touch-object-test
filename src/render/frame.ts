@@ -1,8 +1,10 @@
 import {
+    BaseRuntime,
     BaseSessionRecorder,
     ParityCheck,
     TrackBridge,
     drawBaseOverlay,
+    drawRenderPlan,
     installBaseHooks,
     trackBridgeContacts,
 } from "../bridge";
@@ -38,6 +40,7 @@ const BASE_PARITY_ENABLED = QS.has("base") && QS.get("base") !== "0";
 let baseBridge: TrackBridge | null = null;
 let parityCheck: ParityCheck | null = null;
 let baseRecorder: BaseSessionRecorder | null = null;
+let baseRuntime: BaseRuntime | null = null;
 let baseParityFailed = false;
 
 /* FRAME — the render loop. */
@@ -61,12 +64,13 @@ export function frame(): void {
         try {
             baseBridge ??= new TrackBridge(view.pxPerMM);
             parityCheck ??= new ParityCheck();
+            baseRuntime ??= new BaseRuntime();
             if (baseRecorder === null) {
                 baseRecorder = new BaseSessionRecorder(
                     baseBridge,
                     parityCheck,
                 );
-                installBaseHooks(baseRecorder);
+                installBaseHooks(baseRecorder, () => baseRuntime);
             }
             baseBridge.update(
                 now,
@@ -75,6 +79,11 @@ export function frame(): void {
             );
             compareBaseParity(now, pucks, baseBridge, parityCheck);
             baseRecorder.capture();
+            /* The new model, running beside the table and touching
+               nothing: its outbox is drained and discarded, so no
+               rule can reach anything the public sees. */
+            baseRuntime.load(baseBridge);
+            baseRuntime.update(baseBridge, now, view.pxPerMM);
         } catch (e) {
             if (!baseParityFailed) {
                 baseParityFailed = true;
@@ -82,6 +91,7 @@ export function frame(): void {
             }
             baseBridge = null;
             parityCheck = null;
+            baseRuntime = null;
         }
     }
     if (learn.open) updateLearn(now);
@@ -97,6 +107,13 @@ export function frame(): void {
     drawPuckKnowledgeRelations(ctx, pucks);
     drawPins(ctx);
     for (const t of pucks) drawPuck(ctx, t, now);
+    if (baseRuntime !== null) {
+        /* What the model would have drawn, over what the table did
+           draw. A diagnostic: the plan holds no instance, no session
+           and no rule, so painting it cannot feed anything back. */
+        const plan = baseRuntime.renderPlan;
+        if (plan !== null) drawRenderPlan(ctx, plan);
+    }
     if (baseBridge !== null && parityCheck !== null) {
         drawBaseOverlay(
             ctx,
@@ -106,6 +123,7 @@ export function frame(): void {
             view.H,
             now,
             baseRecorder,
+            baseRuntime,
         );
     }
 

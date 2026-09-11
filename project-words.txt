@@ -227,3 +227,6 @@ zelfsymmetrie
 zesduizend
 zoomstand
 zotero
+replayable
+quadtree
+kaartstand

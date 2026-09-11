@@ -39,6 +39,17 @@ export function recognise(
     tpls?: Template[],
 ): { pucks: Detection[]; usedIdx: Set<number> } {
     if (ui.debugMode) diag.ring = null;
+    /* Elk getal in de indexlijsten hieronder komt uit het rooster dat
+       van `points` zelf is gemaakt, dus het wijst altijd ergens heen.
+       Toch even nakijken in plaats van de compiler voorbijlopen: een
+       index die er niet is, is een fout in het rooster, en die wil je
+       horen in plaats van er meetkunde op te baseren die nergens op
+       slaat. */
+    const at = (k: number): TouchPoint => {
+        const p = points[k];
+        if (!p) throw new Error(`Contactpunt ${String(k)} bestaat niet.`);
+        return p;
+    };
     const list = tpls || activeTemplates();
     /* The duo's measurements are a guess from the factory, and a guess of
      62 mm with a generous tolerance fits all sorts of things -- among them
@@ -64,17 +75,18 @@ export function recognise(
     const cell = Math.max(24, maxSpan),
         grid = new Map<string, number[]>();
     for (let i = 0; i < points.length; i++) {
-        const key =
-            Math.floor(points[i].x / cell) +
-            ":" +
-            Math.floor(points[i].y / cell);
+        const p = points[i];
+        if (!p) continue;
+        const key = Math.floor(p.x / cell) + ":" + Math.floor(p.y / cell);
         let bucket = grid.get(key);
         if (!bucket) grid.set(key, (bucket = []));
         bucket.push(i);
     }
     for (let i = 0; i < points.length; i++) {
-        const cx = Math.floor(points[i].x / cell),
-            cy = Math.floor(points[i].y / cell);
+        const pi = points[i];
+        if (!pi) continue;
+        const cx = Math.floor(pi.x / cell),
+            cy = Math.floor(pi.y / cell);
         const near: number[] = [];
         for (let dx = -1; dx <= 1; dx++)
             for (let dy = -1; dy <= 1; dy++) {
@@ -85,34 +97,32 @@ export function recognise(
         near.sort((a, b) => a - b);
         for (let a = 0; a < near.length; a++) {
             const j = near[a];
-            if (dist(points[i], points[j]) > maxSpan) continue;
+            const pj = j === undefined ? undefined : points[j];
+            if (j === undefined || !pj) continue;
+            if (dist(pi, pj) > maxSpan) continue;
             for (let b = a + 1; b < near.length; b++) {
                 const k = near[b];
-                if (
-                    dist(points[i], points[k]) > maxSpan ||
-                    dist(points[j], points[k]) > maxSpan
-                )
-                    continue;
+                const pk = k === undefined ? undefined : points[k];
+                if (k === undefined || !pk) continue;
+                if (dist(pi, pk) > maxSpan || dist(pj, pk) > maxSpan) continue;
                 /* A drag copy carries its own number. Points of two
                  different pucks never form one puck, so we skip that
                  triangle -- otherwise such a ghost steals a contact point
                  from a real puck. */
-                const uid = points[i].uid ?? points[j].uid ?? points[k].uid;
+                const uid = pi.uid ?? pj.uid ?? pk.uid;
                 if (
                     uid !== undefined &&
-                    (points[i].uid !== uid ||
-                        points[j].uid !== uid ||
-                        points[k].uid !== uid)
+                    (pi.uid !== uid || pj.uid !== uid || pk.uid !== uid)
                 )
                     continue;
-                const d = describe(points[i], points[j], points[k]);
+                const d = describe(pi, pj, pk);
                 if (!d) continue;
                 for (const tpl of tris) {
                     const r = tpl.ratios;
                     if (!r) continue;
                     const err = Math.hypot(
-                        d.ratios[0] - r[0],
-                        d.ratios[1] - r[1],
+                        (d.ratios[0] ?? 0) - (r[0] ?? 0),
+                        (d.ratios[1] ?? 0) - (r[1] ?? 0),
                     );
                     /* While turning, the measured contact points deform by
                      a few pixels. A puck that is already tracked gets a
@@ -157,40 +167,40 @@ export function recognise(
         const seen = new Set<string>(),
             reach = 2 * rMax * 1.12;
         for (let i = 0; i < points.length; i++) {
-            const cx = Math.floor(points[i].x / cell),
-                cy = Math.floor(points[i].y / cell);
+            const pi = points[i];
+            if (!pi) continue;
+            const cx = Math.floor(pi.x / cell),
+                cy = Math.floor(pi.y / cell);
             const nb: number[] = [];
             for (let dx = -1; dx <= 1; dx++)
                 for (let dy = -1; dy <= 1; dy++) {
                     const bucket = grid.get(cx + dx + ":" + (cy + dy));
                     if (!bucket) continue;
-                    for (const j of bucket)
-                        if (j !== i && dist(points[i], points[j]) <= reach)
-                            nb.push(j);
+                    for (const j of bucket) {
+                        const pj = points[j];
+                        if (!pj || j === i) continue;
+                        if (dist(pi, pj) <= reach) nb.push(j);
+                    }
                 }
             if (nb.length < Math.min(4, CFG.slotMinFeet - 1)) continue;
             /* With many fingers on the glass we only look at the eleven
              nearest points: the feet of the same puck always lie closer
              than the rest of the table. */
-            nb.sort(
-                (a, b) =>
-                    dist(points[i], points[a]) - dist(points[i], points[b]),
-            );
+            nb.sort((a, b) => dist(pi, at(a)) - dist(pi, at(b)));
             const near = nb.slice(0, 11);
             for (let a = 0; a < near.length; a++)
                 for (let b = a + 1; b < near.length; b++) {
-                    const fit = fitCircle([
-                        points[i],
-                        points[near[a]],
-                        points[near[b]],
-                    ]);
+                    const ia = near[a];
+                    const ib = near[b];
+                    if (ia === undefined || ib === undefined) continue;
+                    const fit = fitCircle([pi, at(ia), at(ib)]);
                     if (!fit || fit.r < rMin || fit.r > rMax) continue;
                     let on = [i, ...near].filter(
                         (k) =>
                             Math.abs(
                                 Math.hypot(
-                                    points[k].x - fit.cx,
-                                    points[k].y - fit.cy,
+                                    at(k).x - fit.cx,
+                                    at(k).y - fit.cy,
                                 ) - fit.r,
                             ) <
                             fit.r * 0.16,
@@ -201,10 +211,8 @@ export function recognise(
                      their points from the front of this list. */
                     const offCircle = (k: number): number =>
                         Math.abs(
-                            Math.hypot(
-                                points[k].x - fit.cx,
-                                points[k].y - fit.cy,
-                            ) - fit.r,
+                            Math.hypot(at(k).x - fit.cx, at(k).y - fit.cy) -
+                                fit.r,
                         );
                     on.sort((a2, b2) => offCircle(a2) - offCircle(b2));
                     /* ── The grid code ─────────────────────────────
@@ -218,19 +226,19 @@ export function recognise(
                         const key =
                             "s" + [...group].sort((x, y) => x - y).join(",");
                         const uid = group
-                            .map((k) => points[k].uid)
+                            .map((k) => at(k).uid)
                             .find((u) => u !== undefined);
                         if (
                             !seen.has(key) &&
                             !(
                                 uid !== undefined &&
-                                group.some((k) => points[k].uid !== uid)
+                                group.some((k) => at(k).uid !== uid)
                             )
                         ) {
                             seen.add(key);
                             for (const n of slotCounts) {
                                 const d = describeSlots(
-                                    group.map((k) => points[k]),
+                                    group.map((k) => at(k)),
                                     n,
                                 );
                                 if (
@@ -313,11 +321,11 @@ export function recognise(
                         /* Same rule as for the triangles: points of two
                          drag copies never form one puck. */
                         const uid = group
-                            .map((k) => points[k].uid)
+                            .map((k) => at(k).uid)
                             .find((u) => u !== undefined);
                         if (
                             uid !== undefined &&
-                            group.some((k) => points[k].uid !== uid)
+                            group.some((k) => at(k).uid !== uid)
                         )
                             continue;
                         /* The same five is found from each of its points;
@@ -325,7 +333,7 @@ export function recognise(
                         const key = group.join(",");
                         if (seen.has(key)) continue;
                         seen.add(key);
-                        const d = describeRing(group.map((k) => points[k]));
+                        const d = describeRing(group.map((k) => at(k)));
                         if (!d || d.spread > 0.16) continue;
                         /* One five is one puck, not four candidates.
                          Earlier every template within the limit could join,
@@ -461,19 +469,19 @@ export function recognise(
             close: number[] = [];
         for (let i = 0; i < points.length; i++) {
             if (used.has(i)) continue;
-            const r = Math.hypot(points[i].x - t.x, points[i].y - t.y);
+            const r = Math.hypot(at(i).x - t.x, at(i).y - t.y);
             if (r >= want * 0.55 && r <= want * 1.45) close.push(i);
         }
         if (close.length < 4) continue;
         // The points nearest to its circle go first.
         const off = (i: number): number =>
-            Math.abs(Math.hypot(points[i].x - t.x, points[i].y - t.y) - want);
+            Math.abs(Math.hypot(at(i).x - t.x, at(i).y - t.y) - want);
         close.sort((a, b) => off(a) - off(b));
         const group = close.slice(0, 5);
         const tryThese =
             group.length === 5 ? [group, ...pick4(group)] : [group];
         for (const g of tryThese) {
-            const d = describeRing(g.map((k) => points[k]));
+            const d = describeRing(g.map((k) => at(k)));
             if (!d || d.spread > 0.2) continue;
             if (Math.abs(d.radius - want) / want > 0.3) continue;
             if (Math.hypot(d.cx - t.x, d.cy - t.y) > sep) continue;
@@ -510,16 +518,16 @@ export function recognise(
             close: number[] = [];
         for (let i = 0; i < points.length; i++) {
             if (used.has(i)) continue;
-            const r = Math.hypot(points[i].x - t.x, points[i].y - t.y);
+            const r = Math.hypot(at(i).x - t.x, at(i).y - t.y);
             if (r >= want * 0.6 && r <= want * 1.4) close.push(i);
         }
         if (close.length < CFG.slotMinFeet) continue;
         const off = (i: number): number =>
-            Math.abs(Math.hypot(points[i].x - t.x, points[i].y - t.y) - want);
+            Math.abs(Math.hypot(at(i).x - t.x, at(i).y - t.y) - want);
         close.sort((a, b) => off(a) - off(b));
         const group = close.slice(0, 9);
         const d = describeSlots(
-            group.map((k) => points[k]),
+            group.map((k) => at(k)),
             tplSlots(t.tpl),
         );
         if (!d || d.spread > 0.2 || d.snap > CFG.slotSnapDeg * 1.3 || d.dup)

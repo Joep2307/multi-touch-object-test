@@ -18,6 +18,7 @@ import {
     PxPerMMEstimator,
     PxPerMMPolicy,
     Rotate,
+    HeadingRotationSource,
     RotatePolicy,
     shortestAngleDiffDeg,
 } from "../../../core/base";
@@ -28,7 +29,7 @@ import type {
     PositionSnapshot,
     Vec2,
 } from "../../../core/base";
-import type { ContactFrame, ContactRecording } from "../../../core/contact";
+import type { ContactSet, ContactRecording } from "../../../core/contact";
 import { synthesise, syntheticFootprintSpec } from "./synthesise";
 import type { SynthesiseOptions, SyntheticFootprint } from "./synthesise";
 
@@ -60,7 +61,7 @@ const TRIAD_SPEC = syntheticFootprintSpec(TRIAD, 80);
 const RING_SPEC = syntheticFootprintSpec(RING, 80);
 
 const sampleFrom = (
-    frame: ContactFrame,
+    frame: ContactSet,
     spec: FootprintSpec,
     pxPerMM: number = PX_PER_MM,
 ): BaseSample => ({
@@ -72,7 +73,7 @@ const sampleFrom = (
 
 const replayFrames = (
     recording: ContactRecording,
-    visit: (frame: ContactFrame, index: number) => void,
+    visit: (frame: ContactSet, index: number) => void,
 ): void => {
     const replay = new ReplayContactSource(recording);
     recording.frames.forEach((recorded, index) => {
@@ -358,7 +359,11 @@ describe("rotation and scale under table noise", () => {
             position,
             new ApexHeadingSource(new DirectionPolicy()),
         );
-        const rotate = new Rotate(direction, new RotatePolicy());
+        const rotate = new Rotate(
+            new HeadingRotationSource(direction, new RotatePolicy()),
+            new RotatePolicy(),
+            direction,
+        );
 
         replayFrames(recording, (frame) => {
             const sample = sampleFrom(frame, TRIAD_SPEC);
@@ -552,7 +557,11 @@ const rotateFailsAt = (jitterMM: number): boolean => {
         new ApexHeadingSource(new DirectionPolicy()),
     );
     const move = new Move(position, new MovePolicy());
-    const rotate = new Rotate(direction, new RotatePolicy());
+    const rotate = new Rotate(
+        new HeadingRotationSource(direction, new RotatePolicy()),
+        new RotatePolicy(),
+        direction,
+    );
     replayFrames(recording, (frame) => {
         const sample = sampleFrom(frame, TRIAD_SPEC);
         position.update(sample);

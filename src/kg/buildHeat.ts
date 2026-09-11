@@ -35,7 +35,7 @@ function blurField(
                 for (let d = -r; d <= r; d++) {
                     const xx = x + d;
                     if (xx < 0 || xx >= cols) continue;
-                    sum += a[y * cols + xx];
+                    sum += a[y * cols + xx] ?? 0;
                     n++;
                 }
                 b[y * cols + x] = sum / n;
@@ -48,7 +48,7 @@ function blurField(
                 for (let d = -r; d <= r; d++) {
                     const yy = y + d;
                     if (yy < 0 || yy >= rows) continue;
-                    sum += b[yy * cols + x];
+                    sum += b[yy * cols + x] ?? 0;
                     n++;
                 }
                 a[y * cols + x] = sum / n;
@@ -77,10 +77,11 @@ export function buildHeat(): Heat | null {
     const seen = new Float32Array(cols * rows);
     for (const [key, n] of kg.grid) {
         const [gy, gx] = key.split(",").map(Number);
+        if (gy === undefined || gx === undefined) continue;
         const x = gx - gx0,
             y = gy - gy0;
         if (x < 0 || y < 0 || x >= cols || y >= rows) continue;
-        field[y * cols + x] += n;
+        field[y * cols + x] = (field[y * cols + x] ?? 0) + n;
         seen[y * cols + x] = 1;
     }
     const dens = blurField(field, cols, rows, 3, 2);
@@ -109,11 +110,11 @@ export function buildHeat(): Heat | null {
     // upside down.
     for (let y = 0; y < rows; y++)
         for (let x = 0; x < cols; x++) {
-            const scarce = 1 - Math.min(1, dens[y * cols + x] / max);
+            const scarce = 1 - Math.min(1, (dens[y * cols + x] ?? 0) / max);
             // Below half, enough is known; above it the color runs from amber
             // to red and gradually becomes more opaque.
             const t = Math.max(0, (scarce - 0.45) / 0.55);
-            const fade = Math.min(1, sup[y * cols + x] / (smax * 0.3));
+            const fade = Math.min(1, (sup[y * cols + x] ?? 0) / (smax * 0.3));
             const p = ((rows - 1 - y) * cols + x) * 4;
             img.data[p] = 255;
             img.data[p + 1] = Math.round(209 - 114 * t); // 209 → 95

@@ -6,16 +6,32 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     /* Enabled repo-wide on 8 Sep 2026: each of these cost zero errors
-       across the whole tree, so there was nothing to weigh. The one
-       still missing is `noUncheckedIndexedAccess` — 166 errors, and
-       every one of them is a real place where an array index is
-       assumed to hit. That is its own piece of work, not a flag flip;
-       src/core/ already has it via tsconfig.core.json. */
+       across the whole tree, so there was nothing to weigh. */
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "verbatimModuleSyntax": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    /* Enabled repo-wide on 9 Sep 2026. Ten errors, all of the same
+       kind: an optional field being handed an explicit `undefined`.
+       Every one was a place where "this field is absent" and "this
+       field is set to nothing" were two ways of saying the same thing,
+       and each reader had to guess which it was looking at. Fixing
+       them also retired five `as number` casts in `applyShape`, where
+       the author had had to talk the compiler past a check it could
+       not see through. */
+    "exactOptionalPropertyTypes": true,
+    /* Enabled repo-wide on 9 Sep 2026. This was the one the previous
+       plan called "its own piece of work, not a flag flip": 166
+       errors, every one a place where an array index was assumed to
+       hit. Most were provably in range and are now written out — the
+       loop bound says so, and now the code does too — and the rest
+       turned out to be real gaps: a `describe()` on three points where
+       only two had arrived, a tijdlapse built from an empty list of
+       frames, a keyboard looked up on a side before any keyboard
+       existed. `src/core/` has had it since it was created; this
+       brings the rest of the tree up to it. */
+    "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "isolatedModules": true,
     "esModuleInterop": true,

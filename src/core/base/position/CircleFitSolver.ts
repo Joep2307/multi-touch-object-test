@@ -1,6 +1,6 @@
 import { CentreSolver } from "./CentreSolver";
-import { CIRCLE_FIT_MIN_DET } from "./constants";
-import type { ContactPoint } from "../../contact/ContactPoint";
+import { CIRCLE_FIT_MIN_DET, CIRCLE_FIT_MIN_SPAN } from "./constants";
+import type { SensedContact } from "../../contact/SensedContact";
 import type { CentreFit } from "./CentreFit";
 
 /* The middle of a ring object: an algebraic circle through its feet.
@@ -23,7 +23,7 @@ import type { CentreFit } from "./CentreFit";
 export class CircleFitSolver extends CentreSolver {
     override readonly id = "centre.circleFit";
 
-    override solve(points: readonly ContactPoint[]): CentreFit | null {
+    override solve(points: readonly SensedContact[]): CentreFit | null {
         const n = points.length;
         if (n < 3) return null;
         let mx = 0;
@@ -65,6 +65,15 @@ export class CircleFitSolver extends CentreSolver {
         const centre = { x: mx + uc, y: my + vc };
         const radiusPX = Math.sqrt(uc * uc + vc * vc + (sumU2 + sumV2) / n);
 
+        /* Do the feet actually wrap around this circle, or are they
+           strung out along a shallow arc of an enormous one? A fit
+           like that has a tiny residual and is nonetheless meaningless
+           — and because the residual is measured against the fitted
+           radius, the more meaningless it is the better it scores. */
+        if (widestGap(points) < CIRCLE_FIT_MIN_SPAN * 2 * radiusPX) {
+            return null;
+        }
+
         let sumDev = 0;
         for (const p of points) {
             const d = Math.hypot(p.x - centre.x, p.y - centre.y);
@@ -72,4 +81,21 @@ export class CircleFitSolver extends CentreSolver {
         }
         return { centre, radiusPX, residualPX: sumDev / n };
     }
+}
+
+/* The distance between the two feet furthest apart. A handful of feet
+   is a handful, so comparing every pair is cheaper than being clever
+   about it. */
+function widestGap(points: readonly SensedContact[]): number {
+    let widest = 0;
+    for (let i = 0; i < points.length; i += 1) {
+        for (let j = i + 1; j < points.length; j += 1) {
+            const a = points[i];
+            const b = points[j];
+            if (a === undefined || b === undefined) continue;
+            const d = Math.hypot(a.x - b.x, a.y - b.y);
+            if (d > widest) widest = d;
+        }
+    }
+    return widest;
 }

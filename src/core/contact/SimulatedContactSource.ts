@@ -1,7 +1,6 @@
 import { ContactSource } from "./ContactSource";
 import { SIM_CONTACT_ID_BLOCK } from "./constants";
-import type { ContactFrame } from "./ContactFrame";
-import type { ContactPoint } from "./ContactPoint";
+import type { SensedContact } from "./SensedContact";
 
 /* The drag copies from the tray: pucks that exist on screen but not on
    the glass.
@@ -17,7 +16,7 @@ import type { ContactPoint } from "./ContactPoint";
  * that checkable above rather than assumed here.
  */
 export class SimulatedContactSource extends ContactSource {
-    readonly #copies = new Map<number, ContactPoint[]>();
+    readonly #copies = new Map<number, SensedContact[]>();
 
     setCopy(
         uid: number,
@@ -26,7 +25,7 @@ export class SimulatedContactSource extends ContactSource {
         at: number,
     ): void {
         const was = this.#copies.get(uid);
-        const points = feet.map((foot, index): ContactPoint => {
+        const points = feet.map((foot, index): SensedContact => {
             const id = uid * SIM_CONTACT_ID_BLOCK + index;
             const before = was?.[index];
             return {
@@ -45,14 +44,14 @@ export class SimulatedContactSource extends ContactSource {
         this.#copies.delete(uid);
     }
 
-    override frame(now: number): ContactFrame {
-        const points: ContactPoint[] = [];
+    protected override live(): readonly SensedContact[] {
+        const points: SensedContact[] = [];
         for (const copy of this.#copies.values()) points.push(...copy);
         points.sort((a, b) => a.id - b.id);
-        return { at: now, points };
+        return points;
     }
 
-    override clear(): void {
+    protected override clearLive(): void {
         this.#copies.clear();
     }
 }

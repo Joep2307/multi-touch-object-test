@@ -1,4 +1,4 @@
-/* Tail and Acceleration: traits built only from tier-one movement.
+/* MotionHistory and Acceleration: traits built only from tier-one movement.
  *
  * A hand-written `MoveSnapshot` keeps raw contacts out of this rig. If
  * either trait starts depending on them, these tests stop compiling.
@@ -8,7 +8,7 @@ import {
     Acceleration,
     AccelerationPolicy,
 } from "../../../core/base/acceleration";
-import { Tail, TailPolicy } from "../../../core/base/tail";
+import { MotionHistory, MotionHistoryPolicy } from "../../../core/base/motion";
 import type { BaseSample } from "../../../core/base/BaseSample";
 import type { FootprintSpec } from "../../../core/base/FootprintSpec";
 import type { Move } from "../../../core/base/move/Move";
@@ -26,11 +26,11 @@ type Rig = {
     acceleration: Acceleration;
     setMove: (to: Vec2 | null, deltaFrame?: Vec2) => void;
     step: (at: number) => void;
-    tail: Tail;
+    motionHistory: MotionHistory;
 };
 
 const rig = (
-    tailPolicy = new TailPolicy(),
+    tailPolicy = new MotionHistoryPolicy(),
     accelerationPolicy = new AccelerationPolicy(),
 ): Rig => {
     let movement: MoveSnapshot = {
@@ -45,12 +45,12 @@ const rig = (
     const move = {
         snapshot: (): MoveSnapshot => movement,
     } as Move;
-    const tail = new Tail(move, tailPolicy);
+    const motionHistory = new MotionHistory(move, tailPolicy);
     const acceleration = new Acceleration(move, accelerationPolicy);
 
     return {
         acceleration,
-        tail,
+        motionHistory,
         setMove(to, deltaFrame = ZERO) {
             movement = {
                 moving: Math.hypot(deltaFrame.x, deltaFrame.y) > 0,
@@ -71,59 +71,61 @@ const rig = (
                 spec: SPEC,
                 pxPerMM: 4,
             };
-            tail.update(sample);
+            motionHistory.update(sample);
             acceleration.update(sample);
         },
     };
 };
 
-describe("Tail", () => {
+describe("MotionHistory", () => {
     it("does not add points while the object rests", () => {
-        const r = rig(new TailPolicy(20, 10_000, 5));
+        const r = rig(new MotionHistoryPolicy(20, 10_000, 5));
         r.setMove({ x: 100, y: 50 });
         r.step(0);
         for (let at = 10; at <= 100; at += 10) r.step(at);
-        expect(r.tail.snapshot().points).toEqual([{ x: 100, y: 50, at: 0 }]);
+        expect(r.motionHistory.snapshot().points).toEqual([
+            { x: 100, y: 50, at: 0 },
+        ]);
     });
 
     it("keeps the same snapshot when no point changes", () => {
-        const r = rig(new TailPolicy(20, 10_000, 5));
+        const r = rig(new MotionHistoryPolicy(20, 10_000, 5));
         r.setMove({ x: 100, y: 50 });
         r.step(0);
-        const previousSnapshot = r.tail.snapshot();
+        const previousSnapshot = r.motionHistory.snapshot();
         r.step(10);
-        expect(r.tail.snapshot()).toBe(previousSnapshot);
+        expect(r.motionHistory.snapshot()).toBe(previousSnapshot);
     });
 
     it("keeps no more than maxPoints", () => {
-        const r = rig(new TailPolicy(3, 10_000, 1));
+        const r = rig(new MotionHistoryPolicy(3, 10_000, 1));
         for (let n = 0; n < 5; n += 1) {
             r.setMove({ x: n * 2, y: 0 }, { x: 2, y: 0 });
             r.step(n * 10);
         }
-        expect(r.tail.snapshot().points.map((point) => point.x)).toEqual([
-            4, 6, 8,
-        ]);
+        expect(
+            r.motionHistory.snapshot().points.map((point) => point.x),
+        ).toEqual([4, 6, 8]);
     });
 
     it("removes points older than maxAgeMS", () => {
-        const r = rig(new TailPolicy(20, 25, 1));
+        const r = rig(new MotionHistoryPolicy(20, 25, 1));
         for (let n = 0; n < 4; n += 1) {
             r.setMove({ x: n * 2, y: 0 }, { x: 2, y: 0 });
             r.step(n * 10);
         }
-        expect(r.tail.snapshot().points.map((point) => point.at)).toEqual([
-            10, 20, 30,
-        ]);
+        expect(
+            r.motionHistory.snapshot().points.map((point) => point.at),
+        ).toEqual([10, 20, 30]);
     });
 
     it("does not mutate published history when a ring slot is reused", () => {
-        const r = rig(new TailPolicy(2, 10_000, 1));
+        const r = rig(new MotionHistoryPolicy(2, 10_000, 1));
         r.setMove({ x: 0, y: 0 });
         r.step(0);
         r.setMove({ x: 2, y: 0 }, { x: 2, y: 0 });
         r.step(10);
-        const previousSnapshot = r.tail.snapshot();
+        const previousSnapshot = r.motionHistory.snapshot();
 
         r.setMove({ x: 4, y: 0 }, { x: 2, y: 0 });
         r.step(20);
@@ -134,7 +136,7 @@ describe("Tail", () => {
             { x: 0, y: 0, at: 0 },
             { x: 2, y: 0, at: 10 },
         ]);
-        expect(r.tail.snapshot().points).toEqual([
+        expect(r.motionHistory.snapshot().points).toEqual([
             { x: 2, y: 0, at: 10 },
             { x: 4, y: 0, at: 20 },
         ]);
@@ -144,8 +146,8 @@ describe("Tail", () => {
         const r = rig();
         r.setMove({ x: 10, y: 20 });
         r.step(0);
-        r.tail.reset();
-        expect(r.tail.snapshot().points).toEqual([]);
+        r.motionHistory.reset();
+        expect(r.motionHistory.snapshot().points).toEqual([]);
     });
 });
 

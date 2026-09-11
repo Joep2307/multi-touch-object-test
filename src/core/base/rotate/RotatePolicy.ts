@@ -34,6 +34,14 @@ export class RotatePolicy extends Policy {
         readonly deadZoneDeg: number = 0.4,
         readonly maxStepDeg: number = 45,
         readonly maxRejectedFrames: number = 5,
+        /* How long a gap may be before the previous frame's feet are
+           no longer worth matching against. Four frames at sixty
+           hertz. A puck lifted and put back has not turned in the
+           meantime, however far its feet appear to have moved — and
+           if the touch driver ever hands the new feet the same contact
+           ids as the old ones, matching across the gap would credit
+           the object with a rotation nobody made. */
+        readonly maxGapMS: number = 70,
     ) {
         super();
     }
@@ -43,6 +51,7 @@ export class RotatePolicy extends Policy {
             deadZoneDeg: this.deadZoneDeg,
             maxStepDeg: this.maxStepDeg,
             maxRejectedFrames: this.maxRejectedFrames,
+            maxGapMS: this.maxGapMS,
         };
     }
 }

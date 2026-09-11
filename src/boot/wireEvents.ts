@@ -316,6 +316,10 @@ export function wireEvents(): void {
                 const [la, lo, z] = (b.dataset.go as string)
                     .split(",")
                     .map(Number);
+                /* Een knop met een half `data-go` is een fout in de
+                   HTML, geen kaartstand om naartoe te springen. */
+                if (la === undefined || lo === undefined || z === undefined)
+                    return;
                 MV.lat = la;
                 MV.lng = lo;
                 MV.zoom = z;

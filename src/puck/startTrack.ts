@@ -62,10 +62,13 @@ export function startTrack(d: Detection, now: number): Track {
     );
     if (mi >= 0) {
         const mem = tracks.memory.splice(mi, 1)[0];
+        if (!mem) return t;
         t.menu = mem.menu;
         t.mode = mem.mode;
         t.topicIdx = mem.topicIdx;
-        t.pinId = mem.pinId;
+        /* Geen markering en géén markering zijn hetzelfde: alleen
+           `null`, zodat er niet twee manieren zijn om niets te zeggen. */
+        t.pinId = mem.pinId ?? null;
         t.armed = mem.armed;
         t.landing = false;
         t.angleOrigin = mem.angleOrigin;

@@ -37,7 +37,9 @@ export function matchRing(d: RingShape, tpl: Template): RingMatch {
         sn = 0;
     for (let i = 0; i < k; i++) {
         const off =
-            ((d.angles[i] - best.sub[(i + best.s) % k]) * Math.PI) / 180;
+            (((d.angles[i] ?? 0) - (best.sub[(i + best.s) % k] ?? 0)) *
+                Math.PI) /
+            180;
         cs += Math.cos(off);
         sn += Math.sin(off);
     }

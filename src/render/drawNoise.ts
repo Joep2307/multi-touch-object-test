@@ -34,7 +34,7 @@ export function drawNoise(ctx: CanvasRenderingContext2D): void {
         });
         rows.push({
             text: `uitval ${pct(r.miss)} · extra punten ${pct(r.extra)}`,
-            tone: r.miss > 0.02 ? "warn" : undefined,
+            ...(r.miss > 0.02 ? { tone: "warn" } : {}),
         });
         rows.push({
             text: `straal ${nl(r.radiusMM)} mm ± ${nl(r.radiusSD, 2)}`,

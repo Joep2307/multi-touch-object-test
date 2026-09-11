@@ -22,12 +22,13 @@ export function drawTarget(
         ctx.beginPath();
         ctx.arc(x, y, ring, 0, Math.PI * 2);
         ctx.stroke();
-        for (const [dx, dy] of [
+        const arms: readonly (readonly [number, number])[] = [
             [1, 0],
             [-1, 0],
             [0, 1],
             [0, -1],
-        ]) {
+        ];
+        for (const [dx, dy] of arms) {
             ctx.beginPath();
             ctx.moveTo(x + dx * gap, y + dy * gap);
             ctx.lineTo(x + dx * arm, y + dy * arm);

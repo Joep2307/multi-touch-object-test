@@ -1,22 +1,22 @@
 import { Apertured } from "../core/physical/affordance/Apertured";
 import { CFG } from "../config/CFG";
-import { DEFAULT_OUTER_DIAMETER_MM } from "./constants";
+import { DEFAULT_OUTER_DIAMETER_MM, TEMPLATE_TOLERANCE_MM } from "./constants";
 import { Nestable } from "../core/physical/affordance/Nestable";
 import { Nesting } from "../core/physical/affordance/Nesting";
 import { Opaque } from "../core/physical/affordance/Opaque";
 import { Rotatable } from "../core/physical/affordance/Rotatable";
+import { Tappable } from "../core/physical/affordance/Tappable";
 import { isRing } from "../puck/geometry/isRing";
 import { isSlotted } from "../puck/geometry/isSlotted";
-import { CentroidSolver } from "../core/base/position/CentroidSolver";
-import { CircleFitSolver } from "../core/base/position/CircleFitSolver";
-import { footprintFrom } from "../core/base/footprintFrom";
 import { ringCornersMM } from "./ringCornersMM";
+import { signatureFrom } from "../core/physical/signatureFrom";
 import { triadCornersMM } from "./triadCornersMM";
 import type { Affordance } from "../core/physical/affordance/Affordance";
-import type { FootprintSpec } from "../core/base/FootprintSpec";
 import type { KindFamily } from "../core/physical/KindFamily";
 import type { KindId } from "../core/physical/KindId";
-import type { PhysicalKind } from "../core/physical/PhysicalKind";
+import type { PhysicalKindDefinition } from "../core/physical/PhysicalKindDefinition";
+import type { PhysicalSignature } from "../core/physical/PhysicalSignature";
+import type { SignatureId } from "../core/physical/SignatureId";
 import type { Template } from "../types/Template";
 
 /* Turn one of today's templates into a kind the new model understands.
@@ -35,22 +35,15 @@ import type { Template } from "../types/Template";
  * real 80. That single number is most of the misalignment between the
  * drawn ring and the physical object.
  */
-export function templateToKind(template: Template): PhysicalKind {
-    const family = familyOf(template);
+export function templateToKind(template: Template): PhysicalKindDefinition {
     return {
         id: template.id as KindId,
         label: template.nameKey ?? template.id,
-        family,
-        footprint: footprintOf(template, family),
+        /* One template describes one way of being recognised, so it
+           becomes exactly one signature. A kind with two of them is
+           something the old world could not express. */
+        signatures: [signatureOf(template)],
         affordances: affordancesOf(template),
-        ...(family === "slot"
-            ? {
-                  slotCode: {
-                      slots: template.slots ?? 12,
-                      code: template.code ?? 0,
-                  },
-              }
-            : {}),
         /* Everything that exists today is a shape we are no longer
            making. The three-point standard is the only current kind,
            and it has no template yet. */
@@ -64,29 +57,42 @@ function familyOf(template: Template): KindFamily {
     return "triad";
 }
 
-/* Derived with the same solver the kind will be measured by, so the
-   expected numbers and the measured ones are comparable by
+/* Derived with the same solver the signature will be measured by, so
+   the expected numbers and the measured ones are comparable by
    construction rather than by convention. */
-function footprintOf(template: Template, family: KindFamily): FootprintSpec {
+function signatureOf(template: Template): PhysicalSignature {
+    const family = familyOf(template);
     const outerDiameterMM =
         template.radiusMM === undefined
             ? DEFAULT_OUTER_DIAMETER_MM
             : template.radiusMM * 2;
+    const id = `${template.id}/${family}` as SignatureId;
     if (family === "triad") {
         const ratios = template.ratios ?? [1, 1];
         const corners = triadCornersMM(
             template.longestMM ?? CFG.longestSideMM,
             ratios,
         );
-        return footprintFrom(corners, outerDiameterMM, new CentroidSolver());
+        return signatureFrom(
+            id,
+            family,
+            corners,
+            outerDiameterMM,
+            TEMPLATE_TOLERANCE_MM,
+        );
     }
     const ringMM = template.ringMM ?? CFG.ringRadiusMM;
     const angles =
         family === "slot" ? slotAnglesOf(template) : (template.angles ?? []);
-    return footprintFrom(
+    return signatureFrom(
+        id,
+        family,
         ringCornersMM(ringMM, angles),
         outerDiameterMM,
-        new CircleFitSolver(),
+        TEMPLATE_TOLERANCE_MM,
+        family === "slot"
+            ? { slots: template.slots ?? 12, code: template.code ?? 0 }
+            : undefined,
     );
 }
 
@@ -104,7 +110,12 @@ function slotAnglesOf(template: Template): readonly number[] {
 }
 
 function affordancesOf(template: Template): readonly Affordance[] {
-    const list: Affordance[] = [new Rotatable()];
+    /* Every puck on this table can be tapped: `wasTap()` in the old
+       pipeline is what opens the ring menu, and it asks nothing about
+       which puck it is. `Placeable` is deliberately not claimed —
+       whether these pucks are *put into* regions or merely used where
+       they lie is a question regions will ask, and there are none. */
+    const list: Affordance[] = [new Rotatable(), new Tappable()];
     /* Every puck on this table has a viewing hole; the old renderer
        applies `PUCK_HOLE` to all of them without asking. Recorded as
        an affordance so that a solid one can simply not have it. */

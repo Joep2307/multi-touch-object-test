@@ -3,8 +3,7 @@ import type { DirectionPolicy } from "../base/direction/DirectionPolicy";
 import type { MovePolicy } from "../base/move/MovePolicy";
 import type { PositionPolicy } from "../base/position/PositionPolicy";
 import type { RotatePolicy } from "../base/rotate/RotatePolicy";
-import type { TailPolicy } from "../base/tail";
-import type { TapPolicy } from "../base/tap/TapPolicy";
+import type { MotionHistoryPolicy } from "../base/motion";
 
 /* The tuning for every trait, in one bundle.
  *
@@ -12,13 +11,16 @@ import type { TapPolicy } from "../base/tap/TapPolicy";
  * table's behaviour, and it should be possible to swap the whole set —
  * for a calmer public setting, or for a test — without threading five
  * arguments through every call.
+ *
+ * `Tap` is absent because it has nothing to tune. It reports an
+ * interval; what counts as a tap is a `GestureDefinition`, which a
+ * programme owns rather than the table.
  */
 export type BasePolicies = {
     readonly position: PositionPolicy;
     readonly direction: DirectionPolicy;
     readonly move: MovePolicy;
     readonly rotate: RotatePolicy;
-    readonly tap: TapPolicy;
-    readonly tail: TailPolicy;
+    readonly motionHistory: MotionHistoryPolicy;
     readonly acceleration: AccelerationPolicy;
 };

@@ -6,8 +6,7 @@ import {
     PxPerMMEstimator,
     PxPerMMPolicy,
     RotatePolicy,
-    TailPolicy,
-    TapPolicy,
+    MotionHistoryPolicy,
 } from "../core/base";
 import {
     Apertured,
@@ -30,11 +29,17 @@ import {
 import { MAX_RETURN_PX } from "./constants";
 import { templateToKind } from "./templateToKind";
 import type { TrackBridgeContact } from "./TrackBridgeContact";
-import type { ContactFrame, ContactPoint } from "../core/contact";
+import { ContactStatusTracker } from "../core/contact";
+import type {
+    ContactFrame,
+    ContactPoint,
+    SensedContact,
+} from "../core/contact";
 import type {
     BasePolicies,
     PhysicalId,
-    PhysicalKind,
+    KindId,
+    PhysicalKindDefinition,
     TangibleObject,
 } from "../core/physical";
 import type { Template } from "../types/Template";
@@ -63,9 +68,14 @@ export class TrackBridge {
     readonly #identity: IdentityMap;
     readonly #contacts = new Map<string, ContactLife>();
     readonly #trackToPhysical = new Map<string, PhysicalId>();
+    readonly #status = new ContactStatusTracker();
+    /* When each kind was last learned, so a re-measured puck is
+       converted again instead of served from the cache. */
+    readonly #learned = new Map<KindId, string | number | null>();
     #frame: ContactFrame = Object.freeze({
         at: 0,
         points: EMPTY_POINTS,
+        ended: EMPTY_POINTS,
     });
     #nextContactId = 0;
     #nextPhysicalId = 0;
@@ -146,7 +156,7 @@ export class TrackBridge {
     #readFrame(
         at: number,
         contacts: readonly TrackBridgeContact[],
-    ): readonly ContactPoint[] {
+    ): readonly SensedContact[] {
         const seen = new Set<string>();
         const points = contacts.map((contact) => {
             if (seen.has(contact.sourceId)) {
@@ -176,19 +186,18 @@ export class TrackBridge {
         for (const sourceId of this.#contacts.keys()) {
             if (!seen.has(sourceId)) this.#contacts.delete(sourceId);
         }
-        const ordered = [...points].sort((a, b) => a.id - b.id);
-        this.#frame = Object.freeze({
-            at,
-            points: Object.freeze(ordered),
-        });
+        /* Statuses are derived by the tracker rather than assembled
+           here, so the bridge's frames say the same thing about a
+           landing or lifting touch as any other source's would. */
+        this.#frame = this.#status.apply(at, points);
         return points;
     }
 
     #select(
         indices: readonly number[],
-        points: readonly ContactPoint[],
-    ): readonly ContactPoint[] {
-        const selected: ContactPoint[] = [];
+        points: readonly SensedContact[],
+    ): readonly SensedContact[] {
+        const selected: SensedContact[] = [];
         for (const index of indices) {
             const point = points[index];
             if (point === undefined) {
@@ -201,28 +210,47 @@ export class TrackBridge {
         return Object.freeze(selected);
     }
 
-    #kindFor(template: Template): PhysicalKind {
+    #kindFor(template: Template): PhysicalKindDefinition {
+        const known = this.kinds.get(template.id as KindId);
+        /* A template whose shape has been re-measured with "Learn
+           puck" is a different kind from the one registered a minute
+           ago, and converting it once and caching forever left the
+           model reading the puck by the shape it used to have. The
+           learn stamp is what says it happened. */
+        const stamp = template.learnedAt ?? null;
+        if (known !== null && this.#learned.get(known.id) === stamp) {
+            return known;
+        }
         const made = templateToKind(template);
-        const known = this.kinds.get(made.id);
-        if (known !== null) return known;
-        this.kinds.register(made);
+        if (known === null) this.kinds.register(made);
+        else this.kinds.redefine(made);
+        this.#learned.set(made.id, stamp);
         return made;
     }
 
     #physicalFor(
         trackId: string,
-        kind: PhysicalKind,
+        kind: PhysicalKindDefinition,
         centre: { readonly x: number; readonly y: number },
         simulated: boolean,
         updated: ReadonlySet<PhysicalId>,
     ): TangibleObject {
         const current = this.physicalForTrack(trackId);
-        if (current !== null && current.kind.id === kind.id) return current;
+        /* The same kind *object*, not merely the same id. A puck whose
+           shape has just been re-measured is being read differently, so
+           the base built for the old shape has to go. */
+        if (current !== null && current.kind === kind) return current;
 
         const returning = this.#identity.resolve(kind.id, centre);
         const physical =
             returning !== null &&
             isTangible(returning) &&
+            /* Same kind *object*, not merely the same id. Identity
+               recovery hands back the very physical whose kind has
+               just been re-measured, and reusing it kept the base
+               built from the old footprint — which quietly undid the
+               relearn a few lines above. */
+            returning.kind === kind &&
             !updated.has(returning.id)
                 ? returning
                 : this.#create(kind, simulated);
@@ -233,20 +261,25 @@ export class TrackBridge {
         return physical;
     }
 
-    #create(kind: PhysicalKind, simulated: boolean): TangibleObject {
+    #create(kind: PhysicalKindDefinition, simulated: boolean): TangibleObject {
         this.#nextPhysicalId += 1;
         const id = `physical-${this.#nextPhysicalId}` as PhysicalId;
         const presence = new Presence(this.#presencePolicy);
-        const base = this.#factory.create(kind);
+        /* A template becomes exactly one signature, so the choice the
+           old pipeline never had to make does not arise here. When a
+           kind grows a second one, the recogniser that picked it is
+           what has to say which — not this. */
+        const signature = kind.signatures[0];
+        const base = this.#factory.create(signature);
         const physical = simulated
-            ? new SimulatedPuck(id, kind, presence, base)
+            ? new SimulatedPuck(id, kind, signature, presence, base)
             : affordanceOf(kind, Nestable) !== null
-              ? new DuoInsert(id, kind, presence, base)
+              ? new DuoInsert(id, kind, signature, presence, base)
               : affordanceOf(kind, Nesting) !== null
-                ? new DuoHost(id, kind, presence, base)
+                ? new DuoHost(id, kind, signature, presence, base)
                 : affordanceOf(kind, Apertured) !== null
-                  ? new OpenPuck(id, kind, presence, base)
-                  : new FilledPuck(id, kind, presence, base);
+                  ? new OpenPuck(id, kind, signature, presence, base)
+                  : new FilledPuck(id, kind, signature, presence, base);
         this.physicals.add(physical);
         return physical;
     }
@@ -266,8 +299,7 @@ function defaultPolicies(): BasePolicies {
         direction: new DirectionPolicy(),
         move: new MovePolicy(),
         rotate: new RotatePolicy(),
-        tap: new TapPolicy(),
-        tail: new TailPolicy(),
+        motionHistory: new MotionHistoryPolicy(),
         acceleration: new AccelerationPolicy(),
     };
 }

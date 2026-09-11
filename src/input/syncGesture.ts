@@ -9,19 +9,20 @@ export function syncGesture(): void {
         return;
     }
     const pts = [...touches.real.entries()];
-    if (pts.length === 1) {
+    const [first, second] = pts;
+    if (pts.length === 1 && first) {
         touches.gesture = {
             n: 1,
-            id: pts[0][0],
-            x: pts[0][1].x,
-            y: pts[0][1].y,
+            id: first[0],
+            x: first[1].x,
+            y: first[1].y,
         };
-    } else if (pts.length === 2) {
-        const a = pts[0][1],
-            b = pts[1][1];
+    } else if (pts.length === 2 && first && second) {
+        const a = first[1],
+            b = second[1];
         touches.gesture = {
             n: 2,
-            ids: [pts[0][0], pts[1][0]],
+            ids: [first[0], second[0]],
             d: Math.hypot(a.x - b.x, a.y - b.y),
             mx: (a.x + b.x) / 2,
             my: (a.y + b.y) / 2,

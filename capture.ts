@@ -237,7 +237,9 @@ async function endLapse(reason: CapReason) {
    Ze worden pas hier uitgepakt: honderden losse beelden tegelijk in het
    geheugen houden is precies wat we op de NUC niet moeten doen. */
 async function renderLapse(frames: Blob[]): Promise<Blob> {
-  const first = await createImageBitmap(frames[0]);
+  const firstFrame = frames[0];
+  if (!firstFrame) throw new Error("Geen beelden om een tijdlapse van te maken.");
+  const first = await createImageBitmap(firstFrame);
   const out = document.createElement("canvas");
   out.width = first.width; out.height = first.height;
   const g = out.getContext("2d")!;

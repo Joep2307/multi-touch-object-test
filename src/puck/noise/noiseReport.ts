@@ -5,7 +5,7 @@ import type { NoiseReport } from "../../types/NoiseReport";
 const median = (a: number[]): number => {
     if (!a.length) return 0;
     const s = [...a].sort((x, y) => x - y);
-    return s[s.length >> 1];
+    return s[s.length >> 1] ?? 0;
 };
 
 /* The sums turned into millimetres, and one line of what it means.

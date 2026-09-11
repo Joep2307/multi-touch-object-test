@@ -31,17 +31,20 @@ export function matchFeet(
             bd = NOISE.MATCH_MM * k;
         for (let i = 0; i < pts.length; i++) {
             if (used.has(i)) continue;
-            const d = Math.hypot(pts[i].x - f.ax, pts[i].y - f.ay);
+            const p = pts[i];
+            if (!p) continue;
+            const d = Math.hypot(p.x - f.ax, p.y - f.ay);
             if (d < bd) {
                 bd = d;
                 bi = i;
             }
         }
         pick.push(bi);
-        if (bi >= 0) {
+        const best = bi >= 0 ? pts[bi] : undefined;
+        if (best) {
             used.add(bi);
-            dx += pts[bi].x - f.ax;
-            dy += pts[bi].y - f.ay;
+            dx += best.x - f.ax;
+            dy += best.y - f.ay;
             hits++;
         }
     }

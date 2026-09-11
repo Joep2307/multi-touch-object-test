@@ -44,6 +44,10 @@ export default {
         "coverage/**",
         "vendor/**",
         "exe/public/fixtures/**",
+        "resources/**",
+        /* Deliberate misspellings: the validator tests are about
+           catching typos, so they have to contain some. */
+        "src/test/unit/core/programme.test.ts",
         "src/puck/geometry/*.wasm",
         "src/wasm/**/target/**",
         "src/wasm/**/Cargo.lock",

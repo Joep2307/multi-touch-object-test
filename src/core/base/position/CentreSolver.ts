@@ -1,4 +1,4 @@
-import type { ContactPoint } from "../../contact/ContactPoint";
+import type { SensedContact } from "../../contact/SensedContact";
 import type { CentreFit } from "./CentreFit";
 
 /* Contacts in, middle point out.
@@ -16,5 +16,5 @@ import type { CentreFit } from "./CentreFit";
 export abstract class CentreSolver {
     abstract readonly id: string;
 
-    abstract solve(points: readonly ContactPoint[]): CentreFit | null;
+    abstract solve(points: readonly SensedContact[]): CentreFit | null;
 }

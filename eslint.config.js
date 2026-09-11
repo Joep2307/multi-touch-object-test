@@ -87,7 +87,7 @@ export default [
         },
     },
 
-    /* The TypeScript side (see TODO.md). Without type-checking rules:
+    /* The TypeScript side (see todo/TODO.md). Without type-checking rules:
        `tsc --noEmit` already does that job, and does it better; ESLint
        catches here what the compiler doesn't see. Prettier still handles
        formatting. */
@@ -189,6 +189,39 @@ export default [
                 {
                     name: "navigator",
                     message: "src/core/ may not touch the browser.",
+                },
+            ],
+        },
+    },
+
+    /* The presentation layer draws; it never decides.
+     *
+     * The one guarantee this layer makes is that no arrow runs from it
+     * back into behaviour: the image reads the state, it does not
+     * change it. A comment cannot hold that — the first binding that
+     * "just needs to check one condition" would break it and nothing
+     * would notice — so the boundary is a lint rule.
+     *
+     * Types are allowed through, because a `StateId` in a lookup table
+     * is a name, not a call. Anything executable is not. If a drawing
+     * genuinely needs something from a session, add it to
+     * `PresentationView`, which exists to be small. */
+    {
+        files: ["src/core/presentation/**/*.ts"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [
+                        {
+                            group: ["**/behaviour/*", "**/session/*"],
+                            allowTypeImports: true,
+                            message:
+                                "The image reads the state, it does not " +
+                                "change it. Read what you need through " +
+                                "PresentationView instead.",
+                        },
+                    ],
                 },
             ],
         },

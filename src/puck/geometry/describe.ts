@@ -10,7 +10,12 @@ export function describe(p1: Point, p2: Point, p3: Point): Shape | null {
         { d: dist(p2, p3), a: p2, b: p3, o: p1 },
         { d: dist(p3, p1), a: p3, b: p1, o: p2 },
     ].sort((x, y) => x.d - y.d);
-    const long = e[2];
+    /* Drie zijden, dus e[0..2] bestaan alle drie. Uitgeschreven in
+       plaats van de compiler voorbijgelopen: als er ooit een vierde
+       punt bij komt, is dat hier zichtbaar in plaats van drie regels
+       verderop onvindbaar. */
+    const [shortest, middle, long] = e;
+    if (!shortest || !middle || !long) return null;
     if (long.d < 1) return null;
     const anchor = long.o;
     let P = long.a,
@@ -24,7 +29,7 @@ export function describe(p1: Point, p2: Point, p3: Point): Shape | null {
         (Q.x - P.x) * (anchor.y - P.y) - (Q.y - P.y) * (anchor.x - P.x);
     return {
         ring: false,
-        ratios: [e[0].d / long.d, e[1].d / long.d],
+        ratios: [shortest.d / long.d, middle.d / long.d],
         longest: long.d,
         anchor,
         chir: cross >= 0 ? 1 : -1,

@@ -8,7 +8,7 @@ import type { Move } from "./move/Move";
 import type { Position } from "./position/Position";
 import type { PxPerMMEstimator } from "./position/PxPerMMEstimator";
 import type { Rotate } from "./rotate/Rotate";
-import type { Tail } from "./tail/Tail";
+import type { MotionHistory } from "./motion/MotionHistory";
 import type { Tap } from "./tap/Tap";
 
 /* The kinematic truth about one object, and the container its traits
@@ -27,7 +27,7 @@ import type { Tap } from "./tap/Tap";
  * this file learning what a kind is.
  *
  * `Move`, `Rotate` and `Tap` run after `Direction` because each reads
- * a snapshot the earlier traits produced. `Tail` and `Acceleration`
+ * a snapshot the earlier traits produced. `MotionHistory` and `Acceleration`
  * come last: they are the derived tier and read only what tier one
  * already computed — `Move`'s smoothed displacement, never the raw
  * frame. That ordering is what makes the tier boundary real rather
@@ -40,7 +40,7 @@ export class Base {
         readonly move: Move,
         readonly rotate: Rotate,
         readonly tap: Tap,
-        readonly tail: Tail,
+        readonly motionHistory: MotionHistory,
         readonly acceleration: Acceleration,
         readonly pxPerMM: PxPerMMEstimator,
     ) {}
@@ -58,7 +58,7 @@ export class Base {
         this.move.update(sample);
         this.rotate.update(sample);
         this.tap.update(sample);
-        this.tail.update(sample);
+        this.motionHistory.update(sample);
         this.acceleration.update(sample);
     }
 
@@ -82,7 +82,7 @@ export class Base {
             move: this.move.snapshot(),
             rotate: this.rotate.snapshot(),
             tap: this.tap.snapshot(),
-            tail: this.tail.snapshot(),
+            motionHistory: this.motionHistory.snapshot(),
             acceleration: this.acceleration.snapshot(),
         };
     }
@@ -93,7 +93,7 @@ export class Base {
         this.move.reset();
         this.rotate.reset();
         this.tap.reset();
-        this.tail.reset();
+        this.motionHistory.reset();
         this.acceleration.reset();
         this.pxPerMM.reset();
     }

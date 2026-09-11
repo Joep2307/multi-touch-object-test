@@ -1,4 +1,4 @@
-import type { ContactPoint } from "../../contact/ContactPoint";
+import type { SensedContact } from "../../contact/SensedContact";
 import type { Vec2 } from "../Vec2";
 
 /* How the nose of an object is derived from its feet.
@@ -13,12 +13,20 @@ import type { Vec2 } from "../Vec2";
  * real answer here: a three-foot puck seen as very nearly equilateral
  * has no distinguishable nose, and inventing one would make the puck
  * appear to snap between orientations.
+ *
+ * A source may remember what it decided. `reset` is when it must
+ * forget: the object has left the glass, and the next one to arrive is
+ * a different object even if it lands in the same place.
  */
 export abstract class HeadingSource {
     abstract readonly id: string;
 
     abstract heading(
-        points: readonly ContactPoint[],
+        points: readonly SensedContact[],
         centre: Vec2,
     ): { headingDeg: number; reference: Vec2 } | null;
+
+    /* Most sources decide afresh every frame and have nothing to
+       forget, so this does nothing unless a source says otherwise. */
+    reset(): void {}
 }

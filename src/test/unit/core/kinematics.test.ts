@@ -16,12 +16,12 @@ import {
     Position,
     PositionPolicy,
     Rotate,
+    HeadingRotationSource,
     RotatePolicy,
     Tap,
-    TapPolicy,
     shortestAngleDiffDeg,
 } from "../../../core/base";
-import type { ContactPoint } from "../../../core/contact";
+import type { SensedContact } from "../../../core/contact";
 import type { FootprintSpec } from "../../../core/base";
 
 const TRIAD_FEET = [0, 132, 228].map((deg) => {
@@ -40,7 +40,7 @@ const feet = (
     rot: number,
     at: number,
     firstSeen = 0,
-): ContactPoint[] =>
+): SensedContact[] =>
     [0, 132, 228].map((off, i) => {
         const rad = ((rot + off) * Math.PI) / 180;
         return {
@@ -54,7 +54,7 @@ const feet = (
     });
 
 type Rig = {
-    step: (points: readonly ContactPoint[], at: number) => void;
+    step: (points: readonly SensedContact[], at: number) => void;
     position: Position;
     direction: Direction;
     move: Move;
@@ -69,8 +69,12 @@ const rig = (): Rig => {
         new ApexHeadingSource(new DirectionPolicy()),
     );
     const move = new Move(position, new MovePolicy());
-    const rotate = new Rotate(direction, new RotatePolicy());
-    const tap = new Tap(position, new TapPolicy());
+    const rotate = new Rotate(
+        new HeadingRotationSource(direction, new RotatePolicy()),
+        new RotatePolicy(),
+        direction,
+    );
+    const tap = new Tap(position);
     return {
         position,
         direction,
@@ -201,7 +205,7 @@ describe("Rotate", () => {
         const before = r.rotate.snapshot().deltaTotalDeg;
         /* An equilateral footprint has no nose, so Direction goes
            unknown while keeping its last good heading. */
-        const even: ContactPoint[] = [0, 120, 240].map((off, i) => ({
+        const even: SensedContact[] = [0, 120, 240].map((off, i) => ({
             id: i,
             x: 400 + 160 * Math.cos((off * Math.PI) / 180),
             y: 300 + 160 * Math.sin((off * Math.PI) / 180),
@@ -224,64 +228,33 @@ describe("Tap", () => {
         expect(r.tap.snapshot().dwellMS).toBe(120);
     });
 
-    it("calls a short, still press a tap", () => {
+    it("keeps the finished episode on the frame it is released", () => {
         const r = rig();
         r.step(feet(400, 300, 0, 0, 0), 0);
         r.step(feet(400, 300, 0, 120, 0), 120);
         r.step([], 140);
-        expect(r.tap.snapshot().kind).toBe("tap");
+        const snapshot = r.tap.snapshot();
+        expect(snapshot.down).toBe(false);
+        expect(snapshot.dwellMS).toBe(140);
     });
 
-    it("calls a long press a hold", () => {
-        const r = rig();
-        r.step(feet(400, 300, 0, 0, 0), 0);
-        r.step(feet(400, 300, 0, 800, 0), 800);
-        r.step([], 820);
-        expect(r.tap.snapshot().kind).toBe("hold");
-    });
-
-    it("is neither when it lands between the two thresholds", () => {
-        const r = rig();
-        r.step(feet(400, 300, 0, 0, 0), 0);
-        r.step(feet(400, 300, 0, 500, 0), 500);
-        r.step([], 510);
-        expect(r.tap.snapshot().kind).toBe("none");
-    });
-
-    it("does not call a drag a tap", () => {
+    it("measures how far the centre wandered while it was down", () => {
         const r = rig();
         r.step(feet(400, 300, 0, 0, 0), 0);
         r.step(feet(500, 300, 0, 120, 0), 120);
         r.step([], 140);
-        expect(r.tap.snapshot().kind).toBe("none");
-    });
-
-    it("sees a second quick tap as a double", () => {
-        const r = rig();
-        r.step(feet(400, 300, 0, 0, 0), 0);
-        r.step([], 100);
-        r.step(feet(400, 300, 0, 200, 200), 200);
-        r.step([], 300);
-        expect(r.tap.snapshot().kind).toBe("double");
-    });
-
-    it("does not double-count a third tap", () => {
-        const r = rig();
-        r.step(feet(400, 300, 0, 0, 0), 0);
-        r.step([], 100);
-        r.step(feet(400, 300, 0, 200, 200), 200);
-        r.step([], 300);
-        r.step(feet(400, 300, 0, 400, 400), 400);
-        r.step([], 500);
-        expect(r.tap.snapshot().kind).toBe("tap");
+        expect(r.tap.snapshot().movedPX).toBeGreaterThan(0);
     });
 
     it("survives a foot flickering during a long hold", () => {
+        /* The interval comes from the contacts' own firstSeen, not
+           from a timer this trait starts, so losing a foot in the
+           middle of a hold does not restart the clock. */
         const r = rig();
         r.step(feet(400, 300, 0, 0, 0), 0);
         r.step(feet(400, 300, 0, 400, 0).slice(0, 2), 400);
         r.step(feet(400, 300, 0, 800, 0), 800);
         r.step([], 820);
-        expect(r.tap.snapshot().kind).toBe("hold");
+        expect(r.tap.snapshot().dwellMS).toBe(820);
     });
 });

@@ -6,6 +6,8 @@ import { norm360 } from "./norm360";
 export const gapsOf = (angles: number[]): number[] => {
     const a = [...angles].map(norm360).sort((x, y) => x - y);
     return a.map((v, i) =>
-        norm360((i === a.length - 1 ? a[0] + 360 : a[i + 1]) - v),
+        norm360(
+            (i === a.length - 1 ? (a[0] ?? 0) + 360 : (a[i + 1] ?? 0)) - v,
+        ),
     );
 };

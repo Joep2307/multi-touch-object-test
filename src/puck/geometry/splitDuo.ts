@@ -20,8 +20,17 @@ export function splitDuo(pts: Point[]): DuoSplit | null {
         for (let j = i + 1; j < 6; j++) {
             const ai = [0, i, j],
                 bi = [0, 1, 2, 3, 4, 5].filter((k) => !ai.includes(k));
-            const da = describe(pts[ai[0]], pts[ai[1]], pts[ai[2]]);
-            const db = describe(pts[bi[0]], pts[bi[1]], pts[bi[2]]);
+            /* Zes punten in, dus beide drietallen bestaan. Even
+               nakijken in plaats van erop vertrouwen: als de invoer
+               ooit verandert, wil je het hier zien en niet in een
+               meetkundige uitkomst die nergens op slaat. */
+            const pa = ai.map((k) => pts[k]);
+            const pb = bi.map((k) => pts[k]);
+            const [a0, a1, a2] = pa;
+            const [b0, b1, b2] = pb;
+            if (!a0 || !a1 || !a2 || !b0 || !b1 || !b2) continue;
+            const da = describe(a0, a1, a2);
+            const db = describe(b0, b1, b2);
             if (!da || !db) continue;
             const aBig = da.longest >= db.longest;
             const big = aBig ? da : db,

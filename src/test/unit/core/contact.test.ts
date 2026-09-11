@@ -86,7 +86,7 @@ describe("ContactRecorder", () => {
         for (let at = 0; at < 3; at += 1) rec.add(src.frame(at));
         const out = rec.finish("2026-09-08T00:00:00.000Z");
         expect(out.frames).toHaveLength(3);
-        expect(out.version).toBe(1);
+        expect(out.version).toBe(2);
         expect(out.name).toBe("test");
     });
 

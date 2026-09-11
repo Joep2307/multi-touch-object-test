@@ -36,11 +36,13 @@ export function matchSlots(d: SlotShape, tpl: Template): SlotMatch {
         sn = 0,
         used = 0;
     for (let i = 0; i < d.angles.length; i++) {
-        const j = (((d.idx[i] - best.rot) % n) + n) % n;
+        const slot = d.idx[i];
+        if (slot === undefined) continue;
+        const j = (((slot - best.rot) % n) + n) % n;
         /* A stray point has no foot on the drawing; it must not drag the
          angle along. */
         if (!((code >>> j) & 1)) continue;
-        const off = ((d.angles[i] - j * w) * Math.PI) / 180;
+        const off = (((d.angles[i] ?? 0) - j * w) * Math.PI) / 180;
         cs += Math.cos(off);
         sn += Math.sin(off);
         used++;

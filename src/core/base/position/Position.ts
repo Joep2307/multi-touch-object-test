@@ -1,5 +1,6 @@
 import { Trait } from "../Trait";
 import { CONFIDENCE_MIN } from "./constants";
+import { scoreFootprint } from "./scoreFootprint";
 import type { BaseSample } from "../BaseSample";
 import type { CentreSolver } from "./CentreSolver";
 import type { PositionPolicy } from "./PositionPolicy";
@@ -66,11 +67,13 @@ export class Position extends Trait<PositionSnapshot> {
             return;
         }
 
-        const countScore = clamp01(points.length / Math.max(1, expected));
-        const shapeScore = this.#shapeScore(fit, sample);
-        const sizeScore = this.#sizeScore(fit.radiusPX, sample);
-        const shapeConfidence = countScore * shapeScore;
-        const confidence = shapeConfidence * sizeScore;
+        const { confidence, shapeConfidence } = scoreFootprint(
+            fit,
+            points.length,
+            sample.spec,
+            sample.pxPerMM,
+            this.policy,
+        );
 
         this.#snapshot = {
             sensed: confidence > CONFIDENCE_MIN,
@@ -85,50 +88,6 @@ export class Position extends Trait<PositionSnapshot> {
         };
     }
 
-    /* Are the feet arranged like this kind? Compared as a **ratio** —
-       spread over radius — so the answer holds whatever the screen
-       scale turns out to be.
-
-       Two things forced that. First, the spread is scored against the
-       kind's *inherent* spread rather than against zero: zero is right
-       for a ring and for an equilateral triad, but an equilateral
-       triad has no distinguishable nose, so the standard three-point
-       footprint is deliberately asymmetric and its feet genuinely do
-       sit at different distances from the centroid. Scoring that
-       against zero punished exactly the asymmetry the heading needs.
-
-       Second, both quantities had to lose their units. A score in
-       pixels is a function of `pxPerMM`, and `PxPerMMEstimator` is
-       gated on this score — so a scale that started wrong made the
-       score low, which made the estimator ignore the reading, which
-       left the scale wrong. A ratio breaks that loop. */
-    #shapeScore(
-        fit: { radiusPX: number; residualPX: number },
-        sample: BaseSample,
-    ): number {
-        if (fit.radiusPX <= 0) return CONFIDENCE_MIN;
-        const measured = fit.residualPX / fit.radiusPX;
-        const radiusMM = sample.spec.footRadiusMM;
-        const expected =
-            radiusMM > 0
-                ? (sample.spec.footRadiusSpreadMM ?? 0) / radiusMM
-                : 0;
-        const off = Math.abs(measured - expected);
-        return clamp01(1 - off / this.policy.shapeTolerance);
-    }
-
-    /* Is what we measured the right size for this kind? Size is a
-       recognition feature in its own right: two pucks with the same
-       pattern but a different ring are two different pucks, and
-       checking size *before* the best fit wins is what stops a
-       look-alike silencing the real one. */
-    #sizeScore(radiusPX: number, sample: BaseSample): number {
-        const expectedPX = sample.spec.footRadiusMM * sample.pxPerMM;
-        if (expectedPX <= 0) return CONFIDENCE_MIN;
-        const off = Math.abs(radiusPX - expectedPX) / expectedPX;
-        return clamp01(1 - off / this.policy.sizeTolerance);
-    }
-
     override reset(): void {
         this.#snapshot = EMPTY;
     }
@@ -136,9 +95,4 @@ export class Position extends Trait<PositionSnapshot> {
     override snapshot(): PositionSnapshot {
         return this.#snapshot;
     }
-}
-
-function clamp01(v: number): number {
-    if (Number.isNaN(v)) return 0;
-    return Math.min(1, Math.max(0, v));
 }

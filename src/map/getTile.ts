@@ -25,7 +25,7 @@ export function getTile(z: number, x: number, y: number): TileImage | null {
     }
     if (!img) {
         const src = set.url
-            .replace("{s}", "abc"[(x + y) % 3])
+            .replace("{s}", "abc"[(x + y) % 3] ?? "a")
             .replace("{z}", String(z))
             .replace("{x}", String(x))
             .replace("{y}", String(y));

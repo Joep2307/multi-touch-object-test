@@ -46,7 +46,9 @@ export function padsFor(tpl: Template, k = 1): Point[] {
         { x: c, y: 0 },
         { x: rx, y: ry },
     ];
-    const cx = (pts[0].x + pts[1].x + pts[2].x) / 3,
-        cy = (pts[0].y + pts[1].y + pts[2].y) / 3;
+    /* Het zwaartepunt van de drie, zodat de voetjes rond de oorsprong
+       liggen in plaats van rond het eerste voetje. */
+    const cx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length,
+        cy = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
     return pts.map((p) => ({ x: p.x - cx, y: p.y - cy }));
 }

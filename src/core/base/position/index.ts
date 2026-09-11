@@ -4,6 +4,8 @@ export { CircleFitSolver } from "./CircleFitSolver";
 export { Position } from "./Position";
 export { PositionPolicy } from "./PositionPolicy";
 export { PxPerMMEstimator } from "./PxPerMMEstimator";
+export { scoreFootprint } from "./scoreFootprint";
+export type { FootprintScore } from "./scoreFootprint";
 export { PxPerMMPolicy } from "./PxPerMMPolicy";
 export {
     CIRCLE_FIT_MIN_DET,

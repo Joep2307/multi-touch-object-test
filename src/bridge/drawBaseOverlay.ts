@@ -1,4 +1,5 @@
 import { DirectionRay } from "../core/base";
+import type { BaseRuntime } from "./BaseRuntime";
 import type { BaseSessionRecorder } from "./BaseSessionRecorder";
 import type { ParityCheck } from "./ParityCheck";
 import type { TrackBridge } from "./TrackBridge";
@@ -23,19 +24,20 @@ export function drawBaseOverlay(
     height: number,
     at: number,
     recorder: BaseSessionRecorder | null = null,
+    runtime: BaseRuntime | null = null,
 ): void {
     ctx.save();
     ctx.lineWidth = LINE_WIDTH_PX;
     for (const physical of bridge.all()) {
         const snapshot = physical.base.snapshot(at);
-        const tail = snapshot.tail.points;
-        if (tail.length > 1) {
-            const first = tail[0];
+        const path = snapshot.motionHistory.points;
+        if (path.length > 1) {
+            const first = path[0];
             if (first !== undefined) {
                 ctx.beginPath();
                 ctx.moveTo(first.x, first.y);
-                for (let index = 1; index < tail.length; index += 1) {
-                    const point = tail[index];
+                for (let index = 1; index < path.length; index += 1) {
+                    const point = path[index];
                     if (point !== undefined) ctx.lineTo(point.x, point.y);
                 }
                 ctx.strokeStyle = MODEL_FAINT;
@@ -91,6 +93,7 @@ export function drawBaseOverlay(
                 : "not recording — Shift+Alt+R to start",
         );
     }
+    if (runtime !== null) lines.push(runtime.summary());
     lines.forEach((line, i) => {
         ctx.fillText(line, LABEL_X_PX, LABEL_Y_PX + i * LABEL_LINE_PX);
     });

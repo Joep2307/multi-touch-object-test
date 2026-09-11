@@ -5,11 +5,7 @@
  * touch while a dropout creates a genuinely new one when the foot returns.
  */
 import type { FootprintSpec, Vec2 } from "../../../core/base";
-import type {
-    ContactFrame,
-    ContactPoint,
-    ContactRecording,
-} from "../../../core/contact";
+import type { SensedContact, ContactRecording } from "../../../core/contact";
 
 const HALF_TURN_DEG = 180;
 const UINT32_RANGE = 4_294_967_296;
@@ -291,13 +287,13 @@ export const synthesise = (options: SynthesiseOptions): ContactRecording => {
     const footRadiusPX = options.footContactRadiusPX ?? 8;
     let nextId = 0;
 
-    const frames: ContactFrame[] = [];
+    const frames: { at: number; points: SensedContact[] }[] = [];
     for (let frame = 0; frame < options.frameCount; frame += 1) {
         const denominator = Math.max(1, options.frameCount - 1);
         const progress = frame / denominator;
         const at = options.startAt + frame * options.frameMS;
         const primaryPose = poseAt(options.path, progress);
-        const points: ContactPoint[] = [];
+        const points: SensedContact[] = [];
 
         const addObject = (
             object: SyntheticDropout["object"],

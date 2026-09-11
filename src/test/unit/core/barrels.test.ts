@@ -25,6 +25,50 @@ describe("src/core barrels", () => {
         expect(typeof mod.ContactRecorder).toBe("function");
     });
 
+    it("imports the gesture barrel and exposes its recogniser", async () => {
+        const mod = await import("../../../core/gesture/index");
+        expect(typeof mod.GestureRecogniser).toBe("function");
+        expect(typeof mod.defaultGestureDefinitions).toBe("function");
+    });
+
+    it("imports the event and relation barrels", async () => {
+        const events = await import("../../../core/events/index");
+        expect(typeof events.EventBus).toBe("function");
+        const relation = await import("../../../core/relation/index");
+        expect(typeof relation.SpatialIndex).toBe("function");
+    });
+
+    it("imports the behaviour barrel and exposes its engine", async () => {
+        const mod = await import("../../../core/behaviour/index");
+        expect(typeof mod.RuleEngine).toBe("function");
+        expect(typeof mod.StateMachineRunner).toBe("function");
+        expect(typeof mod.TimerWheel).toBe("function");
+    });
+
+    it("imports the session barrel and exposes its session", async () => {
+        const mod = await import("../../../core/session/index");
+        expect(typeof mod.Session).toBe("function");
+        expect(typeof mod.RoleAssigner).toBe("function");
+        expect(typeof mod.EventLog).toBe("function");
+    });
+
+    it("imports the presentation barrel", async () => {
+        const mod = await import("../../../core/presentation/index");
+        expect(typeof mod.RegionTracker).toBe("function");
+        expect(typeof mod.buildRenderPlan).toBe("function");
+    });
+
+    it("imports the programme barrel", async () => {
+        const mod = await import("../../../core/programme/index");
+        expect(typeof mod.ProgrammeLoader).toBe("function");
+        expect(typeof mod.validateProgramme).toBe("function");
+    });
+
+    it("imports the runtime barrel", async () => {
+        const mod = await import("../../../core/runtime/index");
+        expect(typeof mod.Runtime).toBe("function");
+    });
+
     it("does no work at import time", async () => {
         const before = Date.now();
         await import("../../../core/index");

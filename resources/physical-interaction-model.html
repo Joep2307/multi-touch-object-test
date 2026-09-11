@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Physical Interaction Model</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Deliberately single-theme: this is a technical drawing on paper, and it
+   holds the same light ground whatever theme the viewer is in. */
+:root{
+  --paper:#EFF0EC; --surface:#FBFBF9; --surface-2:#E7E9E3;
+  --ink:#191C1A; --ink-2:#5C625C; --ink-3:#868C85;
+  --line:#C7CAC3; --line-2:#DDE0D9;
+  --def:#2C5F7C; --def-tint:#DCE8EF; --def-ink:#1D4257;
+  --run:#A85423; --run-tint:#F2E1D2; --run-ink:#7B3A13;
+  --focus:#A85423;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Source Serif 4",Georgia,serif;
+  font-size:16.5px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+.col{max-width:68ch}
+
+/* ---------- header ---------- */
+header{
+  border-bottom:1px solid var(--line);
+  padding:64px 0 34px;
+  margin-bottom:14px;
+}
+.eyebrow{
+  font-family:"Archivo",system-ui,sans-serif;font-weight:600;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 18px;
+}
+h1{
+  font-family:"Archivo",system-ui,sans-serif;font-weight:700;
+  font-size:clamp(34px,5.4vw,54px);line-height:1.02;letter-spacing:-.025em;
+  margin:0 0 20px;text-wrap:balance;
+}
+.lede{font-size:19px;line-height:1.55;color:var(--ink);margin:0 0 8px}
+.sub{color:var(--ink-2);margin:14px 0 0}
+
+/* ---------- sections ---------- */
+section{padding:52px 0;border-top:1px solid var(--line-2)}
+section:first-of-type{border-top:none}
+.shead{display:flex;align-items:baseline;gap:16px;margin-bottom:6px}
+.snum{
+  font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+  color:var(--run);letter-spacing:.04em;
+  flex:0 0 auto;padding-top:4px;
+}
+h2{
+  font-family:"Archivo",system-ui,sans-serif;font-weight:600;
+  font-size:clamp(23px,3vw,30px);line-height:1.12;letter-spacing:-.02em;
+  margin:0;text-wrap:balance;
+}
+h3{
+  font-family:"Archivo",system-ui,sans-serif;font-weight:600;
+  font-size:14px;letter-spacing:.02em;margin:0 0 10px;
+}
+p{margin:0 0 14px}
+.col p:last-child{margin-bottom:0}
+code,.mono{font-family:"IBM Plex Mono",monospace;font-size:.87em}
+code{background:var(--surface-2);padding:1px 5px;border-radius:2px}
+
+/* ---------- figures ---------- */
+figure{margin:30px 0 0}
+.scroll{overflow-x:auto;padding-bottom:6px}
+.d{display:block;width:100%;height:auto;color:var(--ink)}
+figcaption{
+  font-family:"Archivo",system-ui,sans-serif;font-size:12.5px;
+  line-height:1.5;color:var(--ink-2);
+  margin-top:14px;padding-left:14px;border-left:2px solid var(--line);
+  max-width:78ch;
+}
+
+/* ---------- svg drawing system ---------- */
+.d .box{fill:var(--surface);stroke-width:1.2}
+.d .hdr{stroke-width:1.2}
+.d .nm{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:12px}
+.d .at{font-family:"IBM Plex Mono",monospace;font-weight:400;font-size:10.5px;fill:var(--ink-2)}
+.d .stereo{font-family:"Archivo",sans-serif;font-weight:600;font-size:8.5px;letter-spacing:.1em;fill:var(--ink-3)}
+.d .el{font-family:"Archivo",sans-serif;font-weight:500;font-size:9.5px;fill:var(--ink-2)}
+.d .el.sm{font-size:9px}
+.d .nd{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:11.5px}
+.d .ndsub{font-family:"Archivo",sans-serif;font-weight:500;font-size:9.5px;fill:var(--ink-2)}
+.d .ln{fill:none;stroke:var(--ink-3);stroke-width:1.2}
+.d .ln.dash{stroke-dasharray:5 4}
+.d marker .ah{fill:none;stroke:var(--ink-3);stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.d marker .df{fill:var(--ink-3);stroke:var(--ink-3);stroke-width:1}
+.d .def .box{stroke:var(--def)}
+.d .def .hdr{fill:var(--def-tint);stroke:var(--def)}
+.d .def .nm{fill:var(--def-ink)}
+.d .run .box{stroke:var(--run)}
+.d .run .hdr{fill:var(--run-tint);stroke:var(--run)}
+.d .run .nm{fill:var(--run-ink)}
+.d .ref .box{fill:none;stroke:var(--ink-3);stroke-dasharray:5 4;stroke-width:1.1}
+.d .ref .nm{fill:var(--ink-2)}
+
+/* ---------- legend ---------- */
+.legend{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:20px 30px;margin-top:26px;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:22px 0;
+}
+.lg{display:flex;gap:12px;align-items:flex-start}
+.lg svg{flex:0 0 auto;margin-top:2px}
+.lg b{font-family:"Archivo",sans-serif;font-size:12.5px;font-weight:600;display:block}
+.lg span{font-family:"Archivo",sans-serif;font-size:11.5px;color:var(--ink-2);line-height:1.4}
+
+/* ---------- index ---------- */
+.index{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:26px;margin-top:28px}
+.index h3{color:var(--ink-2);padding-bottom:7px;border-bottom:1px solid var(--line)}
+.index ol{list-style:none;margin:0;padding:0;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.85}
+.index li{color:var(--ink-2)}
+.index li b{font-weight:500;color:var(--ink)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.dot.r{background:var(--run)}
+.dot.d{background:var(--def)}
+
+/* ---------- enum chips ---------- */
+.enums{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:30px}
+.enum{background:var(--surface);border:1px solid var(--line);padding:14px 16px 15px}
+.enum h4{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;
+  margin:0 0 9px;color:var(--ink);
+}
+.enum h4 em{font-family:"Archivo",sans-serif;font-style:normal;font-weight:600;
+  font-size:8.5px;letter-spacing:.1em;color:var(--ink-3);display:block;margin-bottom:3px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips span{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  background:var(--surface-2);color:var(--ink-2);
+  padding:2.5px 7px;border-radius:2px;white-space:nowrap;
+}
+.enum.acc{border-color:var(--run)}
+.enum.acc .chips span{background:var(--run-tint);color:var(--run-ink)}
+
+/* ---------- notes ---------- */
+.note{
+  margin-top:26px;padding:16px 18px;background:var(--surface);
+  border-left:3px solid var(--def);
+  font-size:15px;line-height:1.55;max-width:74ch;
+}
+.note b{font-family:"Archivo",sans-serif;font-size:12px;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--def-ink);display:block;margin-bottom:5px}
+
+footer{border-top:1px solid var(--line);padding:34px 0 60px;margin-top:16px}
+footer p{font-family:"Archivo",sans-serif;font-size:12.5px;color:var(--ink-3);max-width:70ch}
+a{color:var(--run-ink);text-decoration-thickness:1px;text-underline-offset:2px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media (max-width:640px){
+  .wrap{padding:0 18px}
+  header{padding:44px 0 28px}
+  section{padding:38px 0}
+  .shead{gap:10px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Abstract model &middot; interactive table</p>
+  <h1>Physical Interaction Model</h1>
+  <div class="col">
+    <p class="lede">Twenty-five entities describing how loose contact points on a tabletop
+    become a recognised object, how that object fires rules, and how those rules feed back
+    into what the table shows.</p>
+    <p class="sub">The model splits into two kinds of thing, and that split colours every
+    diagram below. <b>Definitions</b> are authored up front: a kind of object, a role, a
+    rule, a state, a visual. <b>Runtime</b> exists only during a session: the block lying
+    on the table right now, the role it was just given, the event from three seconds ago.
+    Definitions can be versioned; runtime is gone when the session ends.</p>
+  </div>
+
+  <div class="legend">
+    <div class="lg">
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true">
+        <rect x="1" y="2" width="42" height="14" fill="var(--def-tint)" stroke="var(--def)" stroke-width="1.2"/>
+      </svg>
+      <div><b>Definition</b><span>Authored up front, reusable, carries an id</span></div>
+    </div>
+    <div class="lg">
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true">
+        <rect x="1" y="2" width="42" height="14" fill="var(--run-tint)" stroke="var(--run)" stroke-width="1.2"/>
+      </svg>
+      <div><b>Runtime</b><span>Exists only inside a running session</span></div>
+    </div>
+    <div class="lg">
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true">
+        <path d="M2,9 L30,9" fill="none" stroke="var(--ink-3)" stroke-width="1.2"/>
+        <path d="M2,4 L11,9 L2,14" fill="none" stroke="var(--ink-3)" stroke-width="1.3"/>
+        <path d="M30,9 L36,5 L42,9 L36,13 z" fill="var(--ink-3)"/>
+      </svg>
+      <div><b>Composition</b><span>Diamond at the owner; the part has no life of its own</span></div>
+    </div>
+    <div class="lg">
+      <svg width="44" height="18" viewBox="0 0 44 18" aria-hidden="true">
+        <path d="M2,9 L40,9" fill="none" stroke="var(--ink-3)" stroke-width="1.2" stroke-dasharray="5 4"/>
+        <path d="M32,4 L41,9 L32,14" fill="none" stroke="var(--ink-3)" stroke-width="1.3"/>
+      </svg>
+      <div><b>Reference</b><span>Loose coupling by id; dashed box = detailed elsewhere</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ 0. THE LOOP ============ -->
+<section id="loop">
+  <div class="shead"><span class="snum">00</span><h2>The loop that runs every second</h2></div>
+  <div class="col">
+    <p>Everything in this model serves a single circuit. The table sees contact points,
+    not objects. A signature groups those points into something recognisable, that object
+    gets a stable id, its movements become events, events test rules, and rules change
+    state and image. Then a participant looks at the table and moves something again.</p>
+    <p>The hinge is <code>PhysicalInstance</code>: its id must <em>not</em> depend on the
+    current number or position of contact points. If the table drops one point of a block,
+    that is the same block in status <code>Missing</code> &mdash; not a new object.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+    <svg class="d" viewBox="0 0 1380 320" role="img" style="min-width:1120px"
+         aria-label="Loop: contact points become an object through a signature, the object generates events that fire rules, whose effects change state and the table image.">
+      <defs>
+        <marker id="f1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="ah" d="M0.5,1 L8.5,5 L0.5,9"/>
+        </marker>
+      </defs>
+
+      <g class="run"><rect class="hdr" x="10" y="70" width="170" height="64"/>
+        <text class="nd" x="95" y="96" text-anchor="middle">InputContact</text>
+        <text class="ndsub" x="95" y="114" text-anchor="middle">raw contact point</text></g>
+      <g class="def"><rect class="hdr" x="246" y="70" width="170" height="64"/>
+        <text class="nd" x="331" y="96" text-anchor="middle">PhysicalSignature</text>
+        <text class="ndsub" x="331" y="114" text-anchor="middle">shape recognition</text></g>
+      <g class="run"><rect class="hdr" x="482" y="70" width="170" height="64"/>
+        <text class="nd" x="567" y="96" text-anchor="middle">PhysicalInstance</text>
+        <text class="ndsub" x="567" y="114" text-anchor="middle">object on the table</text></g>
+      <g class="run"><rect class="hdr" x="718" y="70" width="170" height="64"/>
+        <text class="nd" x="803" y="96" text-anchor="middle">InteractionEvent</text>
+        <text class="ndsub" x="803" y="114" text-anchor="middle">what happened</text></g>
+      <g class="def"><rect class="hdr" x="954" y="70" width="170" height="64"/>
+        <text class="nd" x="1039" y="96" text-anchor="middle">Action / Transition</text>
+        <text class="ndsub" x="1039" y="114" text-anchor="middle">rule + conditions</text></g>
+      <g class="def"><rect class="hdr" x="1190" y="70" width="170" height="64"/>
+        <text class="nd" x="1275" y="96" text-anchor="middle">EffectDefinition</text>
+        <text class="ndsub" x="1275" y="114" text-anchor="middle">consequence</text></g>
+
+      <g class="def"><rect class="hdr" x="442" y="240" width="236" height="56"/>
+        <text class="nd" x="560" y="264" text-anchor="middle">TablePresentation</text>
+        <text class="ndsub" x="560" y="282" text-anchor="middle">what the table shows</text></g>
+
+      <path class="ln" d="M180,102 H246" marker-end="url(#f1a)"/>
+      <path class="ln" d="M416,102 H482" marker-end="url(#f1a)"/>
+      <path class="ln" d="M652,102 H718" marker-end="url(#f1a)"/>
+      <path class="ln" d="M888,102 H954" marker-end="url(#f1a)"/>
+      <path class="ln" d="M1124,102 H1190" marker-end="url(#f1a)"/>
+      <text class="el" x="213" y="94" text-anchor="middle">groups</text>
+      <text class="el" x="449" y="94" text-anchor="middle">identifies</text>
+      <text class="el" x="685" y="94" text-anchor="middle">generates</text>
+      <text class="el" x="921" y="94" text-anchor="middle">triggers</text>
+      <text class="el" x="1157" y="94" text-anchor="middle">executes</text>
+
+      <path class="ln" d="M1275,70 V34 H567 V70" marker-end="url(#f1a)"/>
+      <text class="el" x="921" y="28" text-anchor="middle">sets a new state, role or variable</text>
+
+      <path class="ln" d="M1275,134 V268 H678" marker-end="url(#f1a)"/>
+      <text class="el" x="980" y="260" text-anchor="middle">changes what the table shows</text>
+
+      <path class="ln" d="M442,268 H95 V134" marker-end="url(#f1a)"/>
+      <text class="el" x="270" y="260" text-anchor="middle">participant moves the object</text>
+    </svg>
+    </div>
+    <figcaption>The full loop. Everything to the right of <span class="mono">InteractionEvent</span>
+    is swappable per programme; everything to the left is table infrastructure you build
+    once.</figcaption>
+  </figure>
+
+  <div class="index">
+    <div>
+      <h3>Recognition &middot; 5</h3>
+      <ol>
+        <li><span class="dot r"></span><b>InputContact</b></li>
+        <li><span class="dot d"></span><b>PhysicalSignature</b></li>
+        <li><span class="dot d"></span><b>PhysicalKindDefinition</b></li>
+        <li><span class="dot d"></span><b>GestureDefinition</b></li>
+        <li><span class="dot r"></span><b>PhysicalInstance</b></li>
+      </ol>
+    </div>
+    <div>
+      <h3>Runtime state &middot; 3</h3>
+      <ol>
+        <li><span class="dot r"></span><b>MotionHistory</b></li>
+        <li><span class="dot r"></span><b>SpatialRelation</b></li>
+        <li><span class="dot r"></span><b>InteractionEvent</b></li>
+      </ol>
+    </div>
+    <div>
+      <h3>Behaviour &middot; 7</h3>
+      <ol>
+        <li><span class="dot d"></span><b>ActionDefinition</b></li>
+        <li><span class="dot d"></span><b>TriggerDefinition</b></li>
+        <li><span class="dot d"></span><b>ConditionDefinition</b></li>
+        <li><span class="dot d"></span><b>EffectDefinition</b></li>
+        <li><span class="dot d"></span><b>StateDefinition</b></li>
+        <li><span class="dot d"></span><b>TransitionDefinition</b></li>
+        <li><span class="dot d"></span><b>StateMachineDefinition</b></li>
+      </ol>
+    </div>
+    <div>
+      <h3>Session &amp; roles &middot; 6</h3>
+      <ol>
+        <li><span class="dot r"></span><b>Session</b></li>
+        <li><span class="dot d"></span><b>ModeDefinition</b></li>
+        <li><span class="dot d"></span><b>RoleDefinition</b></li>
+        <li><span class="dot r"></span><b>RoleAssignment</b></li>
+        <li><span class="dot d"></span><b>Settings</b></li>
+        <li><span class="dot r"></span><b>EventLog</b></li>
+      </ol>
+    </div>
+    <div>
+      <h3>Presentation &middot; 3 + 1</h3>
+      <ol>
+        <li><span class="dot d"></span><b>TablePresentation</b></li>
+        <li><span class="dot d"></span><b>RegionDefinition</b></li>
+        <li><span class="dot d"></span><b>PresentationDefinition</b></li>
+        <li><span class="dot d"></span><b>ExtensionProperties</b></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1. RECOGNITION ============ -->
+<section id="recognition">
+  <div class="shead"><span class="snum">01</span><h2>From contact point to object</h2></div>
+  <div class="col">
+    <p>The table delivers only <code>InputContact</code>: a position, a size, a status. A
+    <code>PhysicalSignature</code> states which combination of points forms one object
+    &mdash; three points in a triangle with at most 5&nbsp;mm deviation, rotation allowed,
+    scaling not. A <code>PhysicalKindDefinition</code> bundles several signatures, so the
+    same kind of object may be recognised in more than one way.</p>
+    <p>What comes out is the <code>PhysicalInstance</code>: the only object the rest of
+    the system talks to. Its movement history lives in <code>MotionHistory</code>, its
+    relation to neighbours in <code>SpatialRelation</code>, and every change becomes an
+    <code>InteractionEvent</code>.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+    <svg class="d" viewBox="0 0 1020 620" role="img" style="min-width:980px"
+         aria-label="Class diagram of the recognition layer: PhysicalKindDefinition owns signatures that match contact points and yield a PhysicalInstance, surrounded by MotionHistory, SpatialRelation, GestureDefinition and InteractionEvent.">
+      <defs>
+        <marker id="f2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="ah" d="M0.5,1 L8.5,5 L0.5,9"/>
+        </marker>
+        <marker id="f2d" viewBox="0 0 12 8" refX="1" refY="4" markerWidth="12" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="df" d="M0.5,4 L5.5,1.2 L10.5,4 L5.5,6.8 z"/>
+        </marker>
+      </defs>
+
+      <g class="run" transform="translate(20,20)">
+        <rect class="box" x="0" y="0" width="220" height="114"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">InputContact</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">position { x, y }</text>
+        <text class="at" x="11" y="72">size</text>
+        <text class="at" x="11" y="87">startedAt / updatedAt</text>
+        <text class="at" x="11" y="102">status: ContactStatus</text>
+      </g>
+
+      <g class="def" transform="translate(400,20)">
+        <rect class="box" x="0" y="0" width="220" height="129"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">PhysicalSignature</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">contactCount</text>
+        <text class="at" x="11" y="72">geometry</text>
+        <text class="at" x="11" y="87">distanceTolerance</text>
+        <text class="at" x="11" y="102">orientationRule</text>
+        <text class="at" x="11" y="117">scaleRule</text>
+      </g>
+
+      <g class="def" transform="translate(780,20)">
+        <rect class="box" x="0" y="0" width="220" height="144"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">PhysicalKindDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">name</text>
+        <text class="at" x="11" y="72">affordances: Affordance[]</text>
+        <text class="at" x="11" y="87">defaultRoleId</text>
+        <text class="at" x="11" y="102">stateMachineId</text>
+        <text class="at" x="11" y="117">presentationId</text>
+        <text class="at" x="11" y="132">properties</text>
+      </g>
+
+      <g class="run" transform="translate(20,262)">
+        <rect class="box" x="0" y="0" width="220" height="96"/>
+        <rect class="hdr" x="0" y="0" width="220" height="38"/>
+        <text class="stereo" x="11" y="16">&#171;ENUMERATION&#187;</text>
+        <text class="nm" x="11" y="31">InstanceStatus</text>
+        <text class="at" x="11" y="54">Detected</text>
+        <text class="at" x="11" y="69">Missing</text>
+        <text class="at" x="11" y="84">Removed</text>
+      </g>
+
+      <g class="run" transform="translate(400,230)">
+        <rect class="box" x="0" y="0" width="220" height="159"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">PhysicalInstance</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">kindId / roleId</text>
+        <text class="at" x="11" y="72">pose { pos, direction, size }</text>
+        <text class="at" x="11" y="87">motion { velocity, accel. }</text>
+        <text class="at" x="11" y="102">currentStateId</text>
+        <text class="at" x="11" y="117">properties</text>
+        <text class="at" x="11" y="132">firstSeenAt / lastSeenAt</text>
+        <text class="at" x="11" y="147">status: InstanceStatus</text>
+      </g>
+
+      <g class="def" transform="translate(780,230)">
+        <rect class="box" x="0" y="0" width="220" height="129"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">GestureDefinition</text>
+        <text class="at" x="11" y="42">id / name</text>
+        <text class="at" x="11" y="57">inputEventTypes</text>
+        <text class="at" x="11" y="72">min/maxDuration</text>
+        <text class="at" x="11" y="87">min/maxDistance</text>
+        <text class="at" x="11" y="102">directionRange</text>
+        <text class="at" x="11" y="117">requiredContactCount</text>
+      </g>
+
+      <g class="run" transform="translate(20,470)">
+        <rect class="box" x="0" y="0" width="220" height="99"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">SpatialRelation</text>
+        <text class="at" x="11" y="42">sourceId / targetId</text>
+        <text class="at" x="11" y="57">distance</text>
+        <text class="at" x="11" y="72">relativeDirection</text>
+        <text class="at" x="11" y="87">relation: RelationKind</text>
+      </g>
+
+      <g class="run" transform="translate(400,470)">
+        <rect class="box" x="0" y="0" width="220" height="114"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">InteractionEvent</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">type: EventType</text>
+        <text class="at" x="11" y="72">sourceId / targetId</text>
+        <text class="at" x="11" y="87">timestamp</text>
+        <text class="at" x="11" y="102">payload</text>
+      </g>
+
+      <g class="run" transform="translate(780,470)">
+        <rect class="box" x="0" y="0" width="220" height="99"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">MotionHistory</text>
+        <text class="at" x="11" y="42">physicalId</text>
+        <text class="at" x="11" y="57">samples: MotionSample[]</text>
+        <text class="at" x="11" y="72">maximumAge</text>
+        <text class="at" x="11" y="87">maximumSamples</text>
+      </g>
+
+      <path class="ln" d="M780,88 H620" marker-start="url(#f2d)" marker-end="url(#f2a)"/>
+      <text class="el" x="700" y="80" text-anchor="middle">signatures 1..*</text>
+
+      <path class="ln" d="M400,105 H240" marker-end="url(#f2a)"/>
+      <text class="el" x="320" y="97" text-anchor="middle">matches on</text>
+      <text class="el sm" x="320" y="120" text-anchor="middle">1..*</text>
+
+      <path class="ln" d="M200,134 V174 H330 V300 H400" marker-end="url(#f2a)"/>
+      <text class="el" x="212" y="168" text-anchor="start">is recognised as</text>
+
+      <path class="ln" d="M560,230 V200 H890 V164" marker-end="url(#f2a)"/>
+      <text class="el" x="720" y="194" text-anchor="middle">kindId 1</text>
+
+      <path class="ln dash" d="M400,377 H360 V340 H240" marker-end="url(#f2a)"/>
+
+      <path class="ln" d="M620,300 H660 V520 H780" marker-start="url(#f2d)" marker-end="url(#f2a)"/>
+      <text class="el" x="700" y="513" text-anchor="start">motionHistory 1</text>
+
+      <path class="ln" d="M890,359 V440 H510 V470" marker-end="url(#f2a)"/>
+      <text class="el" x="770" y="433" text-anchor="middle">derives from</text>
+
+      <path class="ln" d="M130,470 V430 H460 V389" marker-end="url(#f2a)"/>
+      <text class="el" x="250" y="424" text-anchor="middle">source / target &nbsp;2</text>
+
+      <path class="ln" d="M470,470 V389" marker-end="url(#f2a)"/>
+      <text class="el" x="478" y="432" text-anchor="start">sourceId</text>
+    </svg>
+    </div>
+    <figcaption>Recognition layer. The dashed line is a type reference, not ownership:
+    <span class="mono">status</span> draws from the enumeration, it does not contain
+    it.</figcaption>
+  </figure>
+
+  <div class="enums">
+    <div class="enum"><h4><em>ENUMERATION</em>ContactStatus</h4>
+      <div class="chips"><span>Started</span><span>Active</span><span>Ended</span></div></div>
+    <div class="enum"><h4><em>ENUMERATION</em>Affordance</h4>
+      <div class="chips"><span>Movable</span><span>Rotatable</span><span>Tappable</span><span>Stackable</span><span>ViewThrough</span><span>Placeable</span></div></div>
+    <div class="enum"><h4><em>ENUMERATION</em>RelationKind</h4>
+      <div class="chips"><span>Nearest</span><span>Near</span><span>Far</span><span>Touching</span><span>Overlapping</span><span>Inside</span><span>Outside</span></div></div>
+    <div class="enum"><h4><em>EXAMPLES</em>PhysicalKind</h4>
+      <div class="chips"><span>VotingToken</span><span>PlayerPiece</span><span>PlaceMarker</span><span>ControlDial</span><span>LookingGlass</span></div></div>
+    <div class="enum"><h4><em>ENUMERATION</em>Gesture</h4>
+      <div class="chips"><span>Tap</span><span>DoubleTap</span><span>Hold</span><span>Swipe</span><span>Rotate</span><span>Shake</span><span>Place</span><span>Remove</span></div></div>
+    <div class="enum acc"><h4><em>ENUMERATION</em>EventType</h4>
+      <div class="chips"><span>contact.started</span><span>contact.moved</span><span>contact.ended</span><span>physical.detected</span><span>physical.moved</span><span>physical.rotated</span><span>physical.tapped</span><span>physical.removed</span><span>physical.enteredRegion</span><span>physical.exitedRegion</span><span>physical.nearPhysical</span><span>state.entered</span><span>state.exited</span><span>mode.changed</span></div></div>
+  </div>
+</section>
+
+<!-- ============ 2. BEHAVIOUR ============ -->
+<section id="behaviour">
+  <div class="shead"><span class="snum">02</span><h2>Rules and states</h2></div>
+  <div class="col">
+    <p>Behaviour is built from a single grammar of three words: <b>when</b>
+    (<code>TriggerDefinition</code>), <b>provided that</b>
+    (<code>ConditionDefinition</code>) and <b>then</b> (<code>EffectDefinition</code>).
+    Two things use that grammar. An <code>ActionDefinition</code> is free-standing
+    behaviour &mdash; cast a vote, place a marker, change the mode. A
+    <code>TransitionDefinition</code> is the same pattern, but bound to a move between
+    two states.</p>
+    <p>The duplication is deliberate: actions describe what a programme <em>can</em> do,
+    states describe when it is allowed. A token in <code>Voted</code> simply no longer
+    lists <code>cast_vote</code> in its <code>enabledActionIds</code>.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+    <svg class="d" viewBox="0 0 1110 500" role="img" style="min-width:1020px"
+         aria-label="Class diagram of the behaviour layer: ActionDefinition and TransitionDefinition both use the same trigger, condition and effect definitions; StateMachineDefinition owns states and transitions.">
+      <defs>
+        <marker id="f3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="ah" d="M0.5,1 L8.5,5 L0.5,9"/>
+        </marker>
+        <marker id="f3d" viewBox="0 0 12 8" refX="1" refY="4" markerWidth="12" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="df" d="M0.5,4 L5.5,1.2 L10.5,4 L5.5,6.8 z"/>
+        </marker>
+      </defs>
+
+      <g class="def" transform="translate(20,20)">
+        <rect class="box" x="0" y="0" width="220" height="144"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">ActionDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">name</text>
+        <text class="at" x="11" y="72">trigger: Trigger</text>
+        <text class="at" x="11" y="87">conditions: Condition[]</text>
+        <text class="at" x="11" y="102">effects: Effect[]</text>
+        <text class="at" x="11" y="117">parameters</text>
+        <text class="at" x="11" y="132">priority</text>
+      </g>
+
+      <g class="def" transform="translate(300,20)">
+        <rect class="box" x="0" y="0" width="220" height="99"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">TriggerDefinition</text>
+        <text class="at" x="11" y="42">eventType</text>
+        <text class="at" x="11" y="57">sourceFilter</text>
+        <text class="at" x="11" y="72">targetFilter</text>
+        <text class="at" x="11" y="87">parameters</text>
+      </g>
+
+      <g class="def" transform="translate(580,20)">
+        <rect class="box" x="0" y="0" width="220" height="99"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">ConditionDefinition</text>
+        <text class="at" x="11" y="42">type</text>
+        <text class="at" x="11" y="57">subject</text>
+        <text class="at" x="11" y="72">operator</text>
+        <text class="at" x="11" y="87">value</text>
+      </g>
+
+      <g class="def" transform="translate(860,20)">
+        <rect class="box" x="0" y="0" width="220" height="84"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">EffectDefinition</text>
+        <text class="at" x="11" y="42">type</text>
+        <text class="at" x="11" y="57">target</text>
+        <text class="at" x="11" y="72">parameters</text>
+      </g>
+
+      <g class="def" transform="translate(20,300)">
+        <rect class="box" x="0" y="0" width="220" height="114"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">StateMachineDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">name</text>
+        <text class="at" x="11" y="72">initialStateId</text>
+        <text class="at" x="11" y="87">states: State[]</text>
+        <text class="at" x="11" y="102">transitions: Transition[]</text>
+      </g>
+
+      <g class="def" transform="translate(300,300)">
+        <rect class="box" x="0" y="0" width="220" height="144"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">StateDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">name</text>
+        <text class="at" x="11" y="72">presentationId</text>
+        <text class="at" x="11" y="87">enabledActionIds</text>
+        <text class="at" x="11" y="102">entryEffects</text>
+        <text class="at" x="11" y="117">exitEffects</text>
+        <text class="at" x="11" y="132">properties</text>
+      </g>
+
+      <g class="def" transform="translate(580,300)">
+        <rect class="box" x="0" y="0" width="220" height="129"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">TransitionDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">fromStateId</text>
+        <text class="at" x="11" y="72">toStateId</text>
+        <text class="at" x="11" y="87">trigger</text>
+        <text class="at" x="11" y="102">conditions</text>
+        <text class="at" x="11" y="117">effects</text>
+      </g>
+
+      <path class="ln" d="M240,70 H300" marker-end="url(#f3a)"/>
+      <text class="el sm" x="270" y="63" text-anchor="middle">trigger 1</text>
+      <path class="ln" d="M240,95 H270 V210 H690 V119" marker-end="url(#f3a)"/>
+      <text class="el sm" x="450" y="204" text-anchor="middle">conditions *</text>
+      <path class="ln" d="M240,120 H255 V232 H970 V104" marker-end="url(#f3a)"/>
+      <text class="el sm" x="610" y="226" text-anchor="middle">effects *</text>
+
+      <path class="ln dash" d="M620,300 V270 H410 V119" marker-end="url(#f3a)"/>
+      <text class="el sm" x="500" y="264" text-anchor="middle">trigger</text>
+      <path class="ln dash" d="M660,300 V285 H750 V119" marker-end="url(#f3a)"/>
+      <text class="el sm" x="706" y="279" text-anchor="middle">conditions</text>
+      <path class="ln dash" d="M700,300 V288 H1010 V104" marker-end="url(#f3a)"/>
+      <text class="el sm" x="866" y="282" text-anchor="middle">effects</text>
+
+      <path class="ln" d="M240,357 H300" marker-start="url(#f3d)" marker-end="url(#f3a)"/>
+      <text class="el sm" x="272" y="350" text-anchor="middle">states 1..*</text>
+
+      <path class="ln" d="M240,395 H260 V470 H670 V429" marker-start="url(#f3d)" marker-end="url(#f3a)"/>
+      <text class="el sm" x="430" y="464" text-anchor="middle">transitions 1..*</text>
+
+      <path class="ln" d="M580,340 H520" marker-end="url(#f3a)"/>
+      <text class="el sm" x="550" y="333" text-anchor="middle">from / to &nbsp;2</text>
+
+      <path class="ln dash" d="M300,330 H288 V140 H240" marker-end="url(#f3a)"/>
+      <text class="el sm" x="270" y="248" text-anchor="middle" transform="rotate(-90 270 248)">enabledActionIds *</text>
+    </svg>
+    </div>
+    <figcaption>Solid lines: <span class="mono">ActionDefinition</span> owns its own
+    trigger, conditions and effects. Dashed: <span class="mono">TransitionDefinition</span>
+    uses exactly the same three building blocks &mdash; one grammar, two
+    applications.</figcaption>
+  </figure>
+
+  <div class="enums">
+    <div class="enum"><h4><em>EXAMPLES</em>StateDefinition</h4>
+      <div class="chips"><span>Inactive</span><span>Ready</span><span>Selected</span><span>Voting</span><span>Voted</span><span>Locked</span><span>Error</span></div></div>
+    <div class="enum"><h4><em>EXAMPLES</em>ActionDefinition</h4>
+      <div class="chips"><span>cast_vote</span><span>place_mark</span><span>select_item</span><span>open_information</span><span>change_mode</span></div></div>
+    <div class="enum acc"><h4><em>ENUMERATION</em>EffectType</h4>
+      <div class="chips"><span>changeState</span><span>changeMode</span><span>assignRole</span><span>updateVariable</span><span>emitEvent</span><span>startTimer</span><span>changePresentation</span><span>playSound</span><span>appendToLog</span></div></div>
+    <div class="enum"><h4><em>EXAMPLES</em>ConditionDefinition</h4>
+      <div class="chips"><span>kind = VotingToken</span><span>role = Voter</span><span>state = Ready</span><span>distance &lt; 50&nbsp;mm</span><span>mode = Voting</span><span>votes &lt; max</span><span>has Rotatable</span></div></div>
+  </div>
+
+  <div class="note">
+    <b>Example &middot; casting a vote</b>
+    Trigger: <span class="mono">physical.tapped</span>. Conditions: role is
+    <span class="mono">Voter</span>, state is <span class="mono">Ready</span>, the active
+    mode is <span class="mono">Voting</span>. Effects: emit
+    <span class="mono">vote.cast</span>, increment the count, set the state to
+    <span class="mono">Voted</span>. Those same three rules are also why a second tap
+    does nothing.
+  </div>
+</section>
+
+<!-- ============ 3. SESSION ============ -->
+<section id="session">
+  <div class="shead"><span class="snum">03</span><h2>Session, modes and roles</h2></div>
+  <div class="col">
+    <p>The <code>Session</code> is the only place with real state: the active mode, the
+    variables, the objects currently on the table, who holds which role, and the log. A
+    <code>ModeDefinition</code> temporarily trims the rest &mdash; which actions exist,
+    which roles take part, which table image applies. The same table with the same objects
+    behaves differently in <span class="mono">Voting</span> than in
+    <span class="mono">Discussion</span>.</p>
+    <p>With roles, the interesting detail is <code>overflowPolicy</code>: a physical table
+    cannot stop a ninth block appearing when there are eight voters. So the model has to
+    state explicitly what happens then, rather than designing the case away.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+    <svg class="d" viewBox="0 0 1110 460" role="img" style="min-width:1020px"
+         aria-label="Class diagram of the session layer: Session owns role assignments, settings, the event log and physical instances, and points at the active mode definition; a role assignment links a role definition to an object.">
+      <defs>
+        <marker id="f4a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="ah" d="M0.5,1 L8.5,5 L0.5,9"/>
+        </marker>
+        <marker id="f4d" viewBox="0 0 12 8" refX="1" refY="4" markerWidth="12" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="df" d="M0.5,4 L5.5,1.2 L10.5,4 L5.5,6.8 z"/>
+        </marker>
+      </defs>
+
+      <g class="run" transform="translate(300,20)">
+        <rect class="box" x="0" y="0" width="220" height="144"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">Session</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">activeModeId</text>
+        <text class="at" x="11" y="72">settings</text>
+        <text class="at" x="11" y="87">variables</text>
+        <text class="at" x="11" y="102">physicalInstances</text>
+        <text class="at" x="11" y="117">roleAssignments</text>
+        <text class="at" x="11" y="132">eventLog</text>
+      </g>
+
+      <g class="def" transform="translate(580,20)">
+        <rect class="box" x="0" y="0" width="220" height="174"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">ModeDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">name</text>
+        <text class="at" x="11" y="72">tablePresentationId</text>
+        <text class="at" x="11" y="87">enabledActionIds</text>
+        <text class="at" x="11" y="102">enabledRoleIds</text>
+        <text class="at" x="11" y="117">initialStateAssignments</text>
+        <text class="at" x="11" y="132">entryEffects</text>
+        <text class="at" x="11" y="147">exitEffects</text>
+        <text class="at" x="11" y="162">settings</text>
+      </g>
+
+      <g class="def" transform="translate(860,20)">
+        <rect class="box" x="0" y="0" width="220" height="129"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">Settings</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">scope: SettingScope</text>
+        <text class="at" x="11" y="72">key</text>
+        <text class="at" x="11" y="87">value</text>
+        <text class="at" x="11" y="102">defaultValue</text>
+        <text class="at" x="11" y="117">validation</text>
+      </g>
+
+      <g class="run" transform="translate(20,250)">
+        <rect class="box" x="0" y="0" width="220" height="129"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">RoleAssignment</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">roleId</text>
+        <text class="at" x="11" y="72">assigneeId</text>
+        <text class="at" x="11" y="87">assignedAt</text>
+        <text class="at" x="11" y="102">assignedBy</text>
+        <text class="at" x="11" y="117">status: AssignmentStatus</text>
+      </g>
+
+      <g class="ref" transform="translate(300,250)">
+        <rect class="box" x="0" y="0" width="220" height="40"/>
+        <text class="stereo" x="11" y="15">&#171;ELSEWHERE&#187;</text>
+        <text class="nm" x="11" y="31">PhysicalInstance</text>
+      </g>
+
+      <g class="def" transform="translate(580,250)">
+        <rect class="box" x="0" y="0" width="220" height="174"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">RoleDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">name</text>
+        <text class="at" x="11" y="72">permissions</text>
+        <text class="at" x="11" y="87">minimumAssignments</text>
+        <text class="at" x="11" y="102">maximumAssignments</text>
+        <text class="at" x="11" y="117">overflowPolicy</text>
+        <text class="at" x="11" y="132">eligiblePhysicalKinds</text>
+        <text class="at" x="11" y="147">stateMachineId</text>
+        <text class="at" x="11" y="162">properties</text>
+      </g>
+
+      <g class="run" transform="translate(860,250)">
+        <rect class="box" x="0" y="0" width="220" height="84"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">EventLog</text>
+        <text class="at" x="11" y="42">events: InteractionEvent[]</text>
+        <text class="at" x="11" y="57">append-only</text>
+        <text class="at" x="11" y="72">entry carries active mode</text>
+      </g>
+
+      <g class="ref" transform="translate(860,400)">
+        <rect class="box" x="0" y="0" width="220" height="40"/>
+        <text class="stereo" x="11" y="15">&#171;ELSEWHERE&#187;</text>
+        <text class="nm" x="11" y="31">InteractionEvent</text>
+      </g>
+
+      <path class="ln" d="M520,60 H580" marker-end="url(#f4a)"/>
+      <text class="el sm" x="550" y="53" text-anchor="middle">activeModeId</text>
+
+      <path class="ln" d="M520,120 H545 V215 H930 V149" marker-start="url(#f4d)" marker-end="url(#f4a)"/>
+      <text class="el sm" x="866" y="209" text-anchor="middle">settings *</text>
+
+      <path class="ln" d="M520,140 H560 V232 H1000 V250" marker-start="url(#f4d)" marker-end="url(#f4a)"/>
+      <text class="el sm" x="895" y="245" text-anchor="middle">eventLog 1</text>
+
+      <path class="ln" d="M300,110 H270 V210 H130 V250" marker-start="url(#f4d)" marker-end="url(#f4a)"/>
+      <text class="el sm" x="200" y="204" text-anchor="middle">roleAssignments *</text>
+
+      <path class="ln" d="M410,164 V250" marker-start="url(#f4d)" marker-end="url(#f4a)"/>
+      <text class="el sm" x="418" y="212" text-anchor="start">physicalInstances *</text>
+
+      <path class="ln" d="M240,310 H580" marker-end="url(#f4a)"/>
+      <text class="el sm" x="410" y="303" text-anchor="middle">roleId 1</text>
+
+      <path class="ln" d="M240,270 H300" marker-end="url(#f4a)"/>
+      <text class="el sm" x="270" y="263" text-anchor="middle">assignee</text>
+
+      <path class="ln" d="M690,194 V250" marker-end="url(#f4a)"/>
+      <text class="el sm" x="600" y="246" text-anchor="start">enabledRoleIds *</text>
+
+      <path class="ln" d="M970,334 V400" marker-start="url(#f4d)" marker-end="url(#f4a)"/>
+      <text class="el sm" x="978" y="370" text-anchor="start">events *</text>
+    </svg>
+    </div>
+    <figcaption>Session layer. <span class="mono">ModeDefinition</span> also points at
+    <span class="mono">ActionDefinition</span> (02) and
+    <span class="mono">TablePresentation</span> (04); those lines are left out here to
+    keep the diagram readable.</figcaption>
+  </figure>
+
+  <div class="enums">
+    <div class="enum"><h4><em>EXAMPLES</em>ModeDefinition</h4>
+      <div class="chips"><span>Setup</span><span>Free interaction</span><span>Voting</span><span>Discussion</span><span>Results</span><span>Paused</span></div></div>
+    <div class="enum"><h4><em>EXAMPLES</em>RoleDefinition</h4>
+      <div class="chips"><span>Voter</span><span>Moderator</span><span>Player</span><span>Observer</span><span>Controller</span></div></div>
+    <div class="enum acc"><h4><em>ENUMERATION</em>OverflowPolicy</h4>
+      <div class="chips"><span>Reject</span><span>Queue</span><span>ReplaceOldest</span><span>ReplaceLowestPriority</span><span>AllowTemporarily</span></div></div>
+    <div class="enum"><h4><em>ENUMERATION</em>AssignmentStatus</h4>
+      <div class="chips"><span>Active</span><span>Queued</span><span>Expired</span><span>Removed</span></div></div>
+    <div class="enum"><h4><em>ENUMERATION</em>SettingScope</h4>
+      <div class="chips"><span>Global</span><span>Session</span><span>Mode</span><span>Role</span><span>PhysicalKind</span></div></div>
+    <div class="enum"><h4><em>EXAMPLES</em>Settings</h4>
+      <div class="chips"><span>maxVoters</span><span>tapInterval</span><span>neighbourDistance</span><span>movementSensitivity</span><span>missingObjectTimeout</span><span>animationSpeed</span></div></div>
+  </div>
+
+  <div class="note">
+    <b>Why the log is append-only</b>
+    Every entry carries the mode it arose in. That makes five things possible with one
+    structure: debugging, analytics, replaying a session, undoing an action, and
+    accounting afterwards for how a vote came out.
+  </div>
+</section>
+
+<!-- ============ 4. PRESENTATION ============ -->
+<section id="presentation">
+  <div class="shead"><span class="snum">04</span><h2>What the table shows</h2></div>
+  <div class="col">
+    <p>The presentation layer describes image without behaviour. A
+    <code>PresentationDefinition</code> knows which renderer it uses and what it binds to
+    &mdash; position follows an object's pose, rotation follows its direction, colour
+    follows the state, visibility follows the mode. It does not know <em>why</em> that
+    state changed.</p>
+    <p>A <code>RegionDefinition</code> makes a piece of table meaningful: this is the
+    voting area, and it accepts only these kinds of object and these roles. That is where
+    the <span class="mono">enteredRegion</span> and
+    <span class="mono">exitedRegion</span> events the behaviour layer reacts to come
+    from.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+    <svg class="d" viewBox="0 0 1120 320" role="img" style="min-width:1020px"
+         aria-label="Class diagram of the presentation layer: TablePresentation owns regions and presentations, a region accepts certain kinds of object, a presentation binds to an object.">
+      <defs>
+        <marker id="f5a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="ah" d="M0.5,1 L8.5,5 L0.5,9"/>
+        </marker>
+        <marker id="f5d" viewBox="0 0 12 8" refX="1" refY="4" markerWidth="12" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+          <path class="df" d="M0.5,4 L5.5,1.2 L10.5,4 L5.5,6.8 z"/>
+        </marker>
+      </defs>
+
+      <g class="def" transform="translate(20,60)">
+        <rect class="box" x="0" y="0" width="220" height="129"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">TablePresentation</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">background</text>
+        <text class="at" x="11" y="72">regions: Region[]</text>
+        <text class="at" x="11" y="87">layers</text>
+        <text class="at" x="11" y="102">physicalPresentations</text>
+        <text class="at" x="11" y="117">globalPresentations</text>
+      </g>
+
+      <g class="def" transform="translate(300,20)">
+        <rect class="box" x="0" y="0" width="220" height="174"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">RegionDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">name</text>
+        <text class="at" x="11" y="72">shape</text>
+        <text class="at" x="11" y="87">position</text>
+        <text class="at" x="11" y="102">size</text>
+        <text class="at" x="11" y="117">acceptedPhysicalKinds</text>
+        <text class="at" x="11" y="132">acceptedRoles</text>
+        <text class="at" x="11" y="147">presentationId</text>
+        <text class="at" x="11" y="162">properties</text>
+      </g>
+
+      <g class="def" transform="translate(600,20)">
+        <rect class="box" x="0" y="0" width="220" height="144"/>
+        <rect class="hdr" x="0" y="0" width="220" height="26"/>
+        <text class="nm" x="11" y="17.5">PresentationDefinition</text>
+        <text class="at" x="11" y="42">id</text>
+        <text class="at" x="11" y="57">name</text>
+        <text class="at" x="11" y="72">renderer: Renderer</text>
+        <text class="at" x="11" y="87">layer</text>
+        <text class="at" x="11" y="102">assets</text>
+        <text class="at" x="11" y="117">bindings</text>
+        <text class="at" x="11" y="132">properties</text>
+      </g>
+
+      <g class="ref" transform="translate(880,110)">
+        <rect class="box" x="0" y="0" width="220" height="40"/>
+        <text class="stereo" x="11" y="15">&#171;ELSEWHERE&#187;</text>
+        <text class="nm" x="11" y="31">PhysicalInstance</text>
+      </g>
+
+      <g class="ref" transform="translate(300,250)">
+        <rect class="box" x="0" y="0" width="220" height="40"/>
+        <text class="stereo" x="11" y="15">&#171;ELSEWHERE&#187;</text>
+        <text class="nm" x="11" y="31">PhysicalKindDefinition</text>
+      </g>
+
+      <path class="ln" d="M240,100 H300" marker-start="url(#f5d)" marker-end="url(#f5a)"/>
+      <text class="el sm" x="272" y="93" text-anchor="middle">regions *</text>
+
+      <path class="ln" d="M130,189 V300 H710 V164" marker-start="url(#f5d)" marker-end="url(#f5a)"/>
+      <text class="el sm" x="615" y="294" text-anchor="middle">physical- &amp; globalPresentations *</text>
+
+      <path class="ln" d="M520,90 H600" marker-end="url(#f5a)"/>
+      <text class="el sm" x="560" y="83" text-anchor="middle">presentationId</text>
+
+      <path class="ln" d="M820,130 H880" marker-end="url(#f5a)"/>
+      <text class="el sm" x="850" y="123" text-anchor="middle">binds to</text>
+
+      <path class="ln" d="M410,194 V250" marker-end="url(#f5a)"/>
+      <text class="el sm" x="418" y="226" text-anchor="start">acceptedPhysicalKinds *</text>
+    </svg>
+    </div>
+    <figcaption>Presentation layer. No arrow runs from here back into behaviour: the image
+    reads the state, it does not change it.</figcaption>
+  </figure>
+
+  <div class="enums">
+    <div class="enum"><h4><em>ENUMERATION</em>Renderer</h4>
+      <div class="chips"><span>Shape</span><span>Image</span><span>Text</span><span>Animation</span><span>Video</span><span>CustomComponent</span></div></div>
+    <div class="enum acc"><h4><em>EXAMPLES</em>Binding</h4>
+      <div class="chips"><span>position &#8592; pose.position</span><span>rotation &#8592; pose.direction</span><span>text &#8592; voteCount</span><span>color &#8592; currentState</span><span>visible &#8592; activeMode</span></div></div>
+    <div class="enum"><h4><em>EXAMPLES</em>RegionDefinition</h4>
+      <div class="chips"><span>Voting area</span><span>Player area</span><span>Discard area</span><span>Information area</span><span>Start area</span></div></div>
+  </div>
+</section>
+
+<!-- ============ 5. EXTENSION ============ -->
+<section id="extension">
+  <div class="shead"><span class="snum">05</span><h2>Extending without touching the core</h2></div>
+  <div class="col">
+    <p>The last part is not a class but an agreement. Wherever <code>properties</code>
+    appears, a programme may store its own keys: a voting application puts
+    <span class="mono">voteWeight</span> there, a board game
+    <span class="mono">healthPoints</span>, a museum installation
+    <span class="mono">language</span>, a planning tool
+    <span class="mono">taskId</span>. The core does not move with it.</p>
+  </div>
+
+  <figure>
+    <div class="scroll">
+    <svg class="d" viewBox="0 0 900 230" role="img" style="min-width:820px"
+         aria-label="ExtensionProperties is a mixin attached to eight entities: session, physical kind definition, physical instance, role definition, state definition, mode definition, presentation definition and interaction event.">
+      <g class="def" transform="translate(350,90)">
+        <rect class="box" x="0" y="0" width="200" height="80"/>
+        <rect class="hdr" x="0" y="0" width="200" height="38"/>
+        <text class="stereo" x="11" y="16">&#171;MIXIN&#187;</text>
+        <text class="nm" x="11" y="31">ExtensionProperties</text>
+        <text class="at" x="11" y="60">key &#8594; value</text>
+      </g>
+
+      <path class="ln dash" d="M330,64 L350,120"/>
+      <path class="ln dash" d="M330,104 L350,126"/>
+      <path class="ln dash" d="M330,144 L350,134"/>
+      <path class="ln dash" d="M330,184 L350,140"/>
+      <text class="nm" x="325" y="68" text-anchor="end" fill="var(--ink-2)">Session</text>
+      <text class="nm" x="325" y="108" text-anchor="end" fill="var(--ink-2)">PhysicalKindDefinition</text>
+      <text class="nm" x="325" y="148" text-anchor="end" fill="var(--ink-2)">PhysicalInstance</text>
+      <text class="nm" x="325" y="188" text-anchor="end" fill="var(--ink-2)">RoleDefinition</text>
+
+      <path class="ln dash" d="M570,64 L550,120"/>
+      <path class="ln dash" d="M570,104 L550,126"/>
+      <path class="ln dash" d="M570,144 L550,134"/>
+      <path class="ln dash" d="M570,184 L550,140"/>
+      <text class="nm" x="575" y="68" text-anchor="start" fill="var(--ink-2)">StateDefinition</text>
+      <text class="nm" x="575" y="108" text-anchor="start" fill="var(--ink-2)">ModeDefinition</text>
+      <text class="nm" x="575" y="148" text-anchor="start" fill="var(--ink-2)">PresentationDefinition</text>
+      <text class="nm" x="575" y="188" text-anchor="start" fill="var(--ink-2)">InteractionEvent</text>
+    </svg>
+    </div>
+    <figcaption>Eight attachment points. Adding something here breaks no existing
+    programme; adding a core field does.</figcaption>
+  </figure>
+</section>
+
+<footer>
+  <p>25 entities &middot; 5 layers &middot; UML class notation: filled diamond =
+  composition, open arrow = reference, dashed = loose coupling or type use, numbers =
+  multiplicity.</p>
+</footer>
+
+</div>
+</body>
+</html>

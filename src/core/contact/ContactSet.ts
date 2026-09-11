@@ -1,4 +1,4 @@
-import type { ContactPoint } from "./ContactPoint";
+import type { SensedContact } from "./SensedContact";
 
 /* The contacts believed to belong to one object.
  *
@@ -6,6 +6,12 @@ import type { ContactPoint } from "./ContactPoint";
  * three feet the matcher decided are one puck. It is the input to the
  * whole base: `Position` reads it for the middle point, `Direction`
  * for the nose, and everything else derives from those two.
+ *
+ * The points are `SensedContact`s rather than `ContactPoint`s, and
+ * that is the tier boundary showing: whether a touch is new or gone is
+ * a fact about the frame it arrived in, and nothing that measures a
+ * shape has any use for it. A trait that needed it would be reaching
+ * across the boundary, and would have to say so.
  *
  * Deliberately not a class and deliberately carrying no identity. Which
  * object this set belongs to is decided above, in phase 5, and putting
@@ -15,5 +21,5 @@ import type { ContactPoint } from "./ContactPoint";
  */
 export type ContactSet = {
     readonly at: number;
-    readonly points: readonly ContactPoint[];
+    readonly points: readonly SensedContact[];
 };

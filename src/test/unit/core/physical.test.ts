@@ -24,6 +24,7 @@ import {
     SystemPhysical,
     affordanceOf,
     isTangible,
+    physicalInstanceOf,
 } from "../../../core/physical";
 import {
     AccelerationPolicy,
@@ -35,36 +36,39 @@ import {
     PxPerMMEstimator,
     PxPerMMPolicy,
     RotatePolicy,
-    TailPolicy,
-    TapPolicy,
+    MotionHistoryPolicy,
 } from "../../../core/base";
-import type { ContactPoint } from "../../../core/contact";
+import type { SensedContact } from "../../../core/contact";
 import type {
     BasePolicies,
     KindId,
     PhysicalId,
-    PhysicalKind,
+    PhysicalKindDefinition,
+    PhysicalSignature,
+    SignatureId,
 } from "../../../core/physical";
 import type { RegistryEvent } from "../../../core/physical";
+import type { RoleId } from "../../../core/session";
+import type { StateId } from "../../../core/behaviour";
 
 const POLICIES: BasePolicies = {
     position: new PositionPolicy(),
     direction: new DirectionPolicy(),
     move: new MovePolicy(),
     rotate: new RotatePolicy(),
-    tap: new TapPolicy(),
-    tail: new TailPolicy(),
+    motionHistory: new MotionHistoryPolicy(),
     acceleration: new AccelerationPolicy(),
 };
 
 const kindId = (s: string): KindId => s as KindId;
 const physicalId = (s: string): PhysicalId => s as PhysicalId;
+const signatureId = (s: string): SignatureId => s as SignatureId;
 
-const TRIAD: PhysicalKind = {
-    id: kindId("triad-a"),
-    label: "Triad A",
+const TRIAD_SIGNATURE: PhysicalSignature = {
+    id: signatureId("triad-a/feet"),
     family: "triad",
-    footprint: footprintFrom(
+    contactCount: 3,
+    geometry: footprintFrom(
         [0, 132, 228].map((deg) => {
             const rad = (deg * Math.PI) / 180;
             return { x: 40 * Math.cos(rad), y: 40 * Math.sin(rad) };
@@ -72,6 +76,15 @@ const TRIAD: PhysicalKind = {
         80,
         new CentroidSolver(),
     ),
+    distanceToleranceMM: 5,
+    orientationRule: "free",
+    scaleRule: "fixed",
+};
+
+const TRIAD: PhysicalKindDefinition = {
+    id: kindId("triad-a"),
+    label: "Triad A",
+    signatures: [TRIAD_SIGNATURE],
     affordances: [new Apertured(0.58)],
     legacy: false,
 };
@@ -79,7 +92,7 @@ const TRIAD: PhysicalKind = {
 const factory = (): BaseFactory =>
     new BaseFactory(new PxPerMMEstimator(4, new PxPerMMPolicy()), POLICIES);
 
-const feet = (cx: number, cy: number, at: number): ContactPoint[] =>
+const feet = (cx: number, cy: number, at: number): SensedContact[] =>
     [0, 132, 228].map((off, i) => {
         const rad = (off * Math.PI) / 180;
         return {
@@ -92,12 +105,17 @@ const feet = (cx: number, cy: number, at: number): ContactPoint[] =>
         };
     });
 
-const makePuck = (id: string, kind: PhysicalKind = TRIAD): OpenPuck =>
+const makePuck = (
+    id: string,
+    kind: PhysicalKindDefinition = TRIAD,
+    signature: PhysicalSignature = kind.signatures[0],
+): OpenPuck =>
     new OpenPuck(
         physicalId(id),
         kind,
+        signature,
         new Presence(new PresencePolicy()),
-        factory().create(kind),
+        factory().create(signature),
     );
 
 describe("Presence", () => {
@@ -180,12 +198,13 @@ describe("OpenPuck", () => {
 
 describe("FilledPuck", () => {
     it("owns its whole face", () => {
-        const kind: PhysicalKind = { ...TRIAD, affordances: [] };
+        const kind: PhysicalKindDefinition = { ...TRIAD, affordances: [] };
         const puck = new FilledPuck(
             physicalId("f1"),
             kind,
+            TRIAD_SIGNATURE,
             new Presence(new PresencePolicy()),
-            factory().create(kind),
+            factory().create(TRIAD_SIGNATURE),
         );
         puck.update(0, { at: 0, points: feet(400, 300, 0) });
         expect(puck.contains({ x: 400 + 120, y: 300 })).toBe(true);
@@ -195,7 +214,7 @@ describe("FilledPuck", () => {
 
 describe("the duo", () => {
     it("nests and separates from both sides", () => {
-        const kind: PhysicalKind = {
+        const kind: PhysicalKindDefinition = {
             ...TRIAD,
             id: kindId("duo"),
             affordances: [new Nesting(), new Nestable(true)],
@@ -203,14 +222,16 @@ describe("the duo", () => {
         const host = new DuoHost(
             physicalId("host"),
             kind,
+            TRIAD_SIGNATURE,
             new Presence(new PresencePolicy()),
-            factory().create(kind),
+            factory().create(TRIAD_SIGNATURE),
         );
         const insert = new DuoInsert(
             physicalId("insert"),
             kind,
+            TRIAD_SIGNATURE,
             new Presence(new PresencePolicy()),
-            factory().create(kind),
+            factory().create(TRIAD_SIGNATURE),
         );
         insert.nestInto(host);
         expect(host.hasInsert).toBe(true);
@@ -222,16 +243,19 @@ describe("the duo", () => {
 });
 
 describe("BaseFactory", () => {
-    it("refuses a coded kind, which has no recogniser yet", () => {
-        const coded: PhysicalKind = { ...TRIAD, family: "coded" };
+    it("refuses a coded signature, which has no recogniser yet", () => {
+        const coded: PhysicalSignature = {
+            ...TRIAD_SIGNATURE,
+            family: "coded",
+        };
         expect(() => factory().create(coded)).toThrow(/coded/);
     });
 
     it("shares one screen scale across every physical", () => {
         const shared = new PxPerMMEstimator(4, new PxPerMMPolicy());
         const f = new BaseFactory(shared, POLICIES);
-        const a = f.create(TRIAD);
-        const b = f.create(TRIAD);
+        const a = f.create(TRIAD_SIGNATURE);
+        const b = f.create(TRIAD_SIGNATURE);
         expect(a.pxPerMM).toBe(b.pxPerMM);
     });
 });
@@ -249,7 +273,7 @@ describe("KindRegistry", () => {
         reg.register({
             ...TRIAD,
             id: kindId("ring-a"),
-            family: "ring",
+            signatures: [{ ...TRIAD_SIGNATURE, family: "ring" }],
             legacy: true,
         });
         expect(reg.all()).toHaveLength(2);
@@ -330,8 +354,9 @@ describe("the physical tree", () => {
         const sim = new SimulatedPuck(
             physicalId("sim"),
             TRIAD,
+            TRIAD_SIGNATURE,
             new Presence(new PresencePolicy()),
-            factory().create(TRIAD),
+            factory().create(TRIAD_SIGNATURE),
         );
         expect(sim.hasPose).toBe(true);
         expect(sim.virtual).toBe(true);
@@ -346,5 +371,60 @@ describe("the physical tree", () => {
         );
         expect(table.hasPose).toBe(false);
         expect(isTangible(table)).toBe(false);
+    });
+});
+
+describe("PhysicalInstance", () => {
+    it("flattens a puck into the record everything above reads", () => {
+        const puck = makePuck("i1");
+        puck.update(0, { at: 0, points: feet(400, 300, 0) });
+        const instance = physicalInstanceOf(puck, 0);
+        expect(instance.id).toBe("i1");
+        expect(instance.kindId).toBe("triad-a");
+        expect(instance.signatureId).toBe("triad-a/feet");
+        expect(instance.status).toBe("detected");
+        expect(instance.firstSeenAt).toBe(0);
+        /* The smoothed centre, not the raw one: `Move` exists because
+           a solved centre carries the sensor's noise, and handing the
+           raw value up would have every consumer filtering it again. */
+        expect(instance.pose?.position).toEqual(puck.base.move.snapshot().to);
+        /* Sized from the kind and the table's scale, never from the
+           measurement: 80 mm at four pixels to the millimetre. */
+        expect(instance.pose?.sizePX).toBeCloseTo(320, 6);
+    });
+
+    it("has no pose for something that is not on the glass", () => {
+        const table = new SystemPhysical(
+            physicalId("table"),
+            TRIAD,
+            new Presence(new PresencePolicy()),
+        );
+        const instance = physicalInstanceOf(table, 0);
+        expect(instance.pose).toBeNull();
+        expect(instance.motion).toBeNull();
+        expect(instance.status).toBe("removed");
+    });
+
+    it("carries the role and state the table assigned", () => {
+        /* Assigned rather than measured, and through `assign` alone.
+           When effects arrive they are the only caller. */
+        const puck = makePuck("i2");
+        puck.assign({
+            roleId: "voter" as RoleId,
+            currentStateId: "ready" as StateId,
+            properties: { votes: 1 },
+        });
+        const instance = physicalInstanceOf(puck, 0);
+        expect(instance.roleId).toBe("voter");
+        expect(instance.currentStateId).toBe("ready");
+        expect(instance.properties.votes).toBe(1);
+    });
+
+    it("reports a dropped foot as missing while the puck stays placed", () => {
+        const puck = makePuck("i3");
+        puck.update(0, { at: 0, points: feet(400, 300, 0) });
+        puck.update(16, { at: 16, points: [] });
+        expect(puck.presence.state).toBe("placed");
+        expect(physicalInstanceOf(puck, 16).status).toBe("missing");
     });
 });

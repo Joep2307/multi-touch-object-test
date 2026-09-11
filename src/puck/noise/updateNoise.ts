@@ -56,11 +56,11 @@ export function updateNoise(points: TouchPoint[], now: number): void {
      anchors are recentred on. */
     noise.feet.forEach((f, i) => {
         const j = pick[i];
-        if (j < 0) {
+        const p = j === undefined || j < 0 ? undefined : pts[j];
+        if (!p) {
             f.miss++;
             return;
         }
-        const p = pts[j];
         f.n++;
         f.sx += p.x;
         f.sy += p.y;
@@ -68,18 +68,20 @@ export function updateNoise(points: TouchPoint[], now: number): void {
         f.syy += p.y * p.y;
     });
     if (noise.phase === "hold") {
-        for (let i = 0; i < pts.length; i++)
-            if (!pick.includes(i))
-                noise.feet.push({
-                    ax: pts[i].x,
-                    ay: pts[i].y,
-                    n: 0,
-                    sx: 0,
-                    sy: 0,
-                    sxx: 0,
-                    syy: 0,
-                    miss: 0,
-                });
+        for (let i = 0; i < pts.length; i++) {
+            const p = pts[i];
+            if (!p || pick.includes(i)) continue;
+            noise.feet.push({
+                ax: p.x,
+                ay: p.y,
+                n: 0,
+                sx: 0,
+                sy: 0,
+                sxx: 0,
+                syy: 0,
+                miss: 0,
+            });
+        }
         if (now - noise.t0 >= NOISE.HOLD_MS) armNoise(now);
         return;
     }

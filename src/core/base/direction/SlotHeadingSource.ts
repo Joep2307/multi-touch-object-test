@@ -1,6 +1,6 @@
 import { HeadingSource } from "./HeadingSource";
 import { FULL_TURN_DEG } from "./constants";
-import type { ContactPoint } from "../../contact/ContactPoint";
+import type { SensedContact } from "../../contact/SensedContact";
 import type { DirectionPolicy } from "./DirectionPolicy";
 import type { Vec2 } from "../Vec2";
 
@@ -46,7 +46,7 @@ export class SlotHeadingSource extends HeadingSource {
     }
 
     override heading(
-        points: readonly ContactPoint[],
+        points: readonly SensedContact[],
         centre: Vec2,
     ): { headingDeg: number; reference: Vec2 } | null {
         if (this.#occupied.length === 0 || points.length === 0) return null;

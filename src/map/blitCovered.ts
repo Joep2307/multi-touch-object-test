@@ -37,15 +37,16 @@ export function blitCovered(
     if (kids.some(Boolean)) {
         const hw = rw / 2,
             hh = rh / 2,
-            off = [
+            off: readonly (readonly [number, number])[] = [
                 [0, 0],
                 [hw, 0],
                 [0, hh],
                 [hw, hh],
             ];
         kids.forEach((k, i) => {
-            if (k)
-                g.drawImage(k, rx + off[i][0], ry + off[i][1], hw + 1, hh + 1);
+            const at = off[i];
+            if (k && at)
+                g.drawImage(k, rx + at[0], ry + at[1], hw + 1, hh + 1);
         });
         return kids.every(Boolean);
     }

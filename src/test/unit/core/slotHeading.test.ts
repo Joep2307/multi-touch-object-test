@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { DirectionPolicy, SlotHeadingSource } from "../../../core/base";
-import type { ContactPoint } from "../../../core/contact";
+import type { SensedContact } from "../../../core/contact";
 
 const SLOTS = 12;
 const WIDTH = 360 / SLOTS;
@@ -15,7 +15,7 @@ const FILLED = [0, 2, 5, 9];
 const CODE = FILLED.reduce((mask, slot) => mask | (1 << slot), 0);
 const CENTRE = { x: 400, y: 300 };
 
-const at = (degrees: readonly number[]): ContactPoint[] =>
+const at = (degrees: readonly number[]): SensedContact[] =>
     degrees.map((deg, i) => {
         const rad = (deg * Math.PI) / 180;
         return {
@@ -28,7 +28,7 @@ const at = (degrees: readonly number[]): ContactPoint[] =>
         };
     });
 
-const feetAt = (phase: number, jitterDeg = 0): ContactPoint[] =>
+const feetAt = (phase: number, jitterDeg = 0): SensedContact[] =>
     at(
         FILLED.map(
             (slot, i) => phase + slot * WIDTH + Math.sin(i * 7.3) * jitterDeg,

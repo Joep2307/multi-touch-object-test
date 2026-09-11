@@ -103,7 +103,7 @@ export async function recorderSession(
     const finish = () => {
         closeMic();
         if (!toBackend && kept.length)
-            say.audio(new Blob(kept, { type: kept[0].type || "audio/webm" }));
+            say.audio(new Blob(kept, { type: kept[0]?.type || "audio/webm" }));
         recorderDone();
     };
 

@@ -1,0 +1,680 @@
+{
+  "id": "participation",
+  "name": "Participatietafel",
+  "version": "1.0.0",
+  "initialModeId": "Setup",
+  "externalEvents": [
+    "custom.menu.capture",
+    "custom.menu.openNote",
+    "custom.menu.startVoting",
+    "custom.menu.startDiscussion",
+    "custom.menu.showResults",
+    "custom.menu.pause",
+    "custom.menu.resume"
+  ],
+  "kinds": [
+    {
+      "id": "puck",
+      "label": "tpl.puck",
+      "signatures": [
+        {
+          "id": "puck/triad",
+          "family": "triad",
+          "contactCount": 3,
+          "geometry": {
+            "expectedCount": 3,
+            "footRadiusMM": 34.6,
+            "footRadiusSpreadMM": 0.95,
+            "outerDiameterMM": 80
+          },
+          "distanceToleranceMM": 5,
+          "orientationRule": "free",
+          "scaleRule": "fixed"
+        }
+      ],
+      "affordances": [],
+      "defaultRoleId": "Participant",
+      "stateMachineId": "puck",
+      "presentationId": "puck.ring",
+      "legacy": false
+    }
+  ],
+  "gestures": [
+    {
+      "id": "gesture.doubleTap",
+      "gesture": "doubleTap",
+      "maxDurationMS": 300,
+      "maxDistancePX": 18,
+      "maxGapMS": 400
+    },
+    {
+      "id": "gesture.tap",
+      "gesture": "tap",
+      "maxDurationMS": 300,
+      "maxDistancePX": 18
+    },
+    {
+      "id": "gesture.hold",
+      "gesture": "hold",
+      "minDurationMS": 700,
+      "maxDistancePX": 18
+    },
+    {
+      "id": "gesture.rotate",
+      "gesture": "rotate",
+      "minRotationDeg": 30
+    }
+  ],
+  "actions": [
+    {
+      "id": "place_mark",
+      "name": "action.placeMark",
+      "trigger": {
+        "eventType": "physical.detected",
+        "sourceFilter": "Participant"
+      },
+      "conditions": [
+        {
+          "type": "mode",
+          "operator": "in",
+          "value": ["FreeInteraction", "Discussion"]
+        }
+      ],
+      "effects": [
+        {
+          "type": "emitEvent",
+          "eventType": "custom.mark.placed"
+        },
+        {
+          "type": "updateVariable",
+          "key": "marks",
+          "add": 1
+        },
+        {
+          "type": "appendToLog",
+          "note": "mark placed"
+        }
+      ]
+    },
+    {
+      "id": "open_note",
+      "name": "action.openNote",
+      "trigger": {
+        "eventType": "custom.menu.openNote"
+      },
+      "conditions": [
+        {
+          "type": "role",
+          "operator": "eq",
+          "value": "Participant"
+        }
+      ],
+      "effects": [
+        {
+          "type": "changePresentation",
+          "target": "self",
+          "presentationId": "puck.ring.open"
+        },
+        {
+          "type": "emitEvent",
+          "eventType": "custom.note.opened"
+        }
+      ]
+    },
+    {
+      "id": "capture",
+      "name": "action.capture",
+      "trigger": {
+        "eventType": "custom.menu.capture"
+      },
+      "conditions": [
+        {
+          "type": "role",
+          "operator": "eq",
+          "value": "Participant"
+        }
+      ],
+      "effects": [
+        {
+          "type": "playSound",
+          "sound": "shutter"
+        },
+        {
+          "type": "appendToLog",
+          "note": "capture made"
+        }
+      ]
+    },
+    {
+      "id": "cast_vote",
+      "name": "action.castVote",
+      "trigger": {
+        "eventType": "physical.tapped"
+      },
+      "conditions": [
+        {
+          "type": "role",
+          "operator": "eq",
+          "value": "Participant"
+        },
+        {
+          "type": "mode",
+          "operator": "eq",
+          "value": "Voting"
+        },
+        {
+          "type": "region",
+          "operator": "has",
+          "value": "votingArea"
+        }
+      ],
+      "effects": [
+        {
+          "type": "emitEvent",
+          "eventType": "custom.vote.cast"
+        },
+        {
+          "type": "updateVariable",
+          "key": "votes",
+          "add": 1
+        },
+        {
+          "type": "playSound",
+          "sound": "vote"
+        }
+      ]
+    },
+    {
+      "id": "start_voting",
+      "name": "action.startVoting",
+      "trigger": {
+        "eventType": "custom.menu.startVoting"
+      },
+      "conditions": [
+        {
+          "type": "role",
+          "operator": "eq",
+          "value": "Moderator"
+        }
+      ],
+      "effects": [
+        {
+          "type": "changeMode",
+          "modeId": "Voting"
+        }
+      ]
+    },
+    {
+      "id": "start_discussion",
+      "name": "action.startDiscussion",
+      "trigger": {
+        "eventType": "custom.menu.startDiscussion"
+      },
+      "conditions": [
+        {
+          "type": "role",
+          "operator": "eq",
+          "value": "Moderator"
+        }
+      ],
+      "effects": [
+        {
+          "type": "changeMode",
+          "modeId": "Discussion"
+        }
+      ]
+    },
+    {
+      "id": "show_results",
+      "name": "action.showResults",
+      "trigger": {
+        "eventType": "custom.menu.showResults"
+      },
+      "conditions": [
+        {
+          "type": "role",
+          "operator": "eq",
+          "value": "Moderator"
+        }
+      ],
+      "effects": [
+        {
+          "type": "changeMode",
+          "modeId": "Results"
+        }
+      ]
+    },
+    {
+      "id": "pause",
+      "name": "action.pause",
+      "trigger": {
+        "eventType": "custom.menu.pause"
+      },
+      "conditions": [
+        {
+          "type": "role",
+          "operator": "eq",
+          "value": "Moderator"
+        }
+      ],
+      "effects": [
+        {
+          "type": "changeMode",
+          "modeId": "Paused"
+        }
+      ]
+    },
+    {
+      "id": "resume",
+      "name": "action.resume",
+      "trigger": {
+        "eventType": "custom.menu.resume"
+      },
+      "conditions": [
+        {
+          "type": "role",
+          "operator": "eq",
+          "value": "Moderator"
+        }
+      ],
+      "effects": [
+        {
+          "type": "changeMode",
+          "modeId": "FreeInteraction"
+        }
+      ]
+    }
+  ],
+  "stateMachines": [
+    {
+      "id": "puck",
+      "name": "Participant puck",
+      "initialStateId": "Ready",
+      "states": [
+        {
+          "id": "Ready",
+          "name": "state.ready",
+          "presentationId": "puck.ring",
+          "enabledActionIds": ["place_mark", "open_note", "capture"],
+          "entryEffects": [],
+          "exitEffects": []
+        },
+        {
+          "id": "Voting",
+          "name": "state.voting",
+          "presentationId": "puck.ring.voting",
+          "enabledActionIds": ["cast_vote"],
+          "entryEffects": [],
+          "exitEffects": []
+        },
+        {
+          "id": "Voted",
+          "name": "state.voted",
+          "presentationId": "puck.ring.voted",
+          "enabledActionIds": ["open_note"],
+          "entryEffects": [
+            {
+              "type": "appendToLog",
+              "note": "voted"
+            }
+          ],
+          "exitEffects": []
+        }
+      ],
+      "transitions": [
+        {
+          "id": "puck.readyToVoting",
+          "fromStateId": "Ready",
+          "toStateId": "Voting",
+          "trigger": {
+            "eventType": "physical.enteredRegion"
+          },
+          "conditions": [
+            {
+              "type": "mode",
+              "operator": "eq",
+              "value": "Voting"
+            }
+          ],
+          "effects": []
+        },
+        {
+          "id": "puck.votingToVoted",
+          "fromStateId": "Voting",
+          "toStateId": "Voted",
+          "trigger": {
+            "eventType": "custom.vote.cast"
+          },
+          "conditions": [],
+          "effects": []
+        },
+        {
+          "id": "puck.votedToReady",
+          "fromStateId": "Voted",
+          "toStateId": "Ready",
+          "trigger": {
+            "eventType": "mode.changed"
+          },
+          "conditions": [],
+          "effects": []
+        }
+      ]
+    }
+  ],
+  "modes": [
+    {
+      "id": "Setup",
+      "name": "mode.setup",
+      "tablePresentationId": "table.plain",
+      "enabledActionIds": ["start_voting", "start_discussion", "resume"],
+      "enabledRoleIds": ["Moderator"],
+      "entryEffects": [],
+      "exitEffects": []
+    },
+    {
+      "id": "FreeInteraction",
+      "name": "mode.free",
+      "tablePresentationId": "table.plain",
+      "enabledActionIds": [
+        "place_mark",
+        "open_note",
+        "capture",
+        "start_voting",
+        "start_discussion",
+        "pause"
+      ],
+      "enabledRoleIds": ["Participant", "Moderator"],
+      "initialStateAssignments": {
+        "puck": "Ready"
+      },
+      "entryEffects": [],
+      "exitEffects": []
+    },
+    {
+      "id": "Voting",
+      "name": "mode.voting",
+      "tablePresentationId": "table.voting",
+      "enabledActionIds": ["cast_vote", "show_results", "pause"],
+      "enabledRoleIds": ["Participant", "Moderator"],
+      "initialStateAssignments": {
+        "puck": "Ready"
+      },
+      "entryEffects": [
+        {
+          "type": "updateVariable",
+          "key": "votes",
+          "set": 0
+        },
+        {
+          "type": "appendToLog",
+          "note": "voting opened"
+        }
+      ],
+      "exitEffects": [
+        {
+          "type": "appendToLog",
+          "note": "voting closed"
+        }
+      ]
+    },
+    {
+      "id": "Discussion",
+      "name": "mode.discussion",
+      "tablePresentationId": "table.plain",
+      "enabledActionIds": [
+        "place_mark",
+        "open_note",
+        "capture",
+        "show_results",
+        "pause"
+      ],
+      "enabledRoleIds": ["Participant", "Moderator"],
+      "initialStateAssignments": {
+        "puck": "Ready"
+      },
+      "entryEffects": [],
+      "exitEffects": []
+    },
+    {
+      "id": "Results",
+      "name": "mode.results",
+      "tablePresentationId": "table.plain",
+      "enabledActionIds": ["start_discussion", "resume", "pause"],
+      "enabledRoleIds": ["Moderator"],
+      "entryEffects": [],
+      "exitEffects": []
+    },
+    {
+      "id": "Paused",
+      "name": "mode.paused",
+      "tablePresentationId": "table.plain",
+      "enabledActionIds": ["resume"],
+      "enabledRoleIds": ["Moderator"],
+      "entryEffects": [],
+      "exitEffects": []
+    }
+  ],
+  "roles": [
+    {
+      "id": "Participant",
+      "name": "role.participant",
+      "overflowPolicy": "allowTemporarily",
+      "eligiblePhysicalKinds": ["puck"]
+    },
+    {
+      "id": "Moderator",
+      "name": "role.moderator",
+      "maximumAssignments": 1,
+      "overflowPolicy": "reject",
+      "eligiblePhysicalKinds": ["puck"]
+    }
+  ],
+  "settings": [
+    {
+      "id": "set.tap",
+      "scope": "global",
+      "key": "tapMaxMS",
+      "value": 300
+    },
+    {
+      "id": "set.hold",
+      "scope": "global",
+      "key": "holdMinMS",
+      "value": 700
+    },
+    {
+      "id": "set.near",
+      "scope": "global",
+      "key": "neighbourDistanceMM",
+      "value": 60
+    }
+  ],
+  "presentations": [
+    {
+      "id": "puck.ring",
+      "name": "presentation.puckRing",
+      "renderer": "shape",
+      "layer": 20,
+      "bindings": [
+        {
+          "target": "position",
+          "source": "pose.position"
+        },
+        {
+          "target": "rotation",
+          "source": "pose.direction"
+        },
+        {
+          "target": "scale",
+          "source": "pose.size"
+        },
+        {
+          "target": "color",
+          "source": "currentState",
+          "map": {
+            "Ready": "#8fbf6f",
+            "Voting": "#d8a13a",
+            "Voted": "#c05a3e"
+          },
+          "fallback": "#9aa19a"
+        },
+        {
+          "target": "opacity",
+          "source": "status",
+          "map": {
+            "detected": 1,
+            "missing": 0.4
+          },
+          "fallback": 0
+        }
+      ]
+    },
+    {
+      "id": "puck.ring.open",
+      "name": "presentation.puckRingOpen",
+      "renderer": "shape",
+      "layer": 21,
+      "bindings": [
+        {
+          "target": "position",
+          "source": "pose.position"
+        },
+        {
+          "target": "color",
+          "source": "currentState",
+          "fallback": "#ffffff"
+        }
+      ]
+    },
+    {
+      "id": "puck.ring.voting",
+      "name": "presentation.puckRingVoting",
+      "renderer": "shape",
+      "layer": 20,
+      "bindings": [
+        {
+          "target": "position",
+          "source": "pose.position"
+        },
+        {
+          "target": "rotation",
+          "source": "pose.direction"
+        },
+        {
+          "target": "color",
+          "source": "currentState",
+          "fallback": "#d8a13a",
+          "map": {
+            "Ready": "#8fbf6f",
+            "Voting": "#d8a13a",
+            "Voted": "#c05a3e"
+          }
+        }
+      ]
+    },
+    {
+      "id": "puck.ring.voted",
+      "name": "presentation.puckRingVoted",
+      "renderer": "shape",
+      "layer": 20,
+      "bindings": [
+        {
+          "target": "position",
+          "source": "pose.position"
+        },
+        {
+          "target": "rotation",
+          "source": "pose.direction"
+        },
+        {
+          "target": "color",
+          "source": "currentState",
+          "fallback": "#c05a3e",
+          "map": {
+            "Ready": "#8fbf6f",
+            "Voting": "#d8a13a",
+            "Voted": "#c05a3e"
+          }
+        }
+      ]
+    },
+    {
+      "id": "area.voting",
+      "name": "presentation.votingArea",
+      "renderer": "shape",
+      "layer": 5,
+      "bindings": [
+        {
+          "target": "visible",
+          "source": "activeMode",
+          "map": {
+            "Voting": true
+          },
+          "fallback": false
+        }
+      ]
+    },
+    {
+      "id": "tally",
+      "name": "presentation.tally",
+      "renderer": "text",
+      "layer": 60,
+      "bindings": [
+        {
+          "target": "text",
+          "source": "variables.votes",
+          "fallback": 0
+        },
+        {
+          "target": "visible",
+          "source": "activeMode",
+          "map": {
+            "Voting": true,
+            "Results": true
+          },
+          "fallback": false
+        }
+      ]
+    }
+  ],
+  "tablePresentations": [
+    {
+      "id": "table.plain",
+      "name": "table.plain",
+      "regions": [],
+      "physicalPresentations": {
+        "puck": "puck.ring"
+      },
+      "globalPresentations": ["tally"]
+    },
+    {
+      "id": "table.voting",
+      "name": "table.voting",
+      "regions": [
+        {
+          "id": "votingArea",
+          "name": "region.votingArea",
+          "shape": {
+            "kind": "circle",
+            "centreMM": {
+              "x": 400,
+              "y": 250
+            },
+            "radiusMM": 150
+          },
+          "acceptedPhysicalKinds": ["puck"],
+          "acceptedRoles": ["Participant"],
+          "presentationId": "area.voting"
+        }
+      ],
+      "physicalPresentations": {
+        "puck": "puck.ring"
+      },
+      "statePresentations": {
+        "Voting": "puck.ring.voting",
+        "Voted": "puck.ring.voted"
+      },
+      "globalPresentations": ["tally"]
+    }
+  ]
+}

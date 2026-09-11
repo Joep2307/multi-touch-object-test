@@ -15,10 +15,14 @@ export async function loadKG(baseUrl = ""): Promise<void> {
     kg.loaded = false;
     kg.listener();
     try {
-        kg.client = defaultClient({
-            baseUrl: baseUrl || undefined,
-            fixtures: "fixtures",
-        });
+        /* Een leeg adres is geen adres: dan wordt het veld weggelaten
+           in plaats van op `undefined` gezet, zodat de client zijn
+           eigen standaard kiest. */
+        kg.client = defaultClient(
+            baseUrl === ""
+                ? { fixtures: "fixtures" }
+                : { baseUrl, fixtures: "fixtures" },
+        );
         const g = await kg.client.graph(["documents", "entities", "themes"]);
 
         const label = new Map(g.nodes.map((n) => [n.id, n.label]));

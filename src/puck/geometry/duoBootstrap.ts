@@ -40,7 +40,9 @@ export function duoBootstrap(
     const found: (DuoSplit & { idx: number[] })[] = [];
     const choose = (start: number, cur: number[]): void => {
         if (cur.length === 6) {
-            const split = splitDuo(cur.map((i) => points[i]));
+            const six = cur.map((i) => points[i]).filter((p) => !!p);
+            if (six.length !== 6) return;
+            const split = splitDuo(six);
             if (split && (!found[0] || split.score < found[0].score))
                 found[0] = { ...split, idx: [...cur] };
             return;
@@ -66,7 +68,7 @@ export function duoBootstrap(
     set(outer, best.big);
     set(inner, best.small);
     /* `splitDuo` counts within the six; back to the numbers of the glass. */
-    const real = (g: number[]): number[] => g.map((i) => best.idx[i]);
+    const real = (g: number[]): number[] => g.map((i) => best.idx[i] ?? 0);
     const cand = (tpl: Template, d: Shape, idx: number[]): PuckCandidate => ({
         tpl,
         errN: 0,

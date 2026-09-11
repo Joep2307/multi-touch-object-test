@@ -1,7 +1,7 @@
 import { ContactSource } from "./ContactSource";
-import { RECORDING_VERSION } from "./constants";
-import type { ContactFrame } from "./ContactFrame";
+import { RECORDING_MIN_VERSION, RECORDING_VERSION } from "./constants";
 import type { ContactRecording } from "./ContactRecording";
+import type { SensedContact } from "./SensedContact";
 
 /* Plays a recording back as if it were the glass.
  *
@@ -27,18 +27,27 @@ import type { ContactRecording } from "./ContactRecording";
  * arrival, from a puck that had only just been put down. Any trait
  * reading a contact's own timestamps would have inherited the same
  * fault, so the fix belongs here rather than in `Tap`.
+ *
+ * Only what was **down** is read back from a recording;
+ * `ContactStatusTracker` derives the lifts again on the way out.
+ * Deriving rather than trusting is what lets a version 1 recording,
+ * made before contacts carried a status at all, replay into exactly
+ * the same frames as one recorded today — and those seven recordings
+ * of real pucks are the only ones that exist.
  */
 export class ReplayContactSource extends ContactSource {
-    readonly #frames: readonly ContactFrame[];
+    readonly #frames: ContactRecording["frames"];
     #originNow: number | null = null;
     #index = 0;
 
     constructor(recording: ContactRecording) {
         super();
-        if (recording.version !== RECORDING_VERSION) {
+        const version = recording.version;
+        if (version < RECORDING_MIN_VERSION || version > RECORDING_VERSION) {
             throw new Error(
                 `Recording "${recording.name}" is version ` +
-                    `${String(recording.version)}, this build reads ` +
+                    `${String(version)}, this build reads ` +
+                    `${String(RECORDING_MIN_VERSION)} to ` +
                     `${String(RECORDING_VERSION)}.`,
             );
         }
@@ -49,9 +58,9 @@ export class ReplayContactSource extends ContactSource {
         return this.#index >= this.#frames.length - 1;
     }
 
-    override frame(now: number): ContactFrame {
+    protected override live(now: number): readonly SensedContact[] {
         const first = this.#frames[0];
-        if (first === undefined) return { at: now, points: [] };
+        if (first === undefined) return [];
         this.#originNow ??= now;
         const target = first.at + (now - this.#originNow);
         while (this.#index + 1 < this.#frames.length) {
@@ -61,18 +70,15 @@ export class ReplayContactSource extends ContactSource {
         }
         const current = this.#frames[this.#index] ?? first;
         const shift = now - current.at;
-        if (shift === 0) return { at: now, points: current.points };
-        return {
-            at: now,
-            points: current.points.map((p) => ({
-                ...p,
-                firstSeen: p.firstSeen + shift,
-                lastSeen: p.lastSeen + shift,
-            })),
-        };
+        if (shift === 0) return current.points;
+        return current.points.map((p) => ({
+            ...p,
+            firstSeen: p.firstSeen + shift,
+            lastSeen: p.lastSeen + shift,
+        }));
     }
 
-    override clear(): void {
+    protected override clearLive(): void {
         this.#originNow = null;
         this.#index = 0;
     }

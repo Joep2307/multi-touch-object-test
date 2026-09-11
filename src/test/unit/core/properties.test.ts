@@ -486,7 +486,7 @@ describe("ApexHeadingSource properties", () => {
                     centre,
                     random.range(20, 250),
                     random.range(-720, 720),
-                    random.range(-4, 4),
+                    random.range(-3.9, 3.9),
                 ),
                 centre,
             );
@@ -494,7 +494,7 @@ describe("ApexHeadingSource properties", () => {
         });
     });
 
-    it("places the asymmetry boundary about five degrees away", () => {
+    it("places the asymmetry boundary about four degrees away", () => {
         forCases(SEED_APEX + 3, (random, caseSeed) => {
             const source = new ApexHeadingSource(new DirectionPolicy());
             const centre = {
@@ -517,8 +517,14 @@ describe("ApexHeadingSource properties", () => {
                 rotationDeg,
                 -1,
             );
-            close(inward, 5.225_784_995, caseSeed, "inward boundary", 1e-8);
-            close(outward, 5.367_277_693, caseSeed, "outward boundary", 1e-8);
+            /* The numbers moved when `minApexAsymmetry` came down from
+               0.08 to 0.06, which is the point of pinning them: a
+               threshold that drifts silently is one nobody can reason
+               about. At 0.08 they were 5.226 and 5.367 degrees, and a
+               still puck on the real table reported a heading on none
+               of its 460 three-foot frames. */
+            close(inward, 3.931_406_930, caseSeed, "inward boundary", 1e-8);
+            close(outward, 4.010_909_656, caseSeed, "outward boundary", 1e-8);
         });
     });
 });

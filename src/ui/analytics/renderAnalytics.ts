@@ -115,8 +115,11 @@ export function renderAnalytics(): void {
     for (const group of clusters)
         for (let i = 0; i < group.items.length; i++)
             for (let j = i + 1; j < group.items.length; j++) {
-                const a = topicLabel(group.items[i].topic),
-                    b = topicLabel(group.items[j].topic);
+                const left = group.items[i];
+                const right = group.items[j];
+                if (!left || !right) continue;
+                const a = topicLabel(left.topic),
+                    b = topicLabel(right.topic);
                 if (a === b) continue;
                 const key = [a, b].sort().join("| ");
                 pairs.set(key, (pairs.get(key) || 0) + 1);

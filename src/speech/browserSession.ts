@@ -28,6 +28,7 @@ export function browserSession(lang: Lang, say: TalkSay): TalkSession | null {
         let interim = "";
         for (let i = e.resultIndex; i < e.results.length; i++) {
             const r = e.results[i];
+            if (!r) continue;
             if (r.isFinal) {
                 const t = (r[0]?.transcript || "").trim();
                 if (t) {

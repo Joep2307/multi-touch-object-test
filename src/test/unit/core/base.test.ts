@@ -25,14 +25,14 @@ import {
     PxPerMMEstimator,
     PxPerMMPolicy,
     Rotate,
+    HeadingRotationSource,
     RotatePolicy,
-    Tail,
-    TailPolicy,
+    MotionHistory,
+    MotionHistoryPolicy,
     Tap,
-    TapPolicy,
 } from "../../../core/base";
 import { ReplayContactSource } from "../../../core/contact";
-import type { ContactPoint, ContactRecording } from "../../../core/contact";
+import type { ContactRecording, SensedContact } from "../../../core/contact";
 import type { FootprintSpec } from "../../../core/base";
 import fixture from "./fixtures/threePointPlaceRotateLift.json";
 
@@ -53,7 +53,7 @@ const feet = (
     cy: number,
     r: number,
     degs: readonly number[],
-): ContactPoint[] =>
+): SensedContact[] =>
     degs.map((d, i) => {
         const rad = (d * Math.PI) / 180;
         return {
@@ -66,7 +66,7 @@ const feet = (
         };
     });
 
-const set = (points: readonly ContactPoint[], at = 0) => ({ at, points });
+const set = (points: readonly SensedContact[], at = 0) => ({ at, points });
 
 const makeBase = (seed = 4): Base => {
     const position = new Position(new CentroidSolver(), new PositionPolicy());
@@ -79,9 +79,13 @@ const makeBase = (seed = 4): Base => {
         position,
         direction,
         move,
-        new Rotate(direction, new RotatePolicy()),
-        new Tap(position, new TapPolicy()),
-        new Tail(move, new TailPolicy()),
+        new Rotate(
+            new HeadingRotationSource(direction, new RotatePolicy()),
+            new RotatePolicy(),
+            direction,
+        ),
+        new Tap(position),
+        new MotionHistory(move, new MotionHistoryPolicy()),
         new Acceleration(move, new AccelerationPolicy()),
         new PxPerMMEstimator(seed, new PxPerMMPolicy()),
     );
@@ -113,8 +117,49 @@ describe("CircleFitSolver", () => {
         expect(fit?.radiusPX).toBeCloseTo(136, 4);
     });
 
+    it("refuses a circle the feet do not wrap around", () => {
+        /* Five contacts along a line with sub-pixel scatter fit a
+           circle of radius 3790 px with a residual of 2. Measured
+           against that radius the residual looks like a perfect ring,
+           and one such frame was enough to drag the table's shared
+           scale to its clamp. */
+        const strungOut: SensedContact[] = [
+            [500, 400.3],
+            [600, 399.6],
+            [700, 400.5],
+            [800, 399.8],
+            [900, 400.1],
+        ].map(([x, y], i) => ({
+            id: i,
+            x: x ?? 0,
+            y: y ?? 0,
+            radiusPX: 9,
+            firstSeen: 0,
+            lastSeen: 0,
+        }));
+        expect(new CircleFitSolver().solve(strungOut)).toBeNull();
+    });
+
+    it("still fits a real ring", () => {
+        const ring = [0, 70, 150, 210, 300].map((deg, i) => {
+            const rad = (deg * Math.PI) / 180;
+            return {
+                id: i,
+                x: 400 + 136 * Math.cos(rad),
+                y: 300 + 136 * Math.sin(rad),
+                radiusPX: 9,
+                firstSeen: 0,
+                lastSeen: 0,
+            };
+        });
+        expect(new CircleFitSolver().solve(ring)?.radiusPX).toBeCloseTo(
+            136,
+            6,
+        );
+    });
+
     it("returns null for collinear points, which have no circle", () => {
-        const line: ContactPoint[] = [0, 1, 2].map((i) => ({
+        const line: SensedContact[] = [0, 1, 2].map((i) => ({
             id: i,
             x: i * 50,
             y: 100,
@@ -127,7 +172,7 @@ describe("CircleFitSolver", () => {
 });
 
 describe("Position", () => {
-    const run = (points: readonly ContactPoint[], pxPerMM = 4) => {
+    const run = (points: readonly SensedContact[], pxPerMM = 4) => {
         const p = new Position(new CentroidSolver(), new PositionPolicy());
         p.update({ at: 0, contacts: set(points), spec: SPEC, pxPerMM });
         return p.snapshot();

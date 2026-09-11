@@ -5,4 +5,7 @@ export { Nestable } from "./Nestable";
 export { Nesting } from "./Nesting";
 export { Opaque } from "./Opaque";
 export { Passive } from "./Passive";
+export { Placeable } from "./Placeable";
 export { Rotatable } from "./Rotatable";
+export { Tappable } from "./Tappable";
+export type { AffordanceName } from "./AffordanceName";

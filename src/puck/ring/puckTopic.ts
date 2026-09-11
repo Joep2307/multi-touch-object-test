@@ -3,5 +3,8 @@ import type { Track } from "../../types/Track";
 
 export const puckTopic = (t: Track): string => {
     const list = topics();
-    return list[(t.topicIdx || 0) % list.length] || list[0];
+    /* De taaltabel levert altijd onderwerpen; een lege lijst zou
+       betekenen dat de vertalingen niet geladen zijn, en dan is een
+       lege ring eerlijker dan een willekeurig onderwerp. */
+    return list[(t.topicIdx || 0) % list.length] ?? list[0] ?? "";
 };

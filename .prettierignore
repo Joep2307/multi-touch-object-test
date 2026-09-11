@@ -24,6 +24,15 @@ src/i18n/L.ts
 # Uitvoer van Claude-sessies, geen broncode.
 Claude outputs/
 
+# Opnames van de tafel: door de machine geschreven, niet door ons. Ze
+# herformatteren verandert honderden regels meetwaarden zonder dat er iets
+# leesbaarder van wordt, en een fixture hoort te blijven zoals hij is
+# opgenomen.
+src/test/unit/core/fixtures/
+
+# Naslag, geen broncode: het model waar de code aan afgemeten wordt.
+resources/
+
 # Pre-module migration sources. The maintained app and tests are in src/
 # and exe/; these are kept only as the historical table snapshot.
 /app.ts

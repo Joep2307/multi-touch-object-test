@@ -97,7 +97,7 @@ export function track(dets: Detection[], now: number): TrackResult {
             // goes on hold briefly. Otherwise it would come back fresh,
             // choose whichever mode its nose points at, and lose its marker.
             while (
-                tracks.memory.length &&
+                tracks.memory[0] !== undefined &&
                 now - tracks.memory[0].t >= CFG.puckMemoryMS
             )
                 tracks.memory.shift();
@@ -109,7 +109,7 @@ export function track(dets: Detection[], now: number): TrackResult {
                 menu: t.menu,
                 mode: t.mode,
                 topicIdx: t.topicIdx,
-                pinId: t.pinId,
+                pinId: t.pinId ?? null,
                 armed: t.armed,
                 angleOrigin: t.angle,
                 zoomAnchor: t.zoomAnchor,

@@ -1,0 +1,10 @@
+export { AffordanceSubject } from "./AffordanceSubject";
+export { DistanceSubject } from "./DistanceSubject";
+export { KindSubject } from "./KindSubject";
+export { ModeSubject } from "./ModeSubject";
+export { PropertySubject } from "./PropertySubject";
+export { RegionSubject } from "./RegionSubject";
+export { RelationSubject } from "./RelationSubject";
+export { RoleSubject } from "./RoleSubject";
+export { StateSubject } from "./StateSubject";
+export { VariableSubject } from "./VariableSubject";

@@ -14,9 +14,13 @@ import { norm360 } from "../geometry/norm360";
    differences relative to that first frame, so 359 and 1 stay neighbours. */
 export function learnMedian(): LearnMeasure {
     const S = learn.samples;
+    /* De middelste van een gesorteerde rij. Nul als er niets is
+       gemeten -- dat is geen meting om overheen te lezen, maar er is
+       ook geen betere waarde te bedenken, en de aanroeper heeft al
+       gecontroleerd dat er monsters zijn. */
     const med = (f: (s: never) => number): number => {
         const a = S.map(f as (s: unknown) => number).sort((x, y) => x - y);
-        return a[a.length >> 1];
+        return a[a.length >> 1] ?? 0;
     };
     const size = med(((s: { size: number }) => s.size) as never);
     /* A grid puck has no numbers to average: a slot is occupied or it
@@ -68,18 +72,24 @@ export function learnMedian(): LearnMeasure {
         for (let k = 0; k < 5; k++) {
             let e = 0;
             for (let i = 0; i < 5; i++)
-                e += Math.abs(wrap(sm.angles[(i + k) % 5] - base[i]));
+                e += Math.abs(
+                    wrap((sm.angles[(i + k) % 5] ?? 0) - (base[i] ?? 0)),
+                );
             if (e < bErr) {
                 bErr = e;
                 bs = k;
             }
         }
-        for (let i = 0; i < 5; i++)
-            cols[i].push(base[i] + wrap(sm.angles[(i + bs) % 5] - base[i]));
+        for (let i = 0; i < 5; i++) {
+            const column = cols[i];
+            const from = base[i];
+            if (!column || from === undefined) continue;
+            column.push(from + wrap((sm.angles[(i + bs) % 5] ?? 0) - from));
+        }
     }
     const angles = cols.map((c) => {
         c.sort((x, y) => x - y);
-        return norm360(c[c.length >> 1]);
+        return norm360(c[c.length >> 1] ?? 0);
     });
     return { ring: true, angles: angles.sort((a, b) => a - b), radius: size };
 }

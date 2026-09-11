@@ -1,6 +1,5 @@
 import { ContactSource } from "./ContactSource";
-import type { ContactFrame } from "./ContactFrame";
-import type { ContactPoint } from "./ContactPoint";
+import type { SensedContact } from "./SensedContact";
 
 /* Real touches on the glass.
  *
@@ -17,7 +16,7 @@ import type { ContactPoint } from "./ContactPoint";
  * strand a contact until it was lifted and put back.
  */
 export class PointerContactSource extends ContactSource {
-    readonly #live = new Map<number, ContactPoint>();
+    readonly #live = new Map<number, SensedContact>();
 
     down(
         id: number,
@@ -62,12 +61,11 @@ export class PointerContactSource extends ContactSource {
         this.#live.delete(id);
     }
 
-    override frame(now: number): ContactFrame {
-        const points = [...this.#live.values()].sort((a, b) => a.id - b.id);
-        return { at: now, points };
+    protected override live(): readonly SensedContact[] {
+        return [...this.#live.values()].sort((a, b) => a.id - b.id);
     }
 
-    override clear(): void {
+    protected override clearLive(): void {
         this.#live.clear();
     }
 }

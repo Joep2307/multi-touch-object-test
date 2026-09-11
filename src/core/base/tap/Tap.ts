@@ -1,7 +1,6 @@
 import { Trait } from "../Trait";
 import type { BaseSample } from "../BaseSample";
 import type { Position } from "../position/Position";
-import type { TapPolicy } from "./TapPolicy";
 import type { TapSnapshot } from "./TapSnapshot";
 import type { Vec2 } from "../Vec2";
 
@@ -9,21 +8,28 @@ const EMPTY: TapSnapshot = {
     down: false,
     dwellMS: 0,
     movedPX: 0,
-    kind: "none",
 };
 
-/* How long the object has been on the glass, and what that means.
+/* How long the object has been on the glass, and how far it wandered
+   while it was.
+ *
+ * An interval, not an event, and that is the whole of what this trait
+ * is. It reports; it does not judge. Three hundred milliseconds is a
+ * tap in one programme and far too slow in another, so the thresholds
+ * live in `GestureDefinition`s that a programme file can change, and
+ * this trait has no policy at all. It had one, and the verdict it
+ * produced meant two things in the tree could disagree about what a
+ * tap was.
  *
  * The interval comes from the contacts themselves — the earliest
- * `firstSeen` among them — not from a timer this trait starts. A
- * timer would restart every time recognition briefly lost a foot; the
+ * `firstSeen` among them — not from a timer this trait starts. A timer
+ * would restart every time recognition briefly lost a foot; the
  * contacts' own timestamps survive that, so a puck that flickers
  * during a long hold still reads as one long hold.
  *
- * The verdict lands on release rather than at the threshold, because
- * until the object comes off the glass a short press and a long one
- * are the same event. `dwellMS` is live throughout, so anything that
- * wants to show progress while the hold is happening can.
+ * `dwellMS` and `movedPX` survive the release, so the frame the object
+ * comes off the glass carries the completed episode. Anything reading
+ * the down-to-up edge gets the whole story from one snapshot.
  */
 export class Tap extends Trait<TapSnapshot> {
     override readonly id = "tap";
@@ -31,12 +37,8 @@ export class Tap extends Trait<TapSnapshot> {
     #downAt: number | null = null;
     #startCentre: Vec2 | null = null;
     #movedPX = 0;
-    #lastTapEndedAt: number | null = null;
 
-    constructor(
-        private readonly position: Position,
-        private readonly policy: TapPolicy,
-    ) {
+    constructor(private readonly position: Position) {
         super();
     }
 
@@ -69,36 +71,20 @@ export class Tap extends Trait<TapSnapshot> {
             down: true,
             dwellMS: Math.max(0, sample.at - this.#downAt),
             movedPX: this.#movedPX,
-            kind: "none",
         };
     }
 
     #release(at: number): void {
         const downAt = this.#downAt;
         const dwellMS = downAt === null ? 0 : Math.max(0, at - downAt);
-        const moved = this.#movedPX;
-        let kind: TapSnapshot["kind"] = "none";
-
-        if (moved <= this.policy.moveMaxPX) {
-            if (dwellMS <= this.policy.tapMaxMS) {
-                const gap =
-                    this.#lastTapEndedAt === null
-                        ? Number.POSITIVE_INFINITY
-                        : at - this.#lastTapEndedAt;
-                kind = gap <= this.policy.doubleGapMS ? "double" : "tap";
-                /* A double consumes both taps, so three quick taps
-                   read as double then tap, never as two doubles. */
-                this.#lastTapEndedAt = kind === "double" ? null : at;
-            } else if (dwellMS >= this.policy.holdMinMS) {
-                kind = "hold";
-                this.#lastTapEndedAt = null;
-            }
-        }
-
+        this.#snapshot = {
+            down: false,
+            dwellMS,
+            movedPX: this.#movedPX,
+        };
         this.#downAt = null;
         this.#startCentre = null;
         this.#movedPX = 0;
-        this.#snapshot = { down: false, dwellMS, movedPX: moved, kind };
     }
 
     override reset(): void {
@@ -106,7 +92,6 @@ export class Tap extends Trait<TapSnapshot> {
         this.#downAt = null;
         this.#startCentre = null;
         this.#movedPX = 0;
-        this.#lastTapEndedAt = null;
     }
 
     override snapshot(): TapSnapshot {

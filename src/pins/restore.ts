@@ -36,7 +36,9 @@ export function restore(): void {
         if (Array.isArray(stored)) {
             stored
                 .filter((p) => validPin(p))
-                .forEach((p) => pins.list.push(cleanPin(p, topics()[0])));
+                .forEach((p) =>
+                    pins.list.push(cleanPin(p, topics()[0] ?? "")),
+                );
             // We also write back what didn't pass: otherwise it would still be
             // there next time, and the next change in the session would be
             // the only thing that ever cleans it up.

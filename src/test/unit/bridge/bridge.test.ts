@@ -63,32 +63,108 @@ describe("triad footprint", () => {
     });
 });
 
+describe("learning a puck again", () => {
+    it("reads it by its new shape, not the shape it used to have", () => {
+        /* "Learn puck" re-measures a template while the table runs.
+           Converting a template once and caching the result forever
+           left the model reading the object by the footprint it had a
+           minute ago — and only at the table, only after someone had
+           learned a puck, which is the worst place to find it. */
+        const bridge = new TrackBridge(4);
+        const tpl = ring({ id: "learn-me", ringMM: 34 });
+        const first = bridge.kinds.get("learn-me" as never);
+        expect(first).toBeNull();
+
+        const detect = (t: Template): void => {
+            const detection: Detection = {
+                tpl: t,
+                cx: 400,
+                cy: 300,
+                angle: 0,
+                conf: 1,
+                contactIndices: [0, 1, 2, 3, 4],
+                d: { ring: true, angles: t.angles ?? [] } as never,
+            } as unknown as Detection;
+            const assignment: TrackAssignment = {
+                trackId: "track-1",
+                detection,
+                visible: true,
+            } as unknown as TrackAssignment;
+            const contacts: TrackBridgeContact[] = [0, 1, 2, 3, 4].map(
+                (i) => ({
+                    sourceId: `pointer:${String(i)}`,
+                    x: 400 + 68 * Math.cos((i * 2 * Math.PI) / 5),
+                    y: 300 + 68 * Math.sin((i * 2 * Math.PI) / 5),
+                    radiusPX: 0,
+                    simulated: false,
+                }),
+            );
+            bridge.update(0, contacts, [assignment]);
+        };
+
+        detect(tpl);
+        const before = bridge.kinds.get("learn-me" as never);
+        expect(before?.signatures[0].geometry.footRadiusMM).toBe(34);
+
+        /* Someone holds the puck up and learns it: a different ring,
+           and a fresh learn stamp. */
+        const relearned: Template = {
+            ...tpl,
+            ringMM: 41,
+            learnedAt: 12345,
+        } as Template;
+        detect(relearned);
+        const after = bridge.kinds.get("learn-me" as never);
+        expect(after?.signatures[0].geometry.footRadiusMM).toBe(41);
+        expect(after).not.toBe(before);
+    });
+});
+
 describe("templateToKind", () => {
-    it("reads a ring template as a ring kind", () => {
-        const kind = templateToKind(ring());
-        expect(kind.family).toBe("ring");
-        expect(kind.footprint.expectedCount).toBe(5);
-        expect(kind.footprint.footRadiusMM).toBe(34);
+    it("gives a template exactly one signature", () => {
+        /* One template is one way of being recognised. A kind with a
+           second signature is something the old world could not
+           express, so anything here producing two would be inventing
+           a shape rather than translating one. */
+        expect(templateToKind(ring()).signatures).toHaveLength(1);
     });
 
-    it("reads a slot template as a slot kind, counting its feet", () => {
-        const kind = templateToKind(
+    it("reads a ring template as a ring signature", () => {
+        const sig = templateToKind(ring()).signatures[0];
+        expect(sig.family).toBe("ring");
+        expect(sig.contactCount).toBe(5);
+        expect(sig.geometry.expectedCount).toBe(5);
+        expect(sig.geometry.footRadiusMM).toBe(34);
+    });
+
+    it("reads a slot template as a slot signature, counting its feet", () => {
+        const sig = templateToKind(
             ring({ id: "slot-1", slots: 12, code: 0b101101 }),
-        );
-        expect(kind.family).toBe("slot");
-        expect(kind.footprint.expectedCount).toBe(4);
+        ).signatures[0];
+        expect(sig.family).toBe("slot");
+        expect(sig.contactCount).toBe(4);
+        expect(sig.slotCode).toEqual({ slots: 12, code: 0b101101 });
     });
 
-    it("reads a taped triangle as a triad kind", () => {
-        const kind = templateToKind({
+    it("reads a taped triangle as a triad signature", () => {
+        const sig = templateToKind({
             id: "tri-1",
             verdict: "good",
             ratios: [0.8, 0.9],
             longestMM: 60,
-        });
-        expect(kind.family).toBe("triad");
-        expect(kind.footprint.expectedCount).toBe(3);
-        expect(kind.footprint.footRadiusMM).toBeGreaterThan(0);
+        }).signatures[0];
+        expect(sig.family).toBe("triad");
+        expect(sig.contactCount).toBe(3);
+        expect(sig.geometry.footRadiusMM).toBeGreaterThan(0);
+    });
+
+    it("puts the ring size in the identity and lets it be turned", () => {
+        /* The same grid code on a 26 mm ring is a different puck from
+           the one on 34 mm, and every puck on this table is put down
+           whichever way it lands. */
+        const sig = templateToKind(ring()).signatures[0];
+        expect(sig.scaleRule).toBe("fixed");
+        expect(sig.orientationRule).toBe("free");
     });
 
     it("gives an 80 mm puck an 80 mm outer diameter, not 90", () => {
@@ -96,12 +172,13 @@ describe("templateToKind", () => {
            (45 mm), which draws a 90 mm ring on an 80 mm object. This
            is the fix, and it is the single biggest reason the drawn
            ring and the physical puck do not line up. */
-        expect(templateToKind(ring()).footprint.outerDiameterMM).toBe(80);
+        const sig = templateToKind(ring()).signatures[0];
+        expect(sig.geometry.outerDiameterMM).toBe(80);
     });
 
     it("lets the duo's small half keep its own diameter", () => {
-        const kind = templateToKind(ring({ radiusMM: 26 }));
-        expect(kind.footprint.outerDiameterMM).toBe(52);
+        const sig = templateToKind(ring({ radiusMM: 26 })).signatures[0];
+        expect(sig.geometry.outerDiameterMM).toBe(52);
     });
 
     it("gives every puck a viewing hole, as the renderer does", () => {

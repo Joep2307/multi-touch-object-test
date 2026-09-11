@@ -1,5 +1,5 @@
 import type { CentreSolver } from "./position/CentreSolver";
-import type { ContactPoint } from "../contact/ContactPoint";
+import type { SensedContact } from "../contact/SensedContact";
 import type { FootprintSpec } from "./FootprintSpec";
 import type { Vec2 } from "./Vec2";
 
@@ -22,7 +22,7 @@ export function footprintFrom(
     outerDiameterMM: number,
     solver: CentreSolver,
 ): FootprintSpec {
-    const points: ContactPoint[] = feetMM.map((foot, i) => ({
+    const points: SensedContact[] = feetMM.map((foot, i) => ({
         id: i,
         x: foot.x,
         y: foot.y,

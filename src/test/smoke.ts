@@ -163,6 +163,21 @@ async function newPage(
                 () => (window as any).__puck?.tracks().length,
             )) > 0,
     );
+    /* Het nieuwe model draait ernaast en raakt niets aan. Het
+       programma wordt pas op een `?base`-adres opgehaald, dus even
+       wachten tot dat binnen is. */
+    await page.waitForTimeout(600);
+    const model = await page.evaluate(
+        () => (window as any).__base?.model() as string | undefined,
+    );
+    ok(
+        "het model draait ernaast en telt gebeurtenissen",
+        typeof model === "string" &&
+            model.startsWith("model: Setup") &&
+            !model.includes("loading") &&
+            /[1-9]\d* events/.test(model),
+    );
+    ok("en het model heeft niets aangeraakt", errs.length === 0);
     await ctx.close();
 }
 

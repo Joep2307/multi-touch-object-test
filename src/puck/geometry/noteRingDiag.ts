@@ -10,10 +10,12 @@ export function noteRingDiag(
     d: RingShape,
     measured: { tpl: Template; m: RingMatch }[],
 ): void {
-    if (!ui.debugMode || !measured.length) return;
-    if (diag.ring && diag.ring.err <= measured[0].m.err) return;
+    if (!ui.debugMode) return;
+    const first = measured[0];
+    if (!first) return;
+    if (diag.ring && diag.ring.err <= first.m.err) return;
     diag.ring = {
-        err: measured[0].m.err,
+        err: first.m.err,
         legs: d.angles.length,
         mm: d.radius / view.pxPerMM,
         spread: d.spread,

@@ -23,21 +23,35 @@ export function restoreTemplates(): void {
     if (!Array.isArray(saved)) return;
     const num = (v: unknown): number | undefined =>
         Number.isFinite(v) ? (v as number) : undefined;
+    /* Een veld dat er niet is, laat je weg. */
+    const maybe = <K extends string, V>(
+        key: K,
+        value: V | undefined,
+    ): Partial<Record<K, V>> =>
+        value === undefined ? {} : ({ [key]: value } as Record<K, V>);
     for (const sv of saved as Array<Record<string, unknown> | null>) {
         const tpl = templates.list.find((t) => t.id === sv?.id);
         if (!tpl || !sv) continue;
         const r = sv.ratios,
             a = sv.angles;
+        /* Wat niet gemeten is, staat er niet in. Een veld op
+           `undefined` zetten en een veld weglaten zijn twee manieren
+           om hetzelfde te zeggen, en dan moet elke lezer raden welke
+           van de twee hij voor zich heeft. */
         const shape: ShapeValue = {
-            ratios:
-                Array.isArray(r) && r.length === 2
-                    ? [r[0] as number, r[1] as number]
-                    : undefined,
-            longestMM: num(sv.longestMM),
-            angles: Array.isArray(a) ? (a as number[]) : undefined,
-            ringMM: num(sv.ringMM),
-            slots: num(sv.slots),
-            code: num(sv.code),
+            ...(Array.isArray(r) && r.length === 2
+                ? {
+                      ratios: [r[0] as number, r[1] as number] as [
+                          number,
+                          number,
+                      ],
+                  }
+                : {}),
+            ...maybe("longestMM", num(sv.longestMM)),
+            ...(Array.isArray(a) ? { angles: a as number[] } : {}),
+            ...maybe("ringMM", num(sv.ringMM)),
+            ...maybe("slots", num(sv.slots)),
+            ...maybe("code", num(sv.code)),
         };
         if (applyShape(tpl, shape) && typeof sv.learnedAt === "string")
             tpl.learnedAt = sv.learnedAt;

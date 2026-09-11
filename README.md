@@ -97,6 +97,14 @@ Het commentaar is Nederlands en legt uit _waarom_ iets zo is, niet wat er
 staat. Dat is de afspraak waar deze repo op draait, en de reden dat er een
 spellingcontrole overheen gaat: het is proza waar naar verwezen wordt.
 
+## Hoe het in elkaar zit
+
+Twee pijplijnen, met opzet en tijdelijk: de tafel draait op
+`src/puck/` en zijn buren, en `src/core/` is het model dat die gaat
+vervangen. Ze lezen dezelfde contactpunten en worden beeldje voor
+beeldje naast elkaar gelegd. [`ARCHITECTURE.md`](ARCHITECTURE.md)
+legt uit hoe het geheel werkt; de plannen staan in [`todo/`](todo/).
+
 ## Waar wat staat
 
 ```

@@ -1,5 +1,5 @@
 import { CentreSolver } from "./CentreSolver";
-import type { ContactPoint } from "../../contact/ContactPoint";
+import type { SensedContact } from "../../contact/SensedContact";
 import type { CentreFit } from "./CentreFit";
 
 /* The middle of a three-foot object: the centroid of its feet.
@@ -24,7 +24,7 @@ import type { CentreFit } from "./CentreFit";
 export class CentroidSolver extends CentreSolver {
     override readonly id = "centre.centroid";
 
-    override solve(points: readonly ContactPoint[]): CentreFit | null {
+    override solve(points: readonly SensedContact[]): CentreFit | null {
         const n = points.length;
         if (n < 3) return null;
         let sx = 0;

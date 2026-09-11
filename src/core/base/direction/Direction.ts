@@ -56,6 +56,10 @@ export class Direction extends Trait<DirectionSnapshot> {
 
     override reset(): void {
         this.#snapshot = EMPTY;
+        /* And whatever the source decided. An object that has left the
+           glass takes its nose with it; the next one to land in the
+           same place is a different object. */
+        this.source.reset();
     }
 
     override snapshot(): DirectionSnapshot {

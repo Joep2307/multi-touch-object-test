@@ -19,15 +19,19 @@ export function onPointerMove(e: PointerEvent): void {
         if (pt) {
             pt.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
             const p = [...pt.ptrs.values()];
+            const [p0, p1] = p;
             if (p.length === 1) {
                 setSimPuckPosition(
                     pt.puck,
-                    p[0].x - (pt.dx ?? 0),
-                    p[0].y - (pt.dy ?? 0),
+                    (p0?.x ?? 0) - (pt.dx ?? 0),
+                    (p0?.y ?? 0) - (pt.dy ?? 0),
                 );
             } else {
                 // Two fingers only rotate: the puck stays right where it is.
-                const ang = Math.atan2(p[1].y - p[0].y, p[1].x - p[0].x);
+                const ang = Math.atan2(
+                    (p1?.y ?? 0) - (p0?.y ?? 0),
+                    (p1?.x ?? 0) - (p0?.x ?? 0),
+                );
                 pt.puck.rot = (pt.baseRot ?? 0) + (ang - (pt.baseAngle ?? 0));
             }
             return;

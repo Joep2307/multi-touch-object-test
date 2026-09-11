@@ -18,3 +18,11 @@ export const PARITY_CENTRE_PX = 8;
 /* A degree and a half. Below that the two are measuring the same
    angle by different routes; above it one of them is wrong. */
 export const PARITY_ANGLE_DEG = 1.5;
+
+/* How far a foot may sit from where a template says it should, in
+   millimetres. The old matchers do not express a tolerance in these
+   terms at all — they score a shape and take the best fit — so this is
+   a description of the templates rather than a threshold anything
+   currently enforces. It is what a signature has to state, and 5 mm is
+   the figure the model uses. */
+export const TEMPLATE_TOLERANCE_MM = 5;

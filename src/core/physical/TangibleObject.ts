@@ -2,7 +2,8 @@ import { Physical } from "./Physical";
 import type { Base } from "../base/Base";
 import type { ContactSet } from "../contact/ContactSet";
 import type { PhysicalId } from "./PhysicalId";
-import type { PhysicalKind } from "./PhysicalKind";
+import type { PhysicalKindDefinition } from "./PhysicalKindDefinition";
+import type { PhysicalSignature } from "./PhysicalSignature";
 import type { Presence } from "./Presence";
 import type { Vec2 } from "../base/Vec2";
 
@@ -26,7 +27,12 @@ export abstract class TangibleObject extends Physical {
 
     constructor(
         id: PhysicalId,
-        kind: PhysicalKind,
+        kind: PhysicalKindDefinition,
+        /* Which of the kind's signatures this object is being read
+           by. An instance runs on one of them for its whole life: the
+           solver and the heading source inside `base` were chosen for
+           it, so changing it would mean a different base. */
+        readonly signature: PhysicalSignature,
         presence: Presence,
         readonly base: Base,
     ) {
@@ -34,7 +40,7 @@ export abstract class TangibleObject extends Physical {
     }
 
     update(at: number, contacts: ContactSet): void {
-        this.base.update(at, contacts, this.kind.footprint);
+        this.base.update(at, contacts, this.signature.geometry);
         const position = this.base.position.snapshot();
         if (position.sensed && position.centre !== null) {
             /* Position quite properly clears a missing measurement.
@@ -56,6 +62,6 @@ export abstract class TangibleObject extends Physical {
        the measurement — a ring drawn from the frame breathes with
        sensor noise. */
     outerDiameterPX(): number {
-        return this.base.outerDiameterPX(this.kind.footprint);
+        return this.base.outerDiameterPX(this.signature.geometry);
     }
 }
