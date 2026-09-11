@@ -5,7 +5,13 @@ import { QS } from "./QS";
    ═══════════════════════════════════════════════════════════════ */
 export const CFG = {
     longestSideMM: 60,
-    puckRadiusMM: 45,
+    /* Half the printed puck. It is 80 mm across, so 40 -- and this is the
+     number the table draws with, so a wrong one here lands on the glass as
+     a ring that misses the physical rim. It said 45 until now: a 90 mm disc
+     around an 80 mm object, standing 5 mm proud of the rim the whole way
+     round. With `PUCK_HOLE` it also fixes the width of the rim at
+     40 - 28 = 12 mm, whose middle is `ringRadiusMM` below. */
+    puckRadiusMM: 40,
     /* The new puck is not a triangle but a ring: five feet on one circle.
      `ringRadiusMM` is the radius of that circle -- outer diameter 80 mm and
      a viewing hole of 56 mm, so the middle of the rim sits at 34 mm.

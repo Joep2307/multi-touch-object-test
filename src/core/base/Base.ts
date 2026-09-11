@@ -67,8 +67,8 @@ export class Base {
      * Sized from the kind and the current scale, never from the
      * frame's measurement: a ring drawn from the measurement breathes
      * with sensor noise. This is the number that makes the drawn ring
-     * sit on the physical rim, and it is the reason `CFG.puckRadiusMM`
-     * (45 mm, so 90 mm across on an 80 mm puck) goes away. */
+     * sit on the physical rim, and it is why the edge belongs to the
+     * kind rather than to one global radius in the renderer. */
     outerDiameterPX(spec: FootprintSpec): number {
         return spec.outerDiameterMM * this.pxPerMM.value;
     }

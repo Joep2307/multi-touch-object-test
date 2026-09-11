@@ -94,8 +94,8 @@ const BASE = "http://127.0.0.1:" + (server.address() as AddressInfo).port;
 const W = 1600,
     H = 1000;
 const pxPerMM = Math.hypot(W, H) / (43 * 25.4);
-const R = 45 * pxPerMM,
-    HOLE = R * 0.58; // must follow CFG.puckRadiusMM and PUCK_HOLE
+const R = 40 * pxPerMM,
+    HOLE = R * 0.7; // must follow CFG.puckRadiusMM and PUCK_HOLE
 const log: string[] = [];
 const ok = (naam: string, goed: boolean) => {
     const regel = (goed ? "\u2713 " : "\u2717 ") + naam;

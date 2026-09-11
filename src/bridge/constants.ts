@@ -1,8 +1,8 @@
-/* The printed puck is 80 mm across. `CFG.puckRadiusMM` says 45, which
-   would draw a ring 90 mm wide on an 80 mm object — the reason the
-   animation and the physical puck do not line up today. Templates that
-   carry their own `radiusMM` (the duo's small half) keep it; everything
-   else gets this. */
+/* The printed puck is 80 mm across, and both pipelines now say so:
+   `CFG.puckRadiusMM` is the 40 mm half of it. This stays a number of
+   its own because a kind's outer edge is not the drawing's setting —
+   templates that carry their own `radiusMM` (the duo's small half)
+   keep it; everything else gets this. */
 export const DEFAULT_OUTER_DIAMETER_MM = 80;
 
 /* How far a returning puck may have moved and still be the same one.

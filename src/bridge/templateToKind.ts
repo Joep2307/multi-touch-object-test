@@ -28,11 +28,11 @@ import type { Template } from "../types/Template";
  * between them has to come from the code being compared rather than
  * from the kinds being described differently.
  *
- * The one deliberate change is the outer diameter. Templates do not
- * record one, and the old renderer uses `CFG.puckRadiusMM` (45 mm, so
- * 90 mm across) for a puck that is 80 mm across. The duo's small half
- * carries its own `radiusMM` and keeps it; everything else gets the
- * real 80. That single number is most of the misalignment between the
+ * The one addition is the outer diameter. Templates do not record
+ * one, so it is stated here: 80 mm, the printed puck, with the duo's
+ * small half keeping its own `radiusMM`. The old renderer drew 90 mm
+ * around that 80 mm object until `CFG.puckRadiusMM` was corrected to
+ * 40; that single number was most of the misalignment between the
  * drawn ring and the physical object.
  */
 export function templateToKind(template: Template): PhysicalKindDefinition {

@@ -168,10 +168,9 @@ describe("templateToKind", () => {
     });
 
     it("gives an 80 mm puck an 80 mm outer diameter, not 90", () => {
-        /* The old renderer sizes every puck from CFG.puckRadiusMM
-           (45 mm), which draws a 90 mm ring on an 80 mm object. This
-           is the fix, and it is the single biggest reason the drawn
-           ring and the physical puck do not line up. */
+        /* A kind states its own edge instead of borrowing the
+           renderer's radius, which is what let an 80 mm puck be drawn
+           90 mm across for as long as CFG.puckRadiusMM said 45. */
         const sig = templateToKind(ring()).signatures[0];
         expect(sig.geometry.outerDiameterMM).toBe(80);
     });

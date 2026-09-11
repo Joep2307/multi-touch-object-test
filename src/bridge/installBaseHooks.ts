@@ -37,18 +37,6 @@ export function installBaseHooks(
     };
     const parity = (): string => recorder.paritySummary();
 
-    /* Report the outcome on the button itself: there is no console at
-       the table, so a save that quietly failed would look exactly like
-       one that worked. */
-    const reportSave = (button: HTMLButtonElement): string => {
-        const before = button.textContent ?? "Bewaar";
-        const outcome = save();
-        setTimeout(() => {
-            button.textContent = before;
-        }, 2500);
-        return outcome.startsWith("saved") ? "Bewaard \u2713" : "Mislukt";
-    };
-
     window.__base = {
         start,
         stop: () => {
@@ -65,48 +53,6 @@ export function installBaseHooks(
             return recorder.frameCount;
         },
     };
-
-    /* The buttons are the real control, not a convenience.
-       `Shift+Alt+R` assumes a keyboard with an Alt key, and this table
-       does not always have one; the kiosk has no address bar to type a
-       URL into either, and no console. A tapped button is the only
-       thing that can be relied on with pucks on the glass. */
-    const bar = document.createElement("div");
-    bar.id = "baseTools";
-    const rec = document.createElement("button");
-    rec.className = "base-tool";
-    rec.type = "button";
-    const saveBtn = document.createElement("button");
-    saveBtn.className = "base-tool";
-    saveBtn.type = "button";
-    saveBtn.textContent = "Bewaar";
-
-    const paint = (): void => {
-        const seconds = Math.floor(
-            recorder.elapsedMS(performance.now()) / 1000,
-        );
-        rec.textContent = recorder.recording
-            ? `Stop — ${String(seconds)}s`
-            : "Opnemen";
-        rec.dataset.armed = recorder.recording ? "1" : "0";
-        saveBtn.disabled = recorder.recording || recorder.frameCount === 0;
-    };
-
-    rec.addEventListener("click", () => {
-        if (recorder.recording) recorder.stop(performance.now());
-        else start(`table-${String(Math.round(performance.now() / 1000))}`);
-        paint();
-    });
-    saveBtn.addEventListener("click", () => {
-        saveBtn.textContent = reportSave(saveBtn);
-        paint();
-    });
-    /* The frame counter has to move while recording, or there is no way
-       to tell a live capture from a dead one. */
-    setInterval(paint, 250);
-    paint();
-    bar.append(rec, saveBtn);
-    document.body.append(bar);
 
     addEventListener("keydown", (e) => {
         if (!e.shiftKey || !e.altKey) return;

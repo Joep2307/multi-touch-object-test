@@ -26,9 +26,10 @@
  * kind.
  *
  * `outerDiameterMM` is the physical edge of the object: what gets
- * drawn. It is a different number from `footRadiusMM` and conflating
- * them is the mistake the table makes today, where the ring is drawn
- * at `CFG.puckRadiusMM` (45 mm, so 90 mm across) on an 80 mm puck.
+ * drawn. It is a different number from `footRadiusMM`, and conflating
+ * them is the mistake the table made when it drew an 80 mm puck at
+ * `CFG.puckRadiusMM` 45, so 90 mm across. A kind states its own edge
+ * here rather than borrowing the drawing's.
  *
  * Use `footprintFrom()` rather than writing these numbers by hand.
  */
