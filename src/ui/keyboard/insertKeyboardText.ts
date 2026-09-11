@@ -1,4 +1,4 @@
-import type { KeyboardView } from "../../types/KeyboardView";
+import type { KeyboardView } from "../../types";
 
 export function insertKeyboardText(
     kb: KeyboardView | null | undefined,

@@ -1,9 +1,9 @@
-import { CFG } from "../../config/CFG";
-import { sim } from "../../state/sim";
-import { view } from "../../state/view";
-import type { SimPuck } from "../../types/SimPuck";
+import { CFG } from "../../config";
+import { sim, view } from "../../state";
+import type { SimPuck } from "../../types";
 
-/* Topmost simulated puck under a screen point — a generous, finger-sized hit area. */
+/* Topmost simulated puck under a screen point — a generous, finger-sized hit
+   area. */
 export function simPuckAt(x: number, y: number): SimPuck | undefined {
     return sim.pucks
         .slice()

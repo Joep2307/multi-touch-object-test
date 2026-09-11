@@ -1,13 +1,14 @@
+import type { EventDraft } from "../events";
+import type {
+    PhysicalAssignment,
+    PhysicalId,
+    PhysicalInstance,
+    PhysicalKindDefinition,
+} from "../physical";
+import type { RelationKind } from "../relation";
+import type { ModeId, RoleId } from "../session";
 import type { ActionId } from "./ActionId";
-import type { EventDraft } from "../events/EventDraft";
-import type { ModeId } from "../session/ModeId";
 import type { OutboxRequest } from "./OutboxRequest";
-import type { PhysicalAssignment } from "../physical/PhysicalAssignment";
-import type { PhysicalId } from "../physical/PhysicalId";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
-import type { PhysicalKindDefinition } from "../physical/PhysicalKindDefinition";
-import type { RelationKind } from "../relation/RelationKind";
-import type { RoleId } from "../session/RoleId";
 
 /* Everything a rule may read, and everything it may change.
  *
@@ -44,6 +45,18 @@ export type RuleContext = {
     enabledActionIds(subjectId: string | null): ReadonlySet<ActionId> | null;
 
     instance(id: string): PhysicalInstance | null;
+    /* Everything on the table this frame.
+     *
+     * Here for one reason: an event with no source is addressed to
+     * every object, and a state machine cannot run such a transition
+     * without knowing who "every object" is. A mode change, a
+     * session-wide timer and a menu choice all arrive that way, and
+     * before this they could not move a single token — the shipped
+     * programme's `Voted → Ready` on `mode.changed` was simply dead.
+     *
+     * A copy, not the live collection: a rule that moves one object
+     * must not change what the loop over the others is walking. */
+    instances(): readonly PhysicalInstance[];
     kindOf(id: string): PhysicalKindDefinition | null;
     relationBetween(sourceId: string, targetId: string): RelationKind | null;
     distanceBetween(sourceId: string, targetId: string): number | null;

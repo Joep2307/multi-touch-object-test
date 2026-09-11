@@ -1,15 +1,11 @@
-import { CFG } from "../../config/CFG";
-import { NOISE } from "../../config/NOISE";
-import { noise } from "../../state/noise";
-import { ui } from "../../state/ui";
-import { view } from "../../state/view";
-import type { TouchPoint } from "../../types/TouchPoint";
-import { codeCanon } from "../geometry/codeCanon";
-import { describeSlots } from "../geometry/describeSlots";
+import { CFG, NOISE } from "../../config";
+import { noise, ui, view } from "../../state";
+import { codeCanon, describeSlots } from "../geometry";
 import { armNoise } from "./armNoise";
 import { matchFeet } from "./matchFeet";
 import { noiseReport } from "./noiseReport";
 import { seedNoise } from "./seedNoise";
+import type { TouchPoint } from "../../types";
 
 /* One frame of a noise measurement. Runs only while the puck diagnosis is
    on, and only on real touches: a drag copy from the tray has no noise, and

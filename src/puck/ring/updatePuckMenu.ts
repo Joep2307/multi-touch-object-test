@@ -1,10 +1,11 @@
-import type { Track } from "../../types/Track";
 import { commitPuckChoice } from "./commitPuckChoice";
 import { dwellMSFor } from "./dwellMSFor";
 import { ringIndexOf } from "./ringIndexOf";
 import { ringItems } from "./ringItems";
+import type { Track } from "../../types";
 
-/* Track the dwell. Called every frame for as long as a puck lies on the table. */
+/* Track the dwell. Called every frame for as long as a puck lies on the table.
+ */
 export function updatePuckMenu(t: Track, now: number): void {
     const n = ringItems(t).length,
         idx = ringIndexOf(t.angle, n);

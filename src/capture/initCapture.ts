@@ -1,5 +1,5 @@
-import { capture } from "../state/capture";
-import type { CapEvents } from "../types/CapEvents";
+import { capture } from "../state";
+import type { CapEvents } from "../types";
 
 /* ═══════════════════════════════════════════════════════════════
    CAPTURE — the table image as a photo, a recording or a time-lapse

@@ -1,9 +1,9 @@
 import { Trait } from "../Trait";
 import type { BaseSample } from "../BaseSample";
+import type { Vec2 } from "../Vec2";
+import type { Position } from "../position";
 import type { MovePolicy } from "./MovePolicy";
 import type { MoveSnapshot } from "./MoveSnapshot";
-import type { Position } from "../position/Position";
-import type { Vec2 } from "../Vec2";
 
 const ZERO: Vec2 = { x: 0, y: 0 };
 

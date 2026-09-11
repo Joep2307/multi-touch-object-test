@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 import { SHOT_MAX_W } from "./constants";
 import { scaledCanvas } from "./scaledCanvas";
 

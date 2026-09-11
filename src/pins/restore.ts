@@ -1,9 +1,7 @@
-import { DEFAULT_SESSION } from "../config/DEFAULT_SESSION";
-import { DEMO_PINS } from "../config/DEMO_PINS";
-import { el } from "../dom/el";
-import { topics } from "../i18n/topics";
-import { pins } from "../state/pins";
-import { ui } from "../state/ui";
+import { DEFAULT_SESSION, DEMO_PINS } from "../config";
+import { el } from "../dom";
+import { topics } from "../i18n";
+import { pins, ui } from "../state";
 import { cleanPin } from "./cleanPin";
 import { validPin } from "./validPin";
 

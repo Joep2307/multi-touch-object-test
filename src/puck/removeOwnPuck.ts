@@ -1,10 +1,9 @@
-import { templates } from "../state/templates";
-import { tracks } from "../state/tracks";
+import { templates, tracks } from "../state";
 import { saveOwnPucks } from "./saveOwnPucks";
 
-/* Discarding also removes the puck currently recognised on the table: otherwise
-   a marker would be left hanging that belongs to a template that no longer
-   exists. */
+/* Discarding also removes the puck currently recognised on the table:
+   otherwise a marker would be left hanging that belongs to a template that no
+   longer exists. */
 export function removeOwnPuck(id: string): void {
     const i = templates.own.findIndex((t) => t.id === id);
     if (i < 0) return;

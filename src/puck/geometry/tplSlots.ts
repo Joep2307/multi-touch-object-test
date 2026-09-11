@@ -1,5 +1,5 @@
-import { CFG } from "../../config/CFG";
-import type { Template } from "../../types/Template";
+import { CFG } from "../../config";
+import type { Template } from "../../types";
 
 /* How many slots this puck's grid has. The number belongs to the puck, not
    to the table -- a printed sheet with another grid keeps working. */

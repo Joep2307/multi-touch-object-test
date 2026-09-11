@@ -1,4 +1,4 @@
-import { el } from "../../dom/el";
+import { el } from "../../dom";
 
 export function setLearnBar(f: number): void {
     el("learnBar").style.width =

@@ -1,5 +1,5 @@
-import { TPL_FACTORY } from "../config/TPL_FACTORY";
-import type { Template } from "../types/Template";
+import { TPL_FACTORY } from "../config";
+import type { Template } from "../types";
 
 /* The pucks the table knows about.
 

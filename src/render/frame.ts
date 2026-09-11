@@ -8,39 +8,33 @@ import {
     installBaseHooks,
     trackBridgeContacts,
 } from "../bridge";
-import { QS } from "../config/QS";
-import { drawGaps } from "../kg/drawGaps";
-import { drawKG } from "../kg/drawKG";
-import { bakeMap } from "../map/bakeMap";
-import { paintMapLayer } from "../map/paintMapLayer";
-import { recognise } from "../puck/geometry/recognise";
-import { updateLearn } from "../puck/learn/updateLearn";
-import { updateNoise } from "../puck/noise/updateNoise";
-import { simPads } from "../puck/sim/simPads";
-import { syncSimPucksToMap } from "../puck/sim/syncSimPucksToMap";
-import { track } from "../puck/track";
-import { learn } from "../state/learn";
-import { tiles } from "../state/tiles";
-import { touches } from "../state/touches";
-import { ui } from "../state/ui";
-import { view } from "../state/view";
-import type { Track } from "../types/Track";
-import type { TouchPoint } from "../types/TouchPoint";
-import { updateUI } from "../ui/updateUI";
+import { QS } from "../config";
+import { realTouchPoints } from "../input";
+import { drawGaps, drawKG } from "../kg";
+import { bakeMap, paintMapLayer } from "../map";
+import { recognise } from "../puck/geometry";
+import { updateLearn } from "../puck/learn";
+import { updateNoise } from "../puck/noise";
+import { simPads, syncSimPucksToMap } from "../puck/sim";
+import { track } from "../puck";
+import { learn, tiles, ui, view } from "../state";
+import { updateUI } from "../ui";
 import { drawDebugPoints } from "./drawDebugPoints";
 import { drawLockBadge } from "./drawLockBadge";
 import { drawNoise } from "./drawNoise";
 import { drawNoteTether } from "./drawNoteTether";
 import { drawPins } from "./drawPins";
-import { drawPuck } from "./drawPuck";
 import { drawPuckKnowledgeRelations } from "./drawPuckKnowledgeRelations";
+import { drawPuck } from "./drawPuck";
 import { drawResetProgress } from "./drawResetProgress";
+import type { TouchPoint, Track } from "../types";
 
 const BASE_PARITY_ENABLED = QS.has("base") && QS.get("base") !== "0";
 let baseBridge: TrackBridge | null = null;
 let parityCheck: ParityCheck | null = null;
 let baseRecorder: BaseSessionRecorder | null = null;
 let baseRuntime: BaseRuntime | null = null;
+let baseHooksInstalled = false;
 let baseParityFailed = false;
 
 /* FRAME — the render loop. */
@@ -50,7 +44,7 @@ export function frame(): void {
     const ctx = view.ctx;
     syncSimPucksToMap();
     const simulated = ui.simMode ? simPads() : [];
-    const points: TouchPoint[] = [...touches.real.values(), ...simulated];
+    const points: TouchPoint[] = [...realTouchPoints(), ...simulated];
     const { pucks: dets, usedIdx } = recognise(points);
     const tracked = track(dets, now);
     const pucks = tracked.pucks;
@@ -65,16 +59,22 @@ export function frame(): void {
             baseBridge ??= new TrackBridge(view.pxPerMM);
             parityCheck ??= new ParityCheck();
             baseRuntime ??= new BaseRuntime();
-            if (baseRecorder === null) {
-                baseRecorder = new BaseSessionRecorder(
-                    baseBridge,
-                    parityCheck,
+            baseRecorder ??= new BaseSessionRecorder(baseBridge, parityCheck);
+            /* Once for the life of the page. The hooks reach the
+               recorder and the runtime through getters, so rebuilding
+               either after a failure needs no second install — and a
+               second install would add a second keydown listener, so
+               every shortcut would fire twice and cancel itself. */
+            if (!baseHooksInstalled) {
+                baseHooksInstalled = true;
+                installBaseHooks(
+                    () => baseRecorder,
+                    () => baseRuntime,
                 );
-                installBaseHooks(baseRecorder, () => baseRuntime);
             }
             baseBridge.update(
                 now,
-                trackBridgeContacts([...touches.real.entries()], simulated),
+                trackBridgeContacts(points),
                 tracked.assignments,
             );
             compareBaseParity(now, pucks, baseBridge, parityCheck);
@@ -89,9 +89,15 @@ export function frame(): void {
                 baseParityFailed = true;
                 console.error("base parity disabled after an error", e);
             }
+            /* The recorder too. It was built around the bridge and
+               the parity check being thrown away here, so leaving it
+               alive left it capturing a bridge nobody was advancing:
+               the same frozen frame thousands of times over, beside a
+               parity summary reading a counter nobody updates. */
             baseBridge = null;
             parityCheck = null;
             baseRuntime = null;
+            baseRecorder = null;
         }
     }
     if (learn.open) updateLearn(now);

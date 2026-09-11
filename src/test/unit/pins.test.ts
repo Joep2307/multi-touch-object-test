@@ -5,10 +5,9 @@
  * whole table to a halt — pucks, ring menu, everything — on every single
  * frame. This file keeps that door shut.
  */
+import { randomId } from "../../dom";
+import { cleanPin, validPin } from "../../pins";
 import { describe, expect, it } from "vitest";
-import { randomId } from "../../dom/randomId";
-import { cleanPin } from "../../pins/cleanPin";
-import { validPin } from "../../pins/validPin";
 
 const KEYS = new Set(["good", "bad", "talk", "idea"]);
 const geldig = (

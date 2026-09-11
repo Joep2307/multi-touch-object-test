@@ -1,8 +1,8 @@
-import { puckHoleAt } from "./puckHoleAt";
+import { openNote } from "../notes";
+import { pins } from "../state";
 import { dropPin } from "./dropPin";
-import { openPuckRing } from "./ring/openPuckRing";
-import { pins } from "../state/pins";
-import { openNote } from "../notes/openNote";
+import { puckHoleAt } from "./puckHoleAt";
+import { openPuckRing } from "./ring";
 
 /* A center tap places the mark and opens its topic ring. The visible options
    are then selected by tapping; turning remains reserved for map zoom. */

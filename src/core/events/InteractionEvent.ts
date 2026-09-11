@@ -1,7 +1,7 @@
+import type { ExtensionProperties } from "../programme";
 import type { EventId } from "./EventId";
 import type { EventPayload } from "./EventPayload";
 import type { EventType } from "./EventType";
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
 
 /* Something that happened, as a fact rather than as a call.
  *

@@ -1,6 +1,6 @@
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
-import { analytics } from "../../state/analytics";
+import { el } from "../../dom";
+import { tr } from "../../i18n";
+import { analytics } from "../../state";
 
 export function applyAnalyticsOrientation(): void {
     const a = el("analytics");

@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 import { finishRec } from "./finishRec";
 
 /* When a session is wiped or reset, nothing may keep running. */

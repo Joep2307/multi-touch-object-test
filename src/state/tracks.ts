@@ -1,5 +1,4 @@
-import type { PuckMemory } from "../types/PuckMemory";
-import type { Track } from "../types/Track";
+import type { PuckMemory, Track } from "../types";
 
 /* Pucks are tracked by their own sequence number, not by their type. That
    used to be the same thing: one puck per template. But then there could

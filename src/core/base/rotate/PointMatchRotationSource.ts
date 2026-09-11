@@ -1,9 +1,9 @@
 import { MIN_MATCHED_POINTS } from "../constants";
-import { RotationSource } from "./RotationSource";
 import { rigidMotionBetween } from "../rigidMotionBetween";
+import { RotationSource } from "./RotationSource";
 import type { BaseSample } from "../BaseSample";
-import type { RotatePolicy } from "./RotatePolicy";
 import type { Vec2 } from "../Vec2";
+import type { RotatePolicy } from "./RotatePolicy";
 
 /* Rotation with no nose at all.
  *

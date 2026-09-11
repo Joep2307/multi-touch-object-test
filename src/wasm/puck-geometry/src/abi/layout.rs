@@ -1,6 +1,6 @@
 //! How much fits in the buffers, and in what order the fields sit.
 //!
-//! The same numbers live in `src/puck/geometry/layout.ts`; change something
+//! The same numbers live in `src/puck/geometry/LAYOUT.ts`; change something
 //! here, change it there too.
 
 pub const MAX_POINTS: usize = 128;

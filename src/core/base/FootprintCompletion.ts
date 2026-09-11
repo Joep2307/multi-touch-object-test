@@ -1,11 +1,10 @@
 import { applyRigidMotion } from "./applyRigidMotion";
 import { rigidMotionBetween } from "./rigidMotionBetween";
-import type { ContactSet } from "../contact/ContactSet";
+import type { ContactSet, SensedContact } from "../contact";
 import type { FootprintCompletionPolicy } from "./FootprintCompletionPolicy";
 import type { FootprintSpec } from "./FootprintSpec";
-import type { PositionSnapshot } from "./position/PositionSnapshot";
-import type { SensedContact } from "../contact/SensedContact";
 import type { Vec2 } from "./Vec2";
+import type { PositionSnapshot } from "./position";
 
 /* Whatever started with three feet stays that puck while two of those
    feet are still recognisably there.
@@ -35,6 +34,16 @@ import type { Vec2 } from "./Vec2";
  *     watched ids and the frame is a pause, as before, and `Presence`
  *     keeps the identity. A foot that comes back has a new id and is
  *     not matched to whichever old foot is nearest.
+ *
+ * There is deliberately **no time limit** on how old the reference may
+ * be. A limit would be answering the wrong question: what matters is
+ * not how long ago the puck was last whole but whether the feet being
+ * matched are the same touches, and `firstSeen` says that exactly. Two
+ * feet that have been on the glass without interruption since the
+ * reference are still those two feet a minute later, and the motion
+ * between the two frames is still the motion the puck made. Only if a
+ * driver reused a contact id would that be false, and a reused id
+ * brings a new `firstSeen` with it.
  *   - The reconstruction is always **reference → now**, never frame →
  *     frame. The held frames do not become references, so a puck held
  *     for five seconds does not drift by five seconds of accumulated
@@ -45,9 +54,11 @@ import type { Vec2 } from "./Vec2";
  * the same code.
  */
 export class FootprintCompletion {
-    /* The last frame that was complete and sensed on real feet. */
+    /* The last frame that was complete and sensed on real feet. No
+       timestamp beside it: how old it is decides nothing, because
+       `firstSeen` already says whether the feet being matched are the
+       same touches. */
     #reference: readonly SensedContact[] | null = null;
-    #referenceAt: number | null = null;
 
     constructor(private readonly policy: FootprintCompletionPolicy) {}
 
@@ -55,18 +66,28 @@ export class FootprintCompletion {
        untouched when it cannot help. */
     complete(contacts: ContactSet, spec: FootprintSpec): ContactSet {
         const reference = this.#reference;
-        const referenceAt = this.#referenceAt;
-        if (reference === null || referenceAt === null) return contacts;
+        if (reference === null) return contacts;
         if (contacts.points.length >= spec.expectedCount) return contacts;
-        if (contacts.at - referenceAt > this.policy.maxGapMS) return contacts;
 
         const here = new Map<number, SensedContact>();
         for (const point of contacts.points) here.set(point.id, point);
         const matched: SensedContact[] = [];
         const missing: SensedContact[] = [];
         for (const foot of reference) {
-            if (here.has(foot.id)) matched.push(foot);
-            else missing.push(foot);
+            const now = here.get(foot.id);
+            if (now === undefined) {
+                missing.push(foot);
+                continue;
+            }
+            /* The same id *and* the same touch. An id the driver handed
+               out again after a real lift arrives with a later
+               `firstSeen`. That is not a foot that stayed down, and
+               nothing here can tell what it is instead — so the whole
+               frame is left alone rather than half-trusted. This is the
+               check a blunt time limit was standing in for, and it is
+               exact. */
+            if (now.firstSeen !== foot.firstSeen) return contacts;
+            matched.push(foot);
         }
         if (matched.length < this.policy.minMatchedFeet) return contacts;
         if (missing.length === 0) return contacts;
@@ -126,12 +147,10 @@ export class FootprintCompletion {
             return;
         }
         this.#reference = contacts.points;
-        this.#referenceAt = contacts.at;
     }
 
     reset(): void {
         this.#reference = null;
-        this.#referenceAt = null;
     }
 
     /* Are the matched feet still the same distances apart?

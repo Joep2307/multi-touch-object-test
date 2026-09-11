@@ -1,10 +1,10 @@
-import { tracks } from "../state/tracks";
-import type { SimPuck } from "../types/SimPuck";
-import type { Track } from "../types/Track";
+import { tracks } from "../state";
 import { puckSepPX } from "./puckSepPX";
+import type { SimPuck, Track } from "../types";
 
 /* A drag copy belongs to the track that lies closest to it and has the same
-   kind; with two pucks of one kind, the template alone no longer says which. */
+   kind; with two pucks of one kind, the template alone no longer says which.
+   */
 export function trackForSim(s: SimPuck): Track | null {
     let best: Track | null = null,
         bd = puckSepPX();

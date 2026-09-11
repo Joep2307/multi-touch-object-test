@@ -1,4 +1,4 @@
-import { PUCK_HOLE } from "../config/PUCK_HOLE";
+import { PUCK_HOLE } from "../config";
 
 /* Crosshair at the center point of a puck. That center point is the
    coordinate that gets recorded as the pin on confirm, so it must still be

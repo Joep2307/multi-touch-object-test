@@ -12,12 +12,12 @@
  * nine hundred milliseconds, and gone without reaching memory. The
  * tests below are the ones that would have caught it.
  */
+import { CFG } from "../../config";
+import { padsFor } from "../../puck/geometry";
+import { track } from "../../puck";
+import { tracks } from "../../state";
 import { afterEach, beforeEach, describe as suite, expect, it } from "vitest";
-import { CFG } from "../../config/CFG";
-import { tracks } from "../../state/tracks";
-import { track } from "../../puck/track";
-import type { Detection } from "../../types/Detection";
-import type { Template } from "../../types/Template";
+import type { Detection, Template } from "../../types";
 
 const TPL: Template = {
     id: "puck-01",
@@ -35,6 +35,7 @@ const detection = (x: number, y: number): Detection => ({
     y,
     angle: 0,
     contactIndices: [0, 1, 2],
+    feet: padsFor(TPL).map((p, i) => ({ id: i, x: x + p.x, y: y + p.y })),
 });
 
 /* Seen on enough consecutive frames to leave `candidate`. Returns the
@@ -96,6 +97,30 @@ suite("track", () => {
         /* A candidate was never a puck, so there is nothing about it
            worth remembering. */
         expect(tracks.memory).toHaveLength(0);
+    });
+
+    it("remembers the feet it was last seen whole on", () => {
+        settle();
+        /* Three of them, with the contact ids the glass gave them. This
+           is what a two-foot frame is matched against; without it a
+           puck could be held on any two touches at all. */
+        expect(only()?.feet.map((f) => f.id)).toEqual([0, 1, 2]);
+    });
+
+    it("does not take a held reading as the new reference", () => {
+        /* A reference refreshed from a reconstruction would measure the
+           next hold against the last one, and a puck held for five
+           seconds would drift by five seconds of error. */
+        const at = settle();
+        const before = only()?.feet.map((f) => ({ ...f }));
+        const moved = detection(140, 140);
+        track([{ ...moved, held: true }], at);
+        expect(only()?.held).toBe(true);
+        expect(only()?.feet).toEqual(before);
+        /* And a whole reading does refresh it. */
+        track([moved], at + FRAME_MS);
+        expect(only()?.held).toBe(false);
+        expect(only()?.feet).not.toEqual(before);
     });
 
     it("picks a held puck back up where it left off", () => {

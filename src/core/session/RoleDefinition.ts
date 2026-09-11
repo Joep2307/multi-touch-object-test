@@ -1,8 +1,8 @@
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
-import type { KindId } from "../physical/KindId";
+import type { StateMachineId } from "../behaviour";
+import type { KindId } from "../physical";
+import type { ExtensionProperties } from "../programme";
 import type { OverflowPolicy } from "./OverflowPolicy";
 import type { RoleId } from "./RoleId";
-import type { StateMachineId } from "../behaviour/StateMachineId";
 
 /* A part an object can play.
  *

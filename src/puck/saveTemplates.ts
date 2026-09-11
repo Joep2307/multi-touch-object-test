@@ -1,7 +1,6 @@
-import { templates } from "../state/templates";
+import { templates } from "../state";
+import { TPL_KEY } from "./constants";
 import { tplWire } from "./tplWire";
-
-export const TPL_KEY = "pucktable-templates";
 
 /* What is stored is the measurement, not the puck: `restoreTemplates` only
    ever puts it back on a puck the code already knows. All three shapes go

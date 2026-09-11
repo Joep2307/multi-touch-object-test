@@ -1,5 +1,5 @@
-import { tiles } from "../state/tiles";
-import type { BasemapRecord } from "../types/BasemapRecord";
+import { tiles } from "../state";
+import type { BasemapRecord } from "../types";
 
 export function showBasemap(rec: BasemapRecord | null | undefined): void {
     if (!rec || !rec.data) return;

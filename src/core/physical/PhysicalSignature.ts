@@ -1,4 +1,4 @@
-import type { FootprintSpec } from "../base/FootprintSpec";
+import type { FootprintSpec } from "../base";
 import type { KindFamily } from "./KindFamily";
 import type { OrientationRule } from "./OrientationRule";
 import type { ScaleRule } from "./ScaleRule";

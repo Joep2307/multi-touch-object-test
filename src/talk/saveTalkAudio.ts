@@ -1,9 +1,10 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { talk } from "../state/talk";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { talk } from "../state";
 
 /* Without a transcription service, the audio is all there is; it must not
-   disappear along with the window. So download it, with the session name in it. */
+   disappear along with the window. So download it, with the session name in
+   it. */
 export function saveTalkAudio(): void {
     if (!talk.audioBlob) return;
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");

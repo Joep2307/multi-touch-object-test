@@ -1,8 +1,8 @@
-import { flushSave } from "../pins/flushSave";
-import { talk } from "../state/talk";
-import { stopTalk } from "../talk/stopTalk";
-import type { NoteView } from "../types/NoteView";
-import { hideKeyboardIn } from "../ui/keyboard/hideKeyboardIn";
+import { flushSave } from "../pins";
+import { talk } from "../state";
+import { stopTalk } from "../talk";
+import { hideKeyboardIn } from "../ui/keyboard";
+import type { NoteView } from "../types";
 
 /* Close a single window. `keepTalk` exists for moving to the other side:
    this window then closes while the same marker keeps talking on the

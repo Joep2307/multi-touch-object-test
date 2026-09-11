@@ -1,27 +1,29 @@
+import { TimerWheel } from "../behaviour";
+import { physicalInstanceOf } from "../physical";
 import { EventLog } from "./EventLog";
-import { TimerWheel } from "../behaviour/TimerWheel";
-import { physicalInstanceOf } from "../physical/physicalInstanceOf";
-import type { ActionId } from "../behaviour/ActionId";
-import type { EffectRegistry } from "../behaviour/EffectRegistry";
-import type { EventBus } from "../events/EventBus";
-import type { EventDraft } from "../events/EventDraft";
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
+import type {
+    ActionId,
+    EffectRegistry,
+    OutboxRequest,
+    RuleContext,
+    StateDefinition,
+    StateId,
+} from "../behaviour";
+import type { EventBus, EventDraft } from "../events";
+import type {
+    PhysicalAssignment,
+    PhysicalId,
+    PhysicalInstance,
+    PhysicalKindDefinition,
+    PhysicalRegistry,
+} from "../physical";
+import type { ExtensionProperties } from "../programme";
+import type { RelationKind, SpatialRelation } from "../relation";
 import type { ModeDefinition } from "./ModeDefinition";
 import type { ModeId } from "./ModeId";
-import type { OutboxRequest } from "../behaviour/OutboxRequest";
-import type { PhysicalAssignment } from "../physical/PhysicalAssignment";
-import type { PhysicalId } from "../physical/PhysicalId";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
-import type { PhysicalKindDefinition } from "../physical/PhysicalKindDefinition";
-import type { PhysicalRegistry } from "../physical/PhysicalRegistry";
-import type { RelationKind } from "../relation/RelationKind";
 import type { RoleAssigner } from "./RoleAssigner";
 import type { RoleId } from "./RoleId";
-import type { RuleContext } from "../behaviour/RuleContext";
 import type { SettingsResolver } from "./SettingsResolver";
-import type { SpatialRelation } from "../relation/SpatialRelation";
-import type { StateDefinition } from "../behaviour/StateDefinition";
-import type { StateId } from "../behaviour/StateId";
 
 /* The only place with real state.
  *
@@ -193,6 +195,19 @@ export class Session implements RuleContext {
         if (roleId === null) {
             this.roles.departed(id, this.at);
         } else {
+            /* Whether this object may play this part at all, asked
+               here because this is the one door every grant goes
+               through — a rule's `assignRole` effect as much as the
+               offer a mode makes on arrival. It used to be asked only
+               on the arrival path, so a rule could hand a Moderator's
+               part to a printed card and the ledger would record it. */
+            const instance = this.instance(id);
+            if (
+                instance !== null &&
+                !this.roles.eligibleFor(instance, roleId)
+            ) {
+                return;
+            }
             this.roles.assign(id, roleId, this.at);
         }
         this.#reconcileRoles();

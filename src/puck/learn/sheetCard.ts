@@ -1,19 +1,21 @@
-import { tr } from "../../i18n/tr";
-import type { Template } from "../../types/Template";
-import { codeSlots } from "../geometry/codeSlots";
-import { codeText } from "../geometry/codeText";
-import { gapText } from "../geometry/gapText";
-import { isRing } from "../geometry/isRing";
-import { isSlotted } from "../geometry/isSlotted";
-import { padsFor } from "../geometry/padsFor";
-import { slotWidth } from "../geometry/slotWidth";
-import { tplRing } from "../geometry/tplRing";
-import { tplSlots } from "../geometry/tplSlots";
-import { tplSpanMM } from "../geometry/tplSpanMM";
+import { tr } from "../../i18n";
+import {
+    codeSlots,
+    codeText,
+    gapText,
+    isRing,
+    isSlotted,
+    padsFor,
+    slotWidth,
+    tplRing,
+    tplSlots,
+    tplSpanMM,
+} from "../geometry";
 import { tplColor } from "../tplColor";
 import { tplLongest } from "../tplLongest";
 import { tplName } from "../tplName";
 import { tplRadiusMM } from "../tplRadiusMM";
+import type { Template } from "../../types";
 
 /* Nine letters: a grid puck has six feet, a ring five, a triangle three. */
 const LETTERS = "ABCDEFGHI";
@@ -80,18 +82,33 @@ export function sheetCard(t: Template): string {
            <tr><td>${tr("sheetLongest")}</td><td colspan="2">` +
             `${tplLongest(t).toFixed(1)} mm</td></tr>`;
     }
-    return `<div class="sheetcard"><h3 style="color:${c}">${t.id} · ${tplName(t)}</h3>
+    return (
+        `<div class="sheetcard">` +
+        `<h3 style="color:${c}">${t.id} · ${tplName(t)}</h3>
       <svg width="100%" viewBox="0 0 ${S} ${S}">
-        <circle cx="${S / 2}" cy="${S / 2}" r="${tplRadiusMM(t) * sc}" fill="none" stroke="#2c3846"/>
+        <circle cx="${S / 2}" cy="${S / 2}" ` +
+        `r="${tplRadiusMM(t) * sc}" fill="none" stroke="#2c3846"/>
         ${shape}
         ${pts
             .map(
                 (p, i) =>
-                    `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="${c}"/>
-        <text x="${(p.x + 9).toFixed(1)}" y="${(p.y + 4).toFixed(1)}" font-size="10" font-family="monospace" fill="#7f8b9b">${LETTERS[i]}</text>`,
+                    `<circle cx="${p.x.toFixed(1)}" ` +
+                    `cy="${p.y.toFixed(1)}" r="5" fill="${c}"/>
+        <text x="${(p.x + 9).toFixed(1)}" ` +
+                    `y="${(p.y + 4).toFixed(1)}" font-size="10" ` +
+                    `font-family="monospace" ` +
+                    `fill="#7f8b9b">${LETTERS[i]}</text>`,
             )
             .join("")}
       </svg>
-      <table>${pads.map((p, i) => `<tr><td>${tr("sheetPad")} ${LETTERS[i]}</td><td>x ${p.x.toFixed(1)} mm</td><td>y ${p.y.toFixed(1)} mm</td></tr>`).join("")}
-      ${rows}</table></div>`;
+      <table>${pads
+          .map(
+              (p, i) =>
+                  `<tr><td>${tr("sheetPad")} ${LETTERS[i]}</td>` +
+                  `<td>x ${p.x.toFixed(1)} mm</td>` +
+                  `<td>y ${p.y.toFixed(1)} mm</td></tr>`,
+          )
+          .join("")}
+      ${rows}</table></div>`
+    );
 }

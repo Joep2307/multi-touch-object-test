@@ -1,7 +1,7 @@
 import { Trait } from "../Trait";
-import { FULL_TURN_DEG } from "../direction/constants";
+import { FULL_TURN_DEG } from "../direction";
 import type { BaseSample } from "../BaseSample";
-import type { Direction } from "../direction/Direction";
+import type { Direction } from "../direction";
 import type { RotatePolicy } from "./RotatePolicy";
 import type { RotateSnapshot } from "./RotateSnapshot";
 import type { RotationSource } from "./RotationSource";

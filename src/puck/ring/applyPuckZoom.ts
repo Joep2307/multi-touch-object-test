@@ -1,6 +1,6 @@
-import { CFG } from "../../config/CFG";
-import { MV } from "../../map/MV";
-import type { Track } from "../../types/Track";
+import { CFG } from "../../config";
+import { MV } from "../../map";
+import type { Track } from "../../types";
 
 /* Zooming with the puck itself: pushing forward (away from you, up the
    screen) zooms in, pulling toward you zooms out.

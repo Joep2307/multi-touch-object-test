@@ -1,6 +1,4 @@
-import { sim } from "../../state/sim";
-import { templates } from "../../state/templates";
-import { ui } from "../../state/ui";
+import { sim, templates, ui } from "../../state";
 import { moveGhost } from "./moveGhost";
 
 export function onTrayDown(e: PointerEvent): void {
@@ -11,7 +9,8 @@ export function onTrayDown(e: PointerEvent): void {
     e.preventDefault();
     const ghost = node.cloneNode(true) as HTMLElement;
     ghost.style.cssText =
-        "position:fixed;z-index:60;margin:0;pointer-events:none;opacity:.9;zoom:" +
+        "position:fixed;z-index:60;margin:0;pointer-events:none;" +
+        "opacity:.9;zoom:" +
         ui.scale;
     document.body.appendChild(ghost);
     sim.trayDrags.set(e.pointerId, {

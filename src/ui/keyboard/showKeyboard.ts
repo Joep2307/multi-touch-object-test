@@ -1,6 +1,5 @@
-import { tr } from "../../i18n/tr";
-import { keyboards } from "../../state/keyboards";
-import type { TextField } from "../../types/TextField";
+import { tr } from "../../i18n";
+import { keyboards } from "../../state";
 import { tableUi } from "../tableUi";
 import { hideKeyboard } from "./hideKeyboard";
 import { kbOnSide } from "./kbOnSide";
@@ -8,6 +7,7 @@ import { kbPart } from "./kbPart";
 import { keyboardSideFor } from "./keyboardSideFor";
 import { liftEditorAboveKeyboard } from "./liftEditorAboveKeyboard";
 import { renderKeyboard } from "./renderKeyboard";
+import type { TextField } from "../../types";
 
 export function showKeyboard(target: TextField): void {
     // Don't test on `ui.mode==="touch"`: `refreshKeyboardFields` turns off the

@@ -1,8 +1,8 @@
 import { HeadingSource } from "./HeadingSource";
 import { FULL_TURN_DEG } from "./constants";
-import type { SensedContact } from "../../contact/SensedContact";
-import type { DirectionPolicy } from "./DirectionPolicy";
+import type { SensedContact } from "../../contact";
 import type { Vec2 } from "../Vec2";
+import type { DirectionPolicy } from "./DirectionPolicy";
 
 /* The nose of a three-foot object: its apex.
  *

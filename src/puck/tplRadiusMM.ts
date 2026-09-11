@@ -1,5 +1,5 @@
-import { CFG } from "../config/CFG";
-import type { Template } from "../types/Template";
+import { CFG } from "../config";
+import type { Template } from "../types";
 
 /* This puck's disc in millimetres. The small puck of the duo is narrower
    than the four from the drawing; drawn at the same size its black band

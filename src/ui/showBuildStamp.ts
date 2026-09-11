@@ -1,5 +1,5 @@
-import { STAMP_FILES } from "../config/STAMP_FILES";
-import { tr } from "../i18n/tr";
+import { STAMP_FILES } from "../config";
+import { tr } from "../i18n";
 import { stampDate } from "./stampDate";
 
 /* ---- Build stamp ---------------------------------------------------------

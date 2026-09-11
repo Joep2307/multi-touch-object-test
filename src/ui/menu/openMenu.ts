@@ -1,13 +1,12 @@
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
-import { menu } from "../../state/menu";
-import type { MenuView } from "../../types/MenuView";
-import type { Side } from "../../types/Side";
-import { resetPanelOffset } from "../panels/resetPanelOffset";
+import { el } from "../../dom";
+import { tr } from "../../i18n";
+import { menu } from "../../state";
+import { resetPanelOffset } from "../panels";
 import { MENU_BTNS } from "./MENU_BTNS";
 import { MENU_TITLES } from "./MENU_TITLES";
 import { markLayerMenu } from "./markLayerMenu";
 import { menuFlipped } from "./menuFlipped";
+import type { MenuView, Side } from "../../types";
 
 /* ── Menu ──────────────────────────────────────────────────────────────
    At a table with people standing around it, any panel that stays put is

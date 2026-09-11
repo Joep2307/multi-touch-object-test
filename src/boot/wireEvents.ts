@@ -1,91 +1,84 @@
-import { CFG } from "../config/CFG";
-import { wireCapture } from "../capture/wireCapture";
-import { DEV } from "../config/DEV";
-import { DRAG_PANELS } from "../config/DRAG_PANELS";
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { endPointer } from "../input/endPointer";
-import { onControlTapDown } from "../input/onControlTapDown";
-import { onControlTapUp } from "../input/onControlTapUp";
-import { onEscape } from "../input/onEscape";
-import { onImageDrop } from "../input/onImageDrop";
-import { onMouseDown } from "../input/onMouseDown";
-import { onMouseMove } from "../input/onMouseMove";
-import { onMouseUp } from "../input/onMouseUp";
-import { onPointerDown } from "../input/onPointerDown";
-import { onPointerMove } from "../input/onPointerMove";
-import { onSearchKeydown } from "../input/onSearchKeydown";
-import { onTapDown } from "../input/onTapDown";
-import { onTapUp } from "../input/onTapUp";
-import { onWheel } from "../input/onWheel";
-import { kgUrl } from "../config/kgUrl";
-import { kg } from "../kg/kg";
-import { kgStatusText } from "../kg/kgStatusText";
-import { loadKG } from "../kg/loadKG";
-import { onKgChange } from "../kg/onKgChange";
-import { MV } from "../map/MV";
-import { applyCalm } from "../map/applyCalm";
-import { bakeStore } from "../map/bakeStore";
-import { resize } from "../map/resize";
-import { closeNotes } from "../notes/closeNotes";
-import { reorientNote } from "../notes/reorientNote";
-import { exportCsv } from "../pins/exportCsv";
-import { exportGeoJson } from "../pins/exportGeoJson";
-import { restore } from "../pins/restore";
-import { buildSheet } from "../puck/learn/buildSheet";
-import { closeLearn } from "../puck/learn/closeLearn";
-import { closeSheet } from "../puck/learn/closeSheet";
-import { exportConfig } from "../puck/learn/exportConfig";
-import { exportMeasurements } from "../puck/learn/exportMeasurements";
-import { openLearn } from "../puck/learn/openLearn";
-import { restartLearn } from "../puck/learn/restartLearn";
-import { resetTemplates } from "../puck/resetTemplates";
-import { saveOwnPucks } from "../puck/saveOwnPucks";
-import { clearPucks } from "../puck/sim/clearPucks";
-import { endTrayDrag } from "../puck/tray/endTrayDrag";
-import { moveGhost } from "../puck/tray/moveGhost";
-import { onTrayDown } from "../puck/tray/onTrayDown";
-import { renderTray } from "../puck/tray/renderTray";
-import { trays } from "../puck/tray/trays";
-import { learn } from "../state/learn";
-import { panels } from "../state/panels";
-import { reset } from "../state/reset";
-import { templates } from "../state/templates";
-import { tiles } from "../state/tiles";
-import { touches } from "../state/touches";
-import { tracks } from "../state/tracks";
-import { ui } from "../state/ui";
-import type { TextField } from "../types/TextField";
-import { closeAnalytics } from "../ui/analytics/closeAnalytics";
-import { flipAnalytics } from "../ui/analytics/flipAnalytics";
-import { openAnalytics } from "../ui/analytics/openAnalytics";
-import { applyColorTheme } from "../ui/applyColorTheme";
-import { applyLock } from "../ui/applyLock";
-import { applyMode } from "../ui/applyMode";
-import { applyPinMoveMode } from "../ui/applyPinMoveMode";
-import { applySides } from "../ui/applySides";
-import { showKeyboard } from "../ui/keyboard/showKeyboard";
-import { closeDocumentViewer } from "../ui/kgInfo/closeDocumentViewer";
-import { closeKgInfo } from "../ui/kgInfo/closeKgInfo";
-import { MENU_BTNS } from "../ui/menu/MENU_BTNS";
-import { closeMenu } from "../ui/menu/closeMenu";
-import { markLayerMenu } from "../ui/menu/markLayerMenu";
-import { openMenu } from "../ui/menu/openMenu";
-import { reorientMenu } from "../ui/menu/reorientMenu";
-import { onWipe } from "../ui/onWipe";
-import { makeDraggable } from "../ui/panels/makeDraggable";
-import { refreshPanelOffsets } from "../ui/panels/refreshPanelOffsets";
-import { puckMode } from "../ui/puckMode";
-import { refreshFullscreenLabel } from "../ui/refreshFullscreenLabel";
-import { applyResetKey } from "../ui/resetKey/applyResetKey";
-import { onResetKeydown } from "../ui/resetKey/onResetKeydown";
-import { onResetKeyup } from "../ui/resetKey/onResetKeyup";
-import { setLang } from "../ui/setLang";
-import { stepScale } from "../ui/stepScale";
-import { toggleFullscreen } from "../ui/toggleFullscreen";
-import { toggleOrientation } from "../ui/toggleOrientation";
-import { wireAccordions } from "../ui/wireAccordions";
-import { menu } from "../state/menu";
+import { wireCapture } from "../capture";
+import { CFG, DEV, DRAG_PANELS, kgUrl } from "../config";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import {
+    endPointer,
+    onControlTapDown,
+    onControlTapUp,
+    onEscape,
+    onImageDrop,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    onPointerDown,
+    onPointerMove,
+    onSearchKeydown,
+    onTapDown,
+    onTapUp,
+    onWheel,
+} from "../input";
+import { kg, kgStatusText, loadKG, onKgChange } from "../kg";
+import { MV, applyCalm, bakeStore, resize } from "../map";
+import { closeNotes, reorientNote } from "../notes";
+import { exportCsv, exportGeoJson, restore } from "../pins";
+import {
+    buildSheet,
+    closeLearn,
+    closeSheet,
+    exportConfig,
+    exportMeasurements,
+    openLearn,
+    restartLearn,
+} from "../puck/learn";
+import { clearPucks } from "../puck/sim";
+import {
+    endTrayDrag,
+    moveGhost,
+    onTrayDown,
+    renderTray,
+    trays,
+} from "../puck/tray";
+import { resetTemplates, saveOwnPucks } from "../puck";
+import {
+    learn,
+    menu,
+    panels,
+    reset,
+    templates,
+    tiles,
+    touches,
+    tracks,
+    ui,
+} from "../state";
+import { closeAnalytics, flipAnalytics, openAnalytics } from "../ui/analytics";
+import { showKeyboard } from "../ui/keyboard";
+import { closeDocumentViewer, closeKgInfo } from "../ui/kgInfo";
+import {
+    MENU_BTNS,
+    closeMenu,
+    markLayerMenu,
+    openMenu,
+    reorientMenu,
+} from "../ui/menu";
+import { makeDraggable, refreshPanelOffsets } from "../ui/panels";
+import { applyResetKey, onResetKeydown, onResetKeyup } from "../ui/resetKey";
+import {
+    applyColorTheme,
+    applyLock,
+    applyMode,
+    applyPinMoveMode,
+    applySides,
+    onWipe,
+    puckMode,
+    refreshFullscreenLabel,
+    setLang,
+    stepScale,
+    toggleFullscreen,
+    toggleOrientation,
+    wireAccordions,
+} from "../ui";
+import type { TextField } from "../types";
 
 /* Everything that in app.js was attached at the top level to the window
    and the buttons, in the same order: when two handlers sit on the same
@@ -158,7 +151,8 @@ export function wireEvents(): void {
     for (const { id, head, loose } of DRAG_PANELS) {
         const panel = document.getElementById(id);
         if (panel) makeDraggable(panel, head, loose);
-        // The clones on the other side are the same panels, so they slide the same way.
+        // The clones on the other side are the same panels, so they slide the
+        // same way.
         const twin = document.getElementById(id + "-b");
         if (twin) makeDraggable(twin, head, loose);
     }

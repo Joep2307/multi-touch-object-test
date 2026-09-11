@@ -1,9 +1,9 @@
 import { Trait } from "../Trait";
 import { FULL_TURN_DEG } from "./constants";
 import type { BaseSample } from "../BaseSample";
+import type { Position } from "../position";
 import type { DirectionSnapshot } from "./DirectionSnapshot";
 import type { HeadingSource } from "./HeadingSource";
-import type { Position } from "../position/Position";
 
 const EMPTY: DirectionSnapshot = {
     known: false,

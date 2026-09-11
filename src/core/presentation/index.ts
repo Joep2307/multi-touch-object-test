@@ -26,7 +26,7 @@ export type { RegionCrossing } from "./RegionCrossing";
 export type { RegionDefinition } from "./RegionDefinition";
 export type { RegionId } from "./RegionId";
 export type { RegionShape } from "./RegionShape";
-export type { RegionUpdate } from "./RegionTracker";
+export type { RegionUpdate } from "./RegionUpdate";
 export type { RenderItem } from "./RenderItem";
 export type { RenderPlan } from "./RenderPlan";
 export type { RenderProps } from "./RenderProps";

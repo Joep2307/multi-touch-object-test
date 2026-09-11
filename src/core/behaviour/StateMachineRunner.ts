@@ -1,10 +1,10 @@
+import { matchesTrigger } from "./matchesTrigger";
 import { firstUnmetCondition } from "./firstUnmetCondition";
-import { matchesTrigger } from "./TriggerMatcher";
+import type { InteractionEvent } from "../events";
+import type { PhysicalId } from "../physical";
 import type { ConditionRegistry } from "./ConditionRegistry";
 import type { EffectDefinition } from "./EffectDefinition";
 import type { EffectRegistry } from "./EffectRegistry";
-import type { InteractionEvent } from "../events/InteractionEvent";
-import type { PhysicalId } from "../physical/PhysicalId";
 import type { RuleContext } from "./RuleContext";
 import type { RuleTrace } from "./RuleTrace";
 import type { StateDefinition } from "./StateDefinition";
@@ -26,6 +26,17 @@ import type { TransitionId } from "./TransitionId";
  * effect that reads the state sees the one it just arrived in rather
  * than the one it left — which is the difference between an entry
  * effect that can light a lamp and one that lights the wrong lamp.
+ *
+ * **An event with no source is addressed to every object the machine
+ * governs.** A mode change has no source; neither does a timer a mode
+ * started, nor a menu choice. Returning early on those left the
+ * shipped programme's `Voted → Ready` on `mode.changed` dead: a token
+ * that had voted and was carried into Results stayed Voted and red,
+ * with `open_note` as its only remaining action. Broadcasting is not a
+ * special case bolted on — it is what "the mode changed" means. Each
+ * object is handled as though the event had been addressed to it, so a
+ * trigger's `sourceFilter` and a condition about the source both mean
+ * what they say.
  */
 export class StateMachineRunner {
     constructor(
@@ -67,8 +78,35 @@ export class StateMachineRunner {
         event: InteractionEvent,
         context: RuleContext,
     ): TransitionId | null {
-        const subjectId = event.sourceId;
-        if (subjectId === null) return null;
+        if (event.sourceId !== null) {
+            return this.#handle(event.sourceId, event, context);
+        }
+        /* One pass over a copy of the table. The first transition that
+           fires is what gets reported, because the log records which
+           rule consumed an event rather than how many objects it moved;
+           the rest still run. */
+        let fired: TransitionId | null = null;
+        for (const instance of context.instances()) {
+            const moved = this.#handle(instance.id, event, context);
+            fired ??= moved;
+        }
+        return fired;
+    }
+
+    #handle(
+        subjectId: string,
+        broadcast: InteractionEvent,
+        context: RuleContext,
+    ): TransitionId | null {
+        /* Addressed to this object, whoever it was published by. On an
+           ordinary event this is the event itself; on a broadcast it is
+           the same event with a source, so that everything downstream —
+           a trigger's filter, a condition about the source — asks its
+           question about the object actually being moved. */
+        const event: InteractionEvent =
+            broadcast.sourceId === subjectId
+                ? broadcast
+                : { ...broadcast, sourceId: subjectId };
         const current = context.instance(subjectId)?.currentStateId ?? null;
         if (current === null) return null;
         /* And it has to be a state *this* machine has. Two machines

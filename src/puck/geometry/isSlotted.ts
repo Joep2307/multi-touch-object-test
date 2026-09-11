@@ -1,4 +1,4 @@
-import type { Template } from "../../types/Template";
+import type { Template } from "../../types";
 
 /* A grid puck carries a number of slots and a code; a ring puck carries
    five angles and a taped puck side ratios. */

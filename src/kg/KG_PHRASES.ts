@@ -1,5 +1,4 @@
-import type { Lang } from "../types/Lang";
-import type { Phrase } from "../types/Phrases";
+import type { Lang, Phrase } from "../types";
 
 /* The wording of the graph itself. The status stores a key instead of a
    sentence, so that a later language switch also updates a line that has

@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 import { beginLapse } from "./beginLapse";
 import { endLapse } from "./endLapse";
 

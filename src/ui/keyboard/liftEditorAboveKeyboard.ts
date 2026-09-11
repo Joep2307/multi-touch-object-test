@@ -1,7 +1,7 @@
-import { noteViewOf } from "../../notes/noteViewOf";
-import { ui } from "../../state/ui";
-import type { KeyboardView } from "../../types/KeyboardView";
+import { noteViewOf } from "../../notes";
+import { ui } from "../../state";
 import { kbVisible } from "./kbVisible";
+import type { KeyboardView } from "../../types";
 
 /* Keep the window being typed in above its own keyboard. */
 export function liftEditorAboveKeyboard(

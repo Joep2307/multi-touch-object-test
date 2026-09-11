@@ -1,5 +1,4 @@
-import type { CircleFit } from "../../types/CircleFit";
-import type { Point } from "../../types/Point";
+import type { CircleFit, Point } from "../../types";
 
 /* The centre of a ring puck is not the centroid of its five points: the
    feet sit unevenly on purpose, so the centroid drifts towards the crowded

@@ -1,6 +1,6 @@
-import { templates } from "../state/templates";
-import type { Template } from "../types/Template";
-import { puckMode } from "../ui/puckMode";
+import { templates } from "../state";
+import { puckMode } from "../ui";
+import type { Template } from "../types";
 
 /* Which list counts depends on the mode: in puck mode only your own pucks
    -- plus the duo, which is always allowed to join, because it identifies

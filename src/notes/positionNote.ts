@@ -1,6 +1,6 @@
-import { ui } from "../state/ui";
-import type { NoteView } from "../types/NoteView";
+import { ui } from "../state";
 import { openNotes } from "./openNotes";
+import type { NoteView } from "../types";
 
 /* The height of the window is not fixed ahead of time: first the list of
    nearby documents comes in, then the answer grows token by token. So we

@@ -1,11 +1,10 @@
-import { FULL_TURN_DEG } from "../base/direction/constants";
-import type { PhysicalId } from "../physical/PhysicalId";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
+import { FULL_TURN_DEG } from "../base/direction";
+import type { Vec2 } from "../base";
+import type { PhysicalId, PhysicalInstance } from "../physical";
 import type { RelationKind } from "./RelationKind";
-import type { SpatialRelation } from "./SpatialRelation";
 import type { SpatialRelationPolicy } from "./SpatialRelationPolicy";
+import type { SpatialRelation } from "./SpatialRelation";
 import type { SpatialUpdate } from "./SpatialUpdate";
-import type { Vec2 } from "../base/Vec2";
 
 const NONE: SpatialUpdate = Object.freeze({
     relations: Object.freeze([]),

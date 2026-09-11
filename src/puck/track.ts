@@ -1,14 +1,11 @@
-import { CFG } from "../config/CFG";
-import { tracks } from "../state/tracks";
-import type { Detection } from "../types/Detection";
-import type { Track } from "../types/Track";
-import type { TrackAssignment } from "../types/TrackAssignment";
-import type { TrackResult } from "../types/TrackResult";
-import { wrapAngle } from "./geometry/wrapAngle";
-import { observeScale } from "./scale/observeScale";
-import { puckSepPX } from "./puckSepPX";
+import { CFG } from "../config";
+import { tracks } from "../state";
 import { applyPuckControls } from "./applyPuckControls";
+import { wrapAngle } from "./geometry";
+import { puckSepPX } from "./puckSepPX";
+import { observeScale } from "./scale";
 import { startTrack } from "./startTrack";
+import type { Detection, Track, TrackAssignment, TrackResult } from "../types";
 
 /* Which detection belongs to which puck that was already there? Not by
    template -- two pucks can have the same kind -- but by location: the
@@ -68,6 +65,13 @@ export function track(dets: Detection[], now: number): TrackResult {
         // against a segment boundary.
         t.angle = t.angleOrigin + (t.filteredAngle - t.rawOrigin);
         t.state = t.frames >= CFG.stableFrames ? "recognised" : "candidate";
+        t.held = d.held === true;
+        /* The reference a two-foot frame is matched against, refreshed
+         only from a whole reading. A held detection reconstructed one of
+         its feet, and making that the new reference would be measuring
+         the next hold against the last one -- which is how a puck held
+         for five seconds drifts by five seconds of error. */
+        if (!t.held) t.feet = [...d.feet];
         /* A puck of a known size is a ruler lying on the glass, and this is
          where the table reads it: once it is a puck rather than a guess,
          and only from a detection that brought a reading with it. */

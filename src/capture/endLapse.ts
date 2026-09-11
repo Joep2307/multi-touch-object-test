@@ -1,6 +1,6 @@
-import { capture } from "../state/capture";
-import type { CapReason } from "../types/CapReason";
+import { capture } from "../state";
 import { renderLapse } from "./renderLapse";
+import type { CapReason } from "../types";
 
 /* Stop collecting frames and, if there are enough, make the film. Fewer
    than two frames is "leeg"; a tainted canvas has no film in it at

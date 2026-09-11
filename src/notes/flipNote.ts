@@ -1,9 +1,9 @@
-import { save } from "../pins/save";
-import type { Pin } from "../types/Pin";
-import { sidesActive } from "../ui/sidesActive";
+import { save } from "../pins";
+import { sidesActive } from "../ui";
 import { flipFor } from "./flipFor";
 import { noteViewFor } from "./noteViewFor";
 import { openNote } from "./openNote";
+import type { Pin } from "../types";
 
 /* Switching sides now means moving: each side has its own window, so the
    marker moves to the window on the far side (with its own keyboard). An

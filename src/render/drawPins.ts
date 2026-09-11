@@ -1,11 +1,8 @@
-import { CHIP_FAMILY } from "../config/CHIP_FAMILY";
-import { vColor } from "../i18n/vColor";
-import { MV } from "../map/MV";
-import { noteViewFor } from "../notes/noteViewFor";
-import { pins } from "../state/pins";
-import { touches } from "../state/touches";
-import { ui } from "../state/ui";
-import { view } from "../state/view";
+import { CHIP_FAMILY } from "../config";
+import { vColor } from "../i18n";
+import { MV } from "../map";
+import { noteViewFor } from "../notes";
+import { pins, touches, ui, view } from "../state";
 
 /* The pins on the map. */
 export function drawPins(ctx: CanvasRenderingContext2D): void {

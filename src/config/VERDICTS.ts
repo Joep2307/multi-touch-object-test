@@ -1,4 +1,4 @@
-import type { Verdict } from "../types/Verdict";
+import type { Verdict } from "../types";
 
 export const VERDICTS: { key: Verdict; color: string }[] = [
     { key: "good", color: "#39d8a4" },

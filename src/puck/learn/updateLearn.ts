@@ -1,15 +1,16 @@
-import { CFG } from "../../config/CFG";
-import { LEARN } from "../../config/LEARN";
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
-import { learn } from "../../state/learn";
-import { describe } from "../geometry/describe";
-import { codeOf } from "../geometry/codeOf";
-import { describeRing } from "../geometry/describeRing";
-import { describeSlots } from "../geometry/describeSlots";
-import { norm360 } from "../geometry/norm360";
-import { slotWidth } from "../geometry/slotWidth";
-import { splitDuo } from "../geometry/splitDuo";
+import { CFG, LEARN } from "../../config";
+import { el } from "../../dom";
+import { tr } from "../../i18n";
+import { learn } from "../../state";
+import {
+    codeOf,
+    describe,
+    describeRing,
+    describeSlots,
+    norm360,
+    slotWidth,
+    splitDuo,
+} from "../geometry";
 import { drawLearnPoints } from "./drawLearnPoints";
 import { learnKnownNote } from "./learnKnownNote";
 import { learnMedian } from "./learnMedian";

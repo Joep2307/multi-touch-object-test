@@ -1,9 +1,9 @@
-import { CFG } from "../config/CFG";
-import { tracks } from "../state/tracks";
-import { view } from "../state/view";
-import type { Track } from "../types/Track";
+import { CFG } from "../config";
+import { tracks, view } from "../state";
+import type { Track } from "../types";
 
-/* The puck (not a candidate) whose disc, generously measured, lies under this point. */
+/* The puck (not a candidate) whose disc, generously measured, lies under this
+   point. */
 export function puckTrackAt(x: number, y: number): Track | null {
     const R = CFG.puckRadiusMM * view.pxPerMM;
     let best: Track | null = null,

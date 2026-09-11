@@ -1,8 +1,8 @@
+import type { Vec2 } from "../base";
+import type { ContactFrame } from "../contact";
 import type { ContactEventPolicy } from "./ContactEventPolicy";
-import type { ContactFrame } from "../contact/ContactFrame";
 import type { EventBus } from "./EventBus";
 import type { EventDraft } from "./EventDraft";
-import type { Vec2 } from "../base/Vec2";
 
 const NO_PROPERTIES = Object.freeze({});
 

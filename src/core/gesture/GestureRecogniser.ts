@@ -1,11 +1,10 @@
-import { FULL_TURN_DEG } from "../base/direction/constants";
-import type { BaseSnapshot } from "../base/BaseSnapshot";
+import { FULL_TURN_DEG } from "../base/direction";
+import type { MotionSample } from "../base/motion";
+import type { BaseSnapshot, Vec2 } from "../base";
+import type { PresenceState } from "../physical";
 import type { GestureDefinition } from "./GestureDefinition";
 import type { GestureId } from "./GestureId";
 import type { GestureResult } from "./GestureResult";
-import type { MotionSample } from "../base/motion/MotionSample";
-import type { PresenceState } from "../physical/PresenceState";
-import type { Vec2 } from "../base/Vec2";
 
 /* Turns one object's movement into the gestures a programme asked for.
  *

@@ -1,20 +1,13 @@
-import { CFG } from "../../config/CFG";
-import { diag } from "../../state/diag";
-import { tracks } from "../../state/tracks";
-import { ui } from "../../state/ui";
-import { view } from "../../state/view";
-import type { Detection } from "../../types/Detection";
-import type { PuckCandidate } from "../../types/PuckCandidate";
-import type { RingShape } from "../../types/RingShape";
-import type { Template } from "../../types/Template";
-import type { TouchPoint } from "../../types/TouchPoint";
+import { CFG } from "../../config";
+import { diag, tracks, ui, view } from "../../state";
 import { activeTemplates } from "../activeTemplates";
 import { puckSepPX } from "../puckSepPX";
-import { readScale } from "../scale/readScale";
+import { readScale } from "../scale";
 import { tplLongest } from "../tplLongest";
-import { describe } from "./describe";
+import { applyRigid } from "./applyRigid";
 import { describeRing } from "./describeRing";
 import { describeSlots } from "./describeSlots";
+import { describe } from "./describe";
 import { dist } from "./dist";
 import { duoBootstrap } from "./duoBootstrap";
 import { fitCircle } from "./fitCircle";
@@ -27,9 +20,18 @@ import { mayOverlap } from "./mayOverlap";
 import { noteRingDiag } from "./noteRingDiag";
 import { pick4 } from "./pick4";
 import { pick5 } from "./pick5";
+import { rigidFrom } from "./rigidFrom";
 import { sizeErr } from "./sizeErr";
 import { tplRing } from "./tplRing";
 import { tplSlots } from "./tplSlots";
+import type {
+    Detection,
+    PuckCandidate,
+    RingShape,
+    Template,
+    TouchPoint,
+    TrackFoot,
+} from "../../types";
 
 /* Which pucks lie in this cloud of contact points? Two kinds of puck, two
    searches over the same points: triangles out of triples, rings out of
@@ -51,6 +53,11 @@ export function recognise(
         if (!p) throw new Error(`Contactpunt ${String(k)} bestaat niet.`);
         return p;
     };
+    /* The feet behind a set of indices, with the ids the glass gave them.
+     Every detection carries these so `track` can remember which feet a
+     puck was last seen whole on. */
+    const feetOf = (idx: readonly number[]): TrackFoot[] =>
+        idx.map((k) => ({ id: at(k).id, x: at(k).x, y: at(k).y }));
     const list = tpls || activeTemplates();
     /* The duo's measurements are a guess from the factory, and a guess of
      62 mm with a generous tolerance fits all sorts of things -- among them
@@ -440,6 +447,7 @@ export function recognise(
             x: c.d.cx,
             y: c.d.cy,
             contactIndices: [...c.idx],
+            feet: feetOf(c.idx),
             angle: c.d.ring
                 ? (c.d.angle ?? 0)
                 : Math.atan2(c.d.anchor.y - c.d.cy, c.d.anchor.x - c.d.cx),
@@ -507,6 +515,7 @@ export function recognise(
                 x: d.cx,
                 y: d.cy,
                 contactIndices: [...g],
+                feet: feetOf(g),
                 angle: m.angle,
                 held: true,
             });
@@ -559,7 +568,106 @@ export function recognise(
             x: d.cx,
             y: d.cy,
             contactIndices: [...group],
+            feet: feetOf(group),
             angle: m.angle,
+            held: true,
+        });
+    }
+    /* -- Holding on with two feet -------------------------------
+     A triangle has no fourth foot to fall back on, so the rings' trick
+     above cannot be borrowed: two points are not a triangle and there is
+     nothing to describe. But two points *are* enough to fix a rigid
+     motion completely, and a puck is rigid. So: whichever of this puck's
+     own feet -- by contact id, since it was last seen whole -- are still
+     on the glass say how far it moved and turned, and that motion says
+     where the missing foot must be. Three points again, two real and one
+     worked out, and the ordinary description runs on them.
+
+     Two feet of *anything* are not a puck. There has to have been a whole
+     frame first (`t.feet`), the ids have to be the ones this puck has
+     been carrying, and they have to still be the distance apart they were
+     (`CFG.holdRigidTol`) -- which is what turns away a finger landing
+     where a foot was.
+
+     Always reference to now, never frame to frame: `t.feet` is refreshed
+     only from a whole detection (see `track`), so a puck held for five
+     seconds has not accumulated five seconds of error. */
+    for (const t of tpls ? [] : tracks.map.values()) {
+        if (isRing(t.tpl) || isSlotted(t.tpl)) continue;
+        if (t.feet.length < 3) continue;
+        if (
+            out.some(
+                (o) =>
+                    Math.hypot(o.x - t.x, o.y - t.y) < sep &&
+                    !mayOverlap(o.tpl, t.tpl),
+            )
+        )
+            continue;
+        /* Which unused contact carries which of this puck's ids. */
+        const here = new Map<number, number>();
+        for (let i = 0; i < points.length; i++) {
+            if (!used.has(i)) here.set(at(i).id, i);
+        }
+        const idx: number[] = [],
+            was: TrackFoot[] = [];
+        for (const foot of t.feet) {
+            const i = here.get(foot.id);
+            if (i === undefined) continue;
+            idx.push(i);
+            was.push(foot);
+        }
+        if (was.length < 2) continue;
+        /* Still the same puck, or a hand that happens to be there? */
+        let rigid = true;
+        for (let a = 0; a < was.length && rigid; a++)
+            for (let b = a + 1; b < was.length && rigid; b++) {
+                const wa = was[a],
+                    wb = was[b];
+                const ia = idx[a],
+                    ib = idx[b];
+                if (!wa || !wb || ia === undefined || ib === undefined) {
+                    rigid = false;
+                    break;
+                }
+                const then = dist(wa, wb);
+                if (then < 1) {
+                    rigid = false;
+                    break;
+                }
+                const now = dist(at(ia), at(ib));
+                rigid = Math.abs(now - then) / then <= CFG.holdRigidTol;
+            }
+        if (!rigid) continue;
+        const move = rigidFrom(
+            was,
+            idx.map((i) => at(i)),
+        );
+        if (!move) continue;
+        /* The whole footprint again: the real feet where they are, the
+         missing ones where the motion took them. */
+        const whole = t.feet.map((foot) => {
+            const i = here.get(foot.id);
+            return i === undefined ? applyRigid(foot, move) : at(i);
+        });
+        const [w1, w2, w3] = whole;
+        if (!w1 || !w2 || !w3) continue;
+        const d = describe(w1, w2, w3);
+        if (!d) continue;
+        /* It may hold on, but it may not wander off: the puck has to be
+         where the puck was. */
+        if (Math.hypot(d.cx - t.x, d.cy - t.y) > sep) continue;
+        idx.forEach((i) => used.add(i));
+        out.push({
+            tpl: t.tpl,
+            conf: 0.4,
+            x: d.cx,
+            y: d.cy,
+            /* The real feet only. The bridge hands those to the new
+             pipeline, which reconstructs the third itself -- so the two
+             reconstructions are independent and have to agree. */
+            contactIndices: [...idx],
+            feet: feetOf(idx),
+            angle: Math.atan2(d.anchor.y - d.cy, d.anchor.x - d.cx),
             held: true,
         });
     }

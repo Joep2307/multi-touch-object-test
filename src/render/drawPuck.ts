@@ -1,20 +1,12 @@
-import { CFG } from "../config/CFG";
-import { CHIP_FAMILY } from "../config/CHIP_FAMILY";
-import { PUCK_HOLE } from "../config/PUCK_HOLE";
-import { tr } from "../i18n/tr";
-import { vColor } from "../i18n/vColor";
-import { vName } from "../i18n/vName";
-import { puckTapGlow } from "../puck/ring/puckTapGlow";
-import { ringChosen } from "../puck/ring/ringChosen";
-import { ringItems } from "../puck/ring/ringItems";
-import { ringStart } from "../puck/ring/ringStart";
-import { syncPlacedPinTopic } from "../puck/syncPlacedPinTopic";
-import { CHIP } from "../state/chip";
-import { view } from "../state/view";
-import type { Track } from "../types/Track";
-import { tableUi } from "../ui/tableUi";
+import { CFG, CHIP_FAMILY, PUCK_HOLE } from "../config";
+import { tr, vColor, vName } from "../i18n";
+import { puckTapGlow, ringChosen, ringItems, ringStart } from "../puck/ring";
+import { syncPlacedPinTopic } from "../puck";
+import { CHIP, view } from "../state";
+import { tableUi } from "../ui";
 import { chipHeight } from "./chipHeight";
 import { drawTarget } from "./drawTarget";
+import type { Track } from "../types";
 
 /* One puck on the table: the ring of choices, the pointer, the disc with
    viewing hole, the crosshair, and the texts in the band. */
@@ -31,7 +23,11 @@ export function drawPuck(
         glow = puckTapGlow(t, now);
     syncPlacedPinTopic(t);
     ctx.save();
-    ctx.globalAlpha = t.state === "incomplete" ? 0.35 : 1;
+    /* Dimmed while the table is not seeing all of it -- whether that is
+     no reading at all (`incomplete`) or a reading with a foot worked out
+     rather than measured (`held`). Both say the same thing to whoever is
+     standing at the table, so both look the same. */
+    ctx.globalAlpha = t.state === "incomplete" || t.held ? 0.35 : 1;
     for (let k = 0; t.ring && k < n; k++) {
         const item = items[k];
         if (!item) continue;
@@ -68,8 +64,9 @@ export function drawPuck(
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        // Keep the option legible over detailed map tiles. A compact opaque label
-        // also makes the active option much easier to spot from across the table.
+        // Keep the option legible over detailed map tiles. A compact opaque
+        // label also makes the active option much easier to spot from across
+        // the table.
         const labelW = Math.ceil(ctx.measureText(label).width) + CHIP.padX * 2;
         const labelH = chipHeight();
         ctx.beginPath();

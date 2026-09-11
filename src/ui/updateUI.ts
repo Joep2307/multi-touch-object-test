@@ -1,11 +1,9 @@
-import { DEV } from "../config/DEV";
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { analytics } from "../state/analytics";
-import { pins } from "../state/pins";
-import { touches } from "../state/touches";
-import type { Track } from "../types/Track";
-import { renderAnalytics } from "./analytics/renderAnalytics";
+import { DEV } from "../config";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { analytics, pins, touches } from "../state";
+import { renderAnalytics } from "./analytics";
+import type { Track } from "../types";
 
 /* ═══════════════════════════════════════════════════════════════
    UI — what needs to happen continuously during a session is little
@@ -15,8 +13,8 @@ import { renderAnalytics } from "./analytics/renderAnalytics";
    the controls — they're now only built when someone opens the session
    analysis. */
 export function updateUI(pucks: Track[]): void {
-    /* The grounding warning is installer language ("check the grounding")
-     and belongs to calibrating the table, not to the conversation around it. */
+    /* The grounding warning is installer language ("check the grounding") and
+       belongs to calibrating the table, not to the conversation around it. */
     const flag = el("flag"),
         ground = DEV && touches.real.size >= 3 && !pucks.length;
     // A full storage takes priority: that costs someone their contribution,

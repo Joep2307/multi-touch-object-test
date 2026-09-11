@@ -1,4 +1,4 @@
-import type { RingDiag } from "../types/RingDiag";
+import type { RingDiag } from "../types";
 
 /* "The pucks are recognised badly" can be many things: the table doesn't
    see the feet, it sees them at the wrong size, or it hesitates between two

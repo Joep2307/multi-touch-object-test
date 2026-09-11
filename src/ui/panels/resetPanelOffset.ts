@@ -1,4 +1,4 @@
-import { panels } from "../../state/panels";
+import { panels } from "../../state";
 import { applyPanelOffset } from "./applyPanelOffset";
 
 export function resetPanelOffset(panel: HTMLElement | null): void {

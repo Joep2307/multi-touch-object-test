@@ -6,20 +6,23 @@
  * verifiable without any Rust server running anywhere. The network is
  * never touched: none of the functions below load the graph.
  */
+import {
+    buildQuestion,
+    formatDistance,
+    kg,
+    kgDescribe,
+    nearby,
+    setKgLang,
+} from "../../kg";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildQuestion } from "../../kg/buildQuestion";
-import { formatDistance } from "../../kg/formatDistance";
-import { kg } from "../../kg/kg";
-import { kgDescribe } from "../../kg/kgDescribe";
-import { nearby } from "../../kg/nearby";
-import { setKgLang } from "../../kg/setKgLang";
-import type { KgNode } from "../../types/KgNode";
+import type { KgNode } from "../../types";
 
 /* A handful of nodes around the Grote Kerk in Breda. The distances are
    chosen so they clearly fall inside or outside the default radius of
    1500 m — this test measures the ordering, not the earth's radius. */
 const KERK = { lat: 51.5886, lon: 4.7757 };
-/* Meters northward, on the same sphere metersBetween calculates on (R = 6371 km). */
+/* Meters northward, on the same sphere metersBetween calculates on (R = 6371
+   km). */
 const M_PER_GRAAD = (6371000 * Math.PI) / 180;
 const opNoord = (m: number, rest: Partial<KgNode>): KgNode => ({
     id: "n",

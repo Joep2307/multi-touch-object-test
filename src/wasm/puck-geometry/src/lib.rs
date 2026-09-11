@@ -15,7 +15,7 @@
 //! The functions are pure. The only state is the fixed buffers in [`abi`],
 //! through which the browser shuffles numbers back and forth without
 //! wasm-bindgen. The layout of those buffers also lives in
-//! `src/puck/geometry/layout.ts`; change `abi/layout.rs`, change that too.
+//! `src/puck/geometry/LAYOUT.ts`; change `abi/layout.rs`, change that too.
 //!
 //! Everything computes in screen pixels; millimeters are the caller's concern.
 //!

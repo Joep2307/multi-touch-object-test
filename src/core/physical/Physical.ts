@@ -1,10 +1,10 @@
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
+import type { StateId } from "../behaviour";
+import type { ExtensionProperties } from "../programme";
+import type { RoleId } from "../session";
 import type { PhysicalAssignment } from "./PhysicalAssignment";
 import type { PhysicalId } from "./PhysicalId";
 import type { PhysicalKindDefinition } from "./PhysicalKindDefinition";
 import type { Presence } from "./Presence";
-import type { RoleId } from "../session/RoleId";
-import type { StateId } from "../behaviour/StateId";
 
 const NO_PROPERTIES: ExtensionProperties = Object.freeze({});
 

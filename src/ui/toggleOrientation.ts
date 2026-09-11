@@ -1,4 +1,4 @@
-import { ui } from "../state/ui";
+import { ui } from "../state";
 import { refreshOrientationControl } from "./refreshOrientationControl";
 
 export function toggleOrientation(): void {

@@ -1,7 +1,6 @@
-import type { ActionId } from "../behaviour/ActionId";
-import type { InteractionEvent } from "../events/InteractionEvent";
+import type { ActionId, TransitionId } from "../behaviour";
+import type { InteractionEvent } from "../events";
 import type { ModeId } from "./ModeId";
-import type { TransitionId } from "../behaviour/TransitionId";
 
 /* One event, and what the table made of it.
  *

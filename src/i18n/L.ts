@@ -1,5 +1,4 @@
-import type { Lang } from "../types/Lang";
-import type { Phrases } from "../types/Phrases";
+import type { Lang, Phrases } from "../types";
 
 /* ── Language ─────────────────────────────────────────────────────────────
    One table for everything that can be read on the screen. English is the

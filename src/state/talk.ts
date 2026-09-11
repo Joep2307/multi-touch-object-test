@@ -1,5 +1,4 @@
-import type { Pin } from "../types/Pin";
-import type { TalkSession } from "../types/TalkSession";
+import type { Pin, TalkSession } from "../types";
 
 /* One recording at a time. Opening a second pin stops the first — a
    microphone that keeps quietly listening at a closed window is exactly

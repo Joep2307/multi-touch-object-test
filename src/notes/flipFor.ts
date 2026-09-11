@@ -1,6 +1,6 @@
-import type { Pin } from "../types/Pin";
-import { sidesActive } from "../ui/sidesActive";
+import { sidesActive } from "../ui";
 import { flippedFor } from "./flippedFor";
+import type { Pin } from "../types";
 
 /* By default the window opens toward the side the tap came from, but
    whoever is standing on the far side can take it over: the ⇅ button in the

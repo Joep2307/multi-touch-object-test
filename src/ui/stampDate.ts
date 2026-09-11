@@ -1,4 +1,4 @@
-import { tr } from "../i18n/tr";
+import { tr } from "../i18n";
 
 export function stampDate(d: Date): string {
     return d.toLocaleString(tr("locale"), {

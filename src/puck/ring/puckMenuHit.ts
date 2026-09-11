@@ -1,11 +1,9 @@
-import { tracks } from "../../state/tracks";
-import type { RingItem } from "../../types/RingItem";
-import type { Track } from "../../types/Track";
+import { tracks, view } from "../../state";
 import { tplRadiusMM } from "../tplRadiusMM";
-import { view } from "../../state/view";
 import { puckMenuOuterPX } from "./puckMenuOuterPX";
 import { ringIndexOf } from "./ringIndexOf";
 import { ringItems } from "./ringItems";
+import type { RingItem, Track } from "../../types";
 
 export function puckMenuHit(
     x: number,

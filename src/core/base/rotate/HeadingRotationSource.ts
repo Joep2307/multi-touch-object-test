@@ -1,7 +1,7 @@
+import { shortestAngleDiffDeg } from "../direction";
 import { RotationSource } from "./RotationSource";
-import { shortestAngleDiffDeg } from "../direction/shortestAngleDiffDeg";
 import type { BaseSample } from "../BaseSample";
-import type { Direction } from "../direction/Direction";
+import type { Direction } from "../direction";
 import type { RotatePolicy } from "./RotatePolicy";
 
 /* Rotation as the change in where the nose points.

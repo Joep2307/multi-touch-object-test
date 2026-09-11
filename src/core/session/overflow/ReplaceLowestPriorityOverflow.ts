@@ -1,5 +1,5 @@
 import { OverflowResolver } from "../OverflowResolver";
-import type { OverflowDecision } from "../OverflowResolver";
+import type { OverflowDecision } from "../OverflowDecision";
 import type { RoleAssignment } from "../RoleAssignment";
 
 /* The least important holder gives it up.

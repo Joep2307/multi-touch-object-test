@@ -1,23 +1,20 @@
-import { CFG } from "../../config/CFG";
-import { VERDICTS } from "../../config/VERDICTS";
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
-import { vName } from "../../i18n/vName";
-import { learn } from "../../state/learn";
-import { templates } from "../../state/templates";
-import { view } from "../../state/view";
-import type { Verdict } from "../../types/Verdict";
-import { puckMode } from "../../ui/puckMode";
+import { CFG, VERDICTS } from "../../config";
+import { el } from "../../dom";
+import { tr, vName } from "../../i18n";
+import { learn, templates, view } from "../../state";
+import { puckMode } from "../../ui";
 import { activeTemplates } from "../activeTemplates";
-import { codeSelfSym } from "../geometry/codeSelfSym";
-import { codeText } from "../geometry/codeText";
-import { gapText } from "../geometry/gapText";
-import { gapsOf } from "../geometry/gapsOf";
-import { isRing } from "../geometry/isRing";
-import { isSlotted } from "../geometry/isSlotted";
-import { ringSelfSym } from "../geometry/ringSelfSym";
-import { tplRing } from "../geometry/tplRing";
-import { tplSlots } from "../geometry/tplSlots";
+import {
+    codeSelfSym,
+    codeText,
+    gapText,
+    gapsOf,
+    isRing,
+    isSlotted,
+    ringSelfSym,
+    tplRing,
+    tplSlots,
+} from "../geometry";
 import { isToolPuck } from "../isToolPuck";
 import { removeOwnPuck } from "../removeOwnPuck";
 import { tplColor } from "../tplColor";
@@ -33,6 +30,7 @@ import { learnStamp } from "./learnStamp";
 import { nearlyIsosceles } from "./nearlyIsosceles";
 import { ownPuckList } from "./ownPuckList";
 import { restartLearn } from "./restartLearn";
+import type { Verdict } from "../../types";
 
 const pickRow = (
     id: string,
@@ -164,9 +162,13 @@ export function renderLearn(): void {
                 `<p class="learn-which">${tr("recogWhichKind")}</p>` +
                 VERDICTS.map(
                     (v) =>
-                        `<button class="learn-pick" data-verdict="${v.key}" style="--c:${v.color}">
+                        `<button class="learn-pick" ` +
+                        `data-verdict="${v.key}" style="--c:${v.color}">
            <b>${vName(v.key)}</b>
-           <span>${tr("recogKindCount", templates.own.filter((t) => t.verdict === v.key).length)}</span>
+           <span>${tr(
+               "recogKindCount",
+               templates.own.filter((t) => t.verdict === v.key).length,
+           )}</span>
          </button>`,
                 ).join("");
             /* The duo doesn't belong to the four kinds: it is one fixed
@@ -186,7 +188,8 @@ export function renderLearn(): void {
                                     t.id,
                                     tplColor(t),
                                     tplName(t),
-                                    `${t.id} · ${tplSummary(t)} · ${learnStamp(t)}`,
+                                    `${t.id} · ${tplSummary(t)} · ` +
+                                        `${learnStamp(t)}`,
                                 ),
                             )
                             .join(""),

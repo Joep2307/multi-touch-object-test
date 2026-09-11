@@ -1,10 +1,9 @@
-import type { Point } from "../../types/Point";
-import type { SlotShape } from "../../types/SlotShape";
 import { codeOf } from "./codeOf";
 import { describeRing } from "./describeRing";
 import { slotOf } from "./slotOf";
 import { slotPhase } from "./slotPhase";
 import { slotResidual } from "./slotResidual";
+import type { Point, SlotShape } from "../../types";
 
 /* Feet on one circle, read as a grid code. First the circle and the angles
    (that is what `describeRing` already does), then the grid: where it

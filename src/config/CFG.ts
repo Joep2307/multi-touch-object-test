@@ -81,6 +81,23 @@ export const CFG = {
      Two good frames are enough to lock onto it; after that we hold the last
      known position and angle for 0.9 s instead of dropping it after 0.18 s. */
     stableFrames: 2,
+    /* How far two feet of a held triangle may drift from the distance
+     they were apart when the puck was last seen whole, as a fraction.
+
+     Measured, and the measurement was a surprise: when a foot lifts, the
+     two contacts that remain do not stay where they were. On the
+     recording of 9 September 2026 a pair 133 px apart with three feet
+     down reports 119 to 127 px for as long as only two are -- a lasting
+     shrink of about ten per cent, because tilting the puck moves the
+     blobs the glass reports, not the feet themselves. At five per cent
+     that puck held on 14 of its 82 two-foot frames; at fifteen it holds
+     all 82, and sits closer to where the third foot actually comes back.
+
+     What turns a stray finger away is not this number but the contact
+     id: a new touch is a new id and is not one of this puck's feet at
+     all. This is the sanity check behind that, and it can afford to be
+     generous because the check in front of it is exact. */
+    holdRigidTol: 0.15,
     dropoutMS: 900,
     smoothing: 4,
     jitterPX: 22,
@@ -110,7 +127,9 @@ export const CFG = {
      over. At zero, a single touch is enough, and then a sleeve brushing the
      button throws away half a conversation. */
     resetHoldMS: 700,
-    retina: 0, // use the visible zoom level; avoids four times as many tile requests
+    // Use the visible zoom level; avoids four times as many tile
+    // requests.
+    retina: 0,
     /* Once per setup, not per session. These three used to be input fields
      in the menu, where they reset to their default value on every reload:
      a setting that remembers nothing isn't a setting. They belong to the

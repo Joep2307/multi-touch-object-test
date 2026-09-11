@@ -1,4 +1,4 @@
-import { touches } from "../state/touches";
+import { touches } from "../state";
 
 export function movePanelScroll(e: PointerEvent): boolean {
     const ps = touches.panelScroll;

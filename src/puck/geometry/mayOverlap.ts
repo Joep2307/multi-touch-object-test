@@ -1,5 +1,5 @@
-import type { Template } from "../../types/Template";
 import { tplSpanMM } from "./tplSpanMM";
+import type { Template } from "../../types";
 
 /* Two discs cannot lie on top of each other -- except the duo, which is
    made to. Both halves are marked `nest`, and they differ enough in size

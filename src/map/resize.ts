@@ -1,7 +1,6 @@
-import { CFG } from "../config/CFG";
-import { syncPxPerMM } from "../puck/scale/syncPxPerMM";
-import { scale } from "../state/scale";
-import { view } from "../state/view";
+import { CFG } from "../config";
+import { syncPxPerMM } from "../puck/scale";
+import { scale, view } from "../state";
 
 /* Measure the screen: size the canvases to screen size times pixel density,
    and compute the millimeter scale that recognition needs. */

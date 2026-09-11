@@ -1,22 +1,17 @@
-import { CFG } from "../config/CFG";
-import { vColor } from "../i18n/vColor";
-import { topicLabel } from "../i18n/topicLabel";
-import { vName } from "../i18n/vName";
-import { chipHeight } from "../render/chipHeight";
-import { checkTalk } from "../talk/checkTalk";
-import { renderTalk } from "../talk/renderTalk";
-import { talkRunning } from "../talk/talkRunning";
-import type { NoteView } from "../types/NoteView";
-import type { Pin } from "../types/Pin";
-import { resetPanelOffset } from "../ui/panels/resetPanelOffset";
+import { CFG } from "../config";
+import { topicLabel, vColor, vName } from "../i18n";
+import { chipHeight } from "../render";
+import { checkTalk, renderTalk, talkRunning } from "../talk";
+import { resetPanelOffset } from "../ui/panels";
 import { closeNote } from "./closeNote";
 import { fillNoteKnowledge } from "./fillNoteKnowledge";
 import { flipFor } from "./flipFor";
 import { notePart } from "./notePart";
 import { noteViewFor } from "./noteViewFor";
 import { noteViewOnSide } from "./noteViewOnSide";
-import { positionNote } from "./positionNote";
 import { positionNoteX } from "./positionNoteX";
+import { positionNote } from "./positionNote";
+import type { NoteView, Pin } from "../types";
 
 export function openNote(
     pin: Pin,
@@ -24,7 +19,8 @@ export function openNote(
     y: number,
     fromPuck = false,
 ): NoteView {
-    // Which side of the table: at the top of the screen is someone on the far side.
+    // Which side of the table: at the top of the screen is someone on the far
+    // side.
     const v = noteViewOnSide(flipFor(pin, y) ? "b" : "a");
     // The same marker should only be in one window. If it was on the other
     // side, it moves here -- along with its recording, since it's the same

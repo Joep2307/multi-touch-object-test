@@ -106,16 +106,18 @@ type Table = Hand & {
     readonly session: Session;
     readonly bus: EventBus;
     readonly trace: RuleTrace;
+    readonly registry: PhysicalRegistry;
     /* A second puck on the same glass, with its own feet. */
     hand: (id: string) => Hand;
 };
 
-const table = (): Table => {
+const table = (definition: ProgrammeDefinition = programme): Table => {
     const kinds = new KindRegistry();
-    const loaded = new ProgrammeLoader(kinds).load(programme);
+    const loaded = new ProgrammeLoader(kinds).load(definition);
     if (!loaded.ok) {
         throw new Error(
-            `The programme does not validate: ${JSON.stringify(loaded.errors)}`,
+            `The programme does not validate: ` +
+                `${JSON.stringify(loaded.errors)}`,
         );
     }
     const kind = kinds.all()[0];
@@ -127,15 +129,15 @@ const table = (): Table => {
         "test",
         bus,
         registry,
-        programme.modes,
-        programme.stateMachines.flatMap((machine) => machine.states),
+        definition.modes,
+        definition.stateMachines.flatMap((machine) => machine.states),
         new EffectRegistry(),
-        new RoleAssigner(programme.roles),
-        new SettingsResolver(programme.settings),
+        new RoleAssigner(definition.roles),
+        new SettingsResolver(definition.settings),
     );
     const trace = new RuleTrace();
     const runtime = new Runtime(
-        programme,
+        definition,
         session,
         bus,
         registry,
@@ -210,7 +212,7 @@ const table = (): Table => {
         };
     };
 
-    return { runtime, session, bus, trace, hand, ...hand("p1") };
+    return { runtime, session, bus, trace, registry, hand, ...hand("p1") };
 };
 
 describe("the participation programme", () => {
@@ -220,22 +222,25 @@ describe("the participation programme", () => {
         expect(validateProgramme(programme)).toEqual([]);
     });
 
-    it("names every action, state, mode and role with a translation key", () => {
-        /* The check the plan wanted in the validator. It cannot live
+    it(
+        "names every action, state, mode and role with a translation " + "key",
+        () => {
+            /* The check the plan wanted in the validator. It cannot live
            in the core — that may not import `src/i18n/` and should not
            — so it lives here, where both trees are visible. */
-        const keyed = (name: string): boolean =>
-            /^[a-z]+\.[A-Za-z]+$/.test(name);
-        for (const action of programme.actions) {
-            expect(action.name, action.id).toSatisfy(keyed);
-        }
-        for (const role of programme.roles) {
-            expect(role.name, role.id).toSatisfy(keyed);
-        }
-        for (const mode of programme.modes) {
-            expect(mode.name, mode.id).toSatisfy(keyed);
-        }
-    });
+            const keyed = (name: string): boolean =>
+                /^[a-z]+\.[A-Za-z]+$/.test(name);
+            for (const action of programme.actions) {
+                expect(action.name, action.id).toSatisfy(keyed);
+            }
+            for (const role of programme.roles) {
+                expect(role.name, role.id).toSatisfy(keyed);
+            }
+            for (const mode of programme.modes) {
+                expect(mode.name, mode.id).toSatisfy(keyed);
+            }
+        },
+    );
 });
 
 describe("Runtime", () => {
@@ -392,6 +397,115 @@ describe("Runtime", () => {
         t.runtime.start();
         t.put(400, 250, 0);
         expect(seen.filter((s) => s === "contact.started")).toHaveLength(3);
+    });
+
+    it("puts a voted puck back to Ready when the mode changes", () => {
+        /* `puck.votedToReady` in the shipped programme: `Voted → Ready`
+           on `mode.changed`. A mode change has no source, and a
+           transition on a source-less event used to fire for nobody —
+           so a puck that had voted and was carried into Results stayed
+           Voted, red, with `open_note` as its only action, for the rest
+           of the afternoon. The validator's own words for this case are
+           "so this rule can never fire". */
+        const t = table();
+        t.runtime.start();
+        t.put(400, 250, 0);
+        t.session.changeMode("Voting" as never);
+        t.press(400, 250, 1000);
+        expect(t.session.instance("p1")?.currentStateId).toBe("Voted");
+        t.session.changeMode("Results" as never);
+        expect(t.session.instance("p1")?.currentStateId).toBe("Ready");
+    });
+
+    it("moves every puck the mode change concerns, not just one", () => {
+        /* A broadcast is addressed to the whole table. Firing for the
+           first object and stopping would leave the second one in a
+           state the programme says it should have left. */
+        const t = table();
+        const other = t.hand("p2");
+        t.runtime.start();
+        t.put(400, 250, 0);
+        other.put(430, 280, 0);
+        t.session.changeMode("Voting" as never);
+        t.press(400, 250, 1000);
+        other.press(430, 280, 1000);
+        expect(t.session.instance("p1")?.currentStateId).toBe("Voted");
+        expect(t.session.instance("p2")?.currentStateId).toBe("Voted");
+        t.session.changeMode("Results" as never);
+        expect(t.session.instance("p1")?.currentStateId).toBe("Ready");
+        expect(t.session.instance("p2")?.currentStateId).toBe("Ready");
+    });
+
+    /* The shipped programme with one place for a Participant and a
+       queue behind it. The queue is where the ledger and the objects
+       most easily drift apart, and the shipped file has no capped role
+       to try it on. */
+    const queued = (): ProgrammeDefinition => ({
+        ...programme,
+        roles: programme.roles.map((role) =>
+            role.id === "Participant"
+                ? {
+                      ...role,
+                      maximumAssignments: 1,
+                      overflowPolicy: "queue" as const,
+                  }
+                : role,
+        ),
+    });
+
+    it("gives the part to the next in line when one leaves", () => {
+        /* The departure went straight into the ledger rather than
+           through the session, so `departed` promoted b inside the
+           ledger and nothing wrote the part onto b itself. Its
+           `roleId` stayed null until some unrelated mode change
+           happened to reconcile. */
+        const t = table(queued());
+        const second = t.hand("p2");
+        t.runtime.start();
+        t.session.changeMode("FreeInteraction" as never);
+        t.put(400, 250, 0);
+        second.put(200, 150, 0);
+        expect(t.session.instance("p1")?.roleId).toBe("Participant");
+        expect(t.session.instance("p2")?.roleId).toBeNull();
+
+        /* p1 off the glass, and long enough for the table to forget
+           it rather than merely notice it was lifted. */
+        t.put(400, 250, 100, false);
+        second.put(200, 150, 20000);
+        t.registry.sweep();
+        second.put(200, 150, 20100);
+        expect(t.session.instance("p2")?.roleId).toBe("Participant");
+    });
+
+    it("leaves a puck already waiting where it is in the queue", () => {
+        /* A queued object holds no role, so the offer a mode change
+           makes to everything with none was made to it again — and
+           taking an offer means giving up the place it was holding and
+           rejoining at the back. Every mode change closed both waiting
+           entries and opened two more. */
+        const t = table(queued());
+        const second = t.hand("p2");
+        const third = t.hand("p3");
+        t.runtime.start();
+        t.session.changeMode("FreeInteraction" as never);
+        t.put(400, 250, 0);
+        second.put(200, 150, 0);
+        third.put(600, 400, 0);
+        const waiting = () =>
+            t.session.roles
+                .all()
+                .filter((a) => a.status === "queued")
+                .map((a) => a.assigneeId);
+        expect(waiting()).toEqual(["p2", "p3"]);
+
+        /* Two more modes that enable the same part. Nothing about the
+           queue has changed, so nothing in the ledger should have:
+           the entries p2 and p3 are holding are the same entries. */
+        const ids = t.session.roles.all().map((a) => a.id);
+        t.session.changeMode("Voting" as never);
+        t.session.changeMode("Discussion" as never);
+        expect(waiting()).toEqual(["p2", "p3"]);
+        expect(t.session.roles.all().map((a) => a.id)).toEqual(ids);
     });
 
     it("counts votes from two pucks separately", () => {

@@ -1,7 +1,7 @@
-import { CFG } from "../config/CFG";
-import { MV } from "../map/MV";
-import { ui } from "../state/ui";
-import type { Track } from "../types/Track";
+import { CFG } from "../config";
+import { MV } from "../map";
+import { ui } from "../state";
+import type { Track } from "../types";
 
 /* A puck's two physical degrees of freedom directly control the map:
    turning zooms around its center and sliding travels in that direction. */

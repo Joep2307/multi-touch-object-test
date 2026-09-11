@@ -1,14 +1,13 @@
-import { closeNotes } from "../notes/closeNotes";
-import { pinAt } from "../pins/pinAt";
-import { simPuckAt } from "../puck/sim/simPuckAt";
-import { touches } from "../state/touches";
-import { ui } from "../state/ui";
-import type { PuckTouch } from "../types/PuckTouch";
+import { closeNotes } from "../notes";
+import { pinAt } from "../pins";
+import { simPuckAt } from "../puck/sim";
+import { touches, ui } from "../state";
 import { basePuckTouch } from "./basePuckTouch";
 import { nearestPuckTouch } from "./nearestPuckTouch";
 import { startPanelScroll } from "./startPanelScroll";
 import { syncGesture } from "./syncGesture";
 import { uiChrome } from "./uiChrome";
+import type { PuckTouch } from "../types";
 
 /* The main handler for touches on the glass. */
 export function onPointerDown(e: PointerEvent): void {
@@ -36,10 +35,10 @@ export function onPointerDown(e: PointerEvent): void {
         touches.gesture = null;
         return;
     }
-    // A finger on a simulated puck grabs it: one finger slides, a second finger twists it
-    // to pick a theme without moving it. A finger on ANOTHER puck starts its own grip —
-    // that's how you move two pucks at once. A finger next to the pucks joins in with
-    // the nearest grip.
+    // A finger on a simulated puck grabs it: one finger slides, a second
+    // finger twists it to pick a theme without moving it. A finger on ANOTHER
+    // puck starts its own grip — that's how you move two pucks at once. A
+    // finger next to the pucks joins in with the nearest grip.
     {
         const onPuck = simPuckAt(e.clientX, e.clientY);
         let pt: PuckTouch | null = onPuck

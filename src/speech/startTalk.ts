@@ -1,9 +1,7 @@
-import type { TalkCallbacks } from "../types/TalkCallbacks";
-import type { TalkSay } from "../types/TalkSay";
-import type { TalkSession } from "../types/TalkSession";
 import { browserSession } from "./browserSession";
 import { recorderSession } from "./recorderSession";
 import { stt } from "./stt";
+import type { TalkCallbacks, TalkSay, TalkSession } from "../types";
 
 /* ── Recording ─────────────────────────────────────────────────────────────
    `startTalk` provides a session with one button: stop(). Whatever happens

@@ -1,5 +1,5 @@
 import { OverflowResolver } from "../OverflowResolver";
-import type { OverflowDecision } from "../OverflowResolver";
+import type { OverflowDecision } from "../OverflowDecision";
 
 /* The newcomer gets nothing.
  *

@@ -1,6 +1,6 @@
-import { el } from "../../dom/el";
-import { learn } from "../../state/learn";
-import { closeMenu } from "../../ui/menu/closeMenu";
+import { el } from "../../dom";
+import { learn } from "../../state";
+import { closeMenu } from "../../ui/menu";
 import { restartLearn } from "./restartLearn";
 
 /* ── Recognizing a puck ────────────────────────────────────────────────────

@@ -1,7 +1,6 @@
-import { L } from "../../i18n/L";
-import { tr } from "../../i18n/tr";
-import { ui } from "../../state/ui";
-import type { Template } from "../../types/Template";
+import { L, tr } from "../../i18n";
+import { ui } from "../../state";
+import type { Template } from "../../types";
 
 /* "learned 3 Sep" or "not learned yet". */
 export function learnStamp(t: Template): string {

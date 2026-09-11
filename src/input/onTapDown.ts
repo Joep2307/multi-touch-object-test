@@ -1,6 +1,4 @@
-import { learn } from "../state/learn";
-import { touches } from "../state/touches";
-import { ui } from "../state/ui";
+import { learn, touches, ui } from "../state";
 
 /* The start of a possible tap on the map; see onTapUp. */
 export function onTapDown(e: PointerEvent): void {

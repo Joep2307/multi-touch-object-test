@@ -1,6 +1,5 @@
-import type { ShapeValue } from "../types/ShapeValue";
-import type { Template } from "../types/Template";
-import { norm360 } from "./geometry/norm360";
+import { norm360 } from "./geometry";
+import type { ShapeValue, Template } from "../types";
 
 /* Een gemeten waarde die er ook echt is. `Number.isFinite` alleen
    vertelt de compiler niets: het weet daarna nog steeds niet dat de

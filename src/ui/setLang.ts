@@ -1,4 +1,4 @@
-import { ui } from "../state/ui";
+import { ui } from "../state";
 import { applyLang } from "./applyLang";
 
 export function setLang(next: string): void {

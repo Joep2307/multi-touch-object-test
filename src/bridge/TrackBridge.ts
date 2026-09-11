@@ -2,13 +2,14 @@ import {
     AccelerationPolicy,
     DirectionPolicy,
     FootprintCompletionPolicy,
+    MotionHistoryPolicy,
     MovePolicy,
     PositionPolicy,
     PxPerMMEstimator,
     PxPerMMPolicy,
     RotatePolicy,
-    MotionHistoryPolicy,
 } from "../core/base";
+import { ContactStatusTracker } from "../core/contact";
 import {
     Apertured,
     BaseFactory,
@@ -29,8 +30,6 @@ import {
 } from "../core/physical";
 import { MAX_RETURN_PX } from "./constants";
 import { templateToKind } from "./templateToKind";
-import type { TrackBridgeContact } from "./TrackBridgeContact";
-import { ContactStatusTracker } from "../core/contact";
 import type {
     ContactFrame,
     ContactPoint,
@@ -38,13 +37,13 @@ import type {
 } from "../core/contact";
 import type {
     BasePolicies,
-    PhysicalId,
     KindId,
+    PhysicalId,
     PhysicalKindDefinition,
     TangibleObject,
 } from "../core/physical";
-import type { Template } from "../types/Template";
-import type { TrackAssignment } from "../types/TrackAssignment";
+import type { Template, TrackAssignment } from "../types";
+import type { TrackBridgeContact } from "./TrackBridgeContact";
 
 type ContactLife = {
     readonly id: number;

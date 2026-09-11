@@ -1,6 +1,7 @@
 import type { SimPuck } from "./SimPuck";
 
-/* A drag copy attached to the mouse: dragging, or rotating with Shift/right mouse button. */
+/* A drag copy attached to the mouse: dragging, or rotating with Shift/right
+   mouse button. */
 export interface MouseDrag {
     puck: SimPuck;
     rotate: boolean;

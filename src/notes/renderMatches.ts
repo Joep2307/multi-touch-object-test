@@ -1,10 +1,9 @@
-import { relevantDocs } from "../kg/relevantDocs";
-import type { NoteView } from "../types/NoteView";
-import type { Pin } from "../types/Pin";
-import { openDocument } from "../ui/kgInfo/openDocument";
+import { relevantDocs } from "../kg";
+import { openDocument } from "../ui/kgInfo";
 import { kgRow } from "./kgRow";
 import { notePart } from "./notePart";
 import { positionNote } from "./positionNote";
+import type { NoteView, Pin } from "../types";
 
 /* Search on the MEANING of what was said, independent of distance. Hence
    its own separate list: these are pieces that are about the topic, even

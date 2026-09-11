@@ -1,6 +1,6 @@
-import { tiles } from "../state/tiles";
-import type { TileImage } from "../types/TileImage";
+import { tiles } from "../state";
 import { MV } from "./MV";
+import type { TileImage } from "../types";
 
 /* Cache lookup only — never starts a download. */
 export function peekTile(z: number, x: number, y: number): TileImage | null {

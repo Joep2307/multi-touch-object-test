@@ -1,8 +1,6 @@
-import { CFG } from "../config/CFG";
-import { PUCK_HOLE } from "../config/PUCK_HOLE";
-import { tracks } from "../state/tracks";
-import { view } from "../state/view";
-import type { Track } from "../types/Track";
+import { CFG, PUCK_HOLE } from "../config";
+import { tracks, view } from "../state";
+import type { Track } from "../types";
 
 /* The puck whose viewing hole lies under this point. Deliberately tight:
    only the hole counts, not the whole disc. */

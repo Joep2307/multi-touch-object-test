@@ -1,6 +1,5 @@
-import { keyboards } from "../../state/keyboards";
-import type { KeyboardView } from "../../types/KeyboardView";
-import type { Side } from "../../types/Side";
+import { keyboards } from "../../state";
+import type { KeyboardView, Side } from "../../types";
 
 /* Het toetsenbord van deze kant, of anders dat van de andere. Er is
    er altijd ten minste één -- `keyboards.list` wordt bij het opstarten

@@ -1,7 +1,7 @@
 import { EffectExecutor } from "../EffectExecutor";
 import { targetOf } from "./targetOf";
+import type { PhysicalId } from "../../physical";
 import type { EffectDefinition } from "../EffectDefinition";
-import type { PhysicalId } from "../../physical/PhysicalId";
 import type { RuleContext } from "../RuleContext";
 import type { StateId } from "../StateId";
 

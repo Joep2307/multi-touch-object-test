@@ -1,9 +1,8 @@
-import { notePart } from "../../notes/notePart";
-import { noteViewOf } from "../../notes/noteViewOf";
-import type { KeyboardView } from "../../types/KeyboardView";
+import { notePart, noteViewOf } from "../../notes";
 import { hideKeyboard } from "./hideKeyboard";
 import { insertKeyboardText } from "./insertKeyboardText";
 import { renderKeyboard } from "./renderKeyboard";
+import type { KeyboardView } from "../../types";
 
 export function wireKeyboard(kb: KeyboardView): void {
     kb.el.addEventListener("pointerdown", (e) => {

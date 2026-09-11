@@ -1,7 +1,6 @@
-import { SLOT_CODES } from "../../config/SLOT_CODES";
-import type { Template } from "../../types/Template";
-import type { Verdict } from "../../types/Verdict";
-import { codeText } from "../geometry/codeText";
+import { SLOT_CODES } from "../../config";
+import { codeText } from "../geometry";
+import type { Template, Verdict } from "../../types";
 
 /* The grid pucks the build drawing offers to print. They are not pucks the
    table knows: nothing recognises them until you lay one down and read it

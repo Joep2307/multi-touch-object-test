@@ -1,12 +1,12 @@
-import type { Lang } from "../types/Lang";
-import type { Pin } from "../types/Pin";
+import type { Lang, Pin } from "../types";
 
 /* The default demo doesn't open as an empty map. Three filled-in contributions
    per kind lie around Breda, spread over a few recognisable places.
 
    Place and kind are the same in every language — those are the coordinates of
    the table's own city. Only what was said differs, so each entry carries both
-   wordings and restore() seeds the one the table is set to. The topic is stored
+   wordings and restore() seeds the one the table is set to. The topic is
+   stored
    under its English name; topicLabel() puts the Dutch one on screen when the
    table is switched over. */
 const PLACES = [
@@ -19,12 +19,14 @@ const PLACES = [
         en: {
             title: "More room for trees",
             description:
-                "The extra trees on the Grote Markt give shade and make the square more pleasant in summer.",
+                "The extra trees on the Grote Markt give shade and make the " +
+                "square more pleasant in summer.",
         },
         nl: {
             title: "Meer ruimte voor bomen",
             description:
-                "De extra bomen op de Grote Markt geven schaduw en maken het plein prettiger in de zomer.",
+                "De extra bomen op de Grote Markt geven schaduw en maken " +
+                "het plein prettiger in de zomer.",
         },
     },
     {
@@ -36,12 +38,14 @@ const PLACES = [
         en: {
             title: "Good cycle route along the canal",
             description:
-                "The segregated route feels safe and connects well to the town centre.",
+                "The segregated route feels safe and connects well to the " +
+                "town centre.",
         },
         nl: {
             title: "Fijne fietsroute langs de singel",
             description:
-                "De vrijliggende route voelt veilig en sluit goed aan op het centrum.",
+                "De vrijliggende route voelt veilig en sluit goed aan op " +
+                "het centrum.",
         },
     },
     {
@@ -53,12 +57,14 @@ const PLACES = [
         en: {
             title: "A welcoming place to meet",
             description:
-                "The park is used by young and old alike and invites people to stay longer.",
+                "The park is used by young and old alike and invites people " +
+                "to stay longer.",
         },
         nl: {
             title: "Prettige ontmoetingsplek",
             description:
-                "Het park wordt door jong en oud gebruikt en nodigt uit om langer te blijven.",
+                "Het park wordt door jong en oud gebruikt en nodigt uit om " +
+                "langer te blijven.",
         },
     },
 
@@ -71,12 +77,14 @@ const PLACES = [
         en: {
             title: "Waste beside the containers",
             description:
-                "Especially after the weekend, bags and loose packaging are left lying here.",
+                "Especially after the weekend, bags and loose packaging are " +
+                "left lying here.",
         },
         nl: {
             title: "Afval naast de containers",
             description:
-                "Vooral na het weekend blijven hier zakken en losse verpakkingen liggen.",
+                "Vooral na het weekend blijven hier zakken en losse " +
+                "verpakkingen liggen.",
         },
     },
     {
@@ -88,12 +96,14 @@ const PLACES = [
         en: {
             title: "Dark crossing",
             description:
-                "The crossing is hard to see in the evening and cars often drive too fast here.",
+                "The crossing is hard to see in the evening and cars often " +
+                "drive too fast here.",
         },
         nl: {
             title: "Donkere oversteek",
             description:
-                "De oversteek is in de avond slecht zichtbaar en auto's rijden hier vaak te hard.",
+                "De oversteek is in de avond slecht zichtbaar en auto's " +
+                "rijden hier vaak te hard.",
         },
     },
     {
@@ -105,12 +115,14 @@ const PLACES = [
         en: {
             title: "Busy junction",
             description:
-                "Cyclists and turning traffic come together unclearly here during rush hour.",
+                "Cyclists and turning traffic come together unclearly here " +
+                "during rush hour.",
         },
         nl: {
             title: "Drukke kruising",
             description:
-                "Fietsers en afslaand verkeer komen hier onduidelijk samen tijdens de spits.",
+                "Fietsers en afslaand verkeer komen hier onduidelijk samen " +
+                "tijdens de spits.",
         },
     },
 
@@ -123,12 +135,14 @@ const PLACES = [
         en: {
             title: "A town centre with less car traffic",
             description:
-                "Discuss how deliveries stay possible once there is less through traffic.",
+                "Discuss how deliveries stay possible once there is less " +
+                "through traffic.",
         },
         nl: {
             title: "Autoluwe binnenstad",
             description:
-                "Bespreek hoe bevoorrading mogelijk blijft als er minder doorgaand autoverkeer komt.",
+                "Bespreek hoe bevoorrading mogelijk blijft als er minder " +
+                "doorgaand autoverkeer komt.",
         },
     },
     {
@@ -140,12 +154,14 @@ const PLACES = [
         en: {
             title: "Use of the quayside",
             description:
-                "Can lingering, events and more greenery exist side by side here?",
+                "Can lingering, events and more greenery exist side by side " +
+                "here?",
         },
         nl: {
             title: "Gebruik van de kade",
             description:
-                "Kunnen verblijf, evenementen en meer groen hier naast elkaar bestaan?",
+                "Kunnen verblijf, evenementen en meer groen hier naast " +
+                "elkaar bestaan?",
         },
     },
     {
@@ -157,12 +173,14 @@ const PLACES = [
         en: {
             title: "Room for different ages",
             description:
-                "Discuss which facilities appeal to children, teenagers and older people alike.",
+                "Discuss which facilities appeal to children, teenagers and " +
+                "older people alike.",
         },
         nl: {
             title: "Ruimte voor verschillende leeftijden",
             description:
-                "Bespreek welke voorzieningen zowel kinderen, jongeren als ouderen aanspreken.",
+                "Bespreek welke voorzieningen zowel kinderen, jongeren als " +
+                "ouderen aanspreken.",
         },
     },
 
@@ -175,12 +193,14 @@ const PLACES = [
         en: {
             title: "Facade garden route",
             description:
-                "Create an unbroken route of facade gardens and rain barrels through the town centre.",
+                "Create an unbroken route of facade gardens and rain " +
+                "barrels through the town centre.",
         },
         nl: {
             title: "Geveltuinenroute",
             description:
-                "Maak een aaneengesloten route van geveltuinen en regentonnen door de binnenstad.",
+                "Maak een aaneengesloten route van geveltuinen en " +
+                "regentonnen door de binnenstad.",
         },
     },
     {
@@ -192,12 +212,14 @@ const PLACES = [
         en: {
             title: "Line of light at the crossing",
             description:
-                "Mark the walking route with warm, low lighting that stays clearly visible in the evening.",
+                "Mark the walking route with warm, low lighting that stays " +
+                "clearly visible in the evening.",
         },
         nl: {
             title: "Lichtlijn bij de oversteek",
             description:
-                "Markeer de looproute met warme, lage verlichting die ook 's avonds goed zichtbaar is.",
+                "Markeer de looproute met warme, lage verlichting die ook " +
+                "'s avonds goed zichtbaar is.",
         },
     },
     {
@@ -209,12 +231,14 @@ const PLACES = [
         en: {
             title: "Smart collection point",
             description:
-                "Place a compact collection point with separate compartments and an alert when a bin is full.",
+                "Place a compact collection point with separate " +
+                "compartments and an alert when a bin is full.",
         },
         nl: {
             title: "Slim inzamelpunt",
             description:
-                "Plaats een compact inzamelpunt met aparte vakken en een melding wanneer een bak vol is.",
+                "Plaats een compact inzamelpunt met aparte vakken en een " +
+                "melding wanneer een bak vol is.",
         },
     },
 ] as const;

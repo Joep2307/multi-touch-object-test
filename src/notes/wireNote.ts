@@ -1,10 +1,6 @@
-import { noteToPin } from "../pins/noteToPin";
-import { save } from "../pins/save";
-import { saveSoon } from "../pins/saveSoon";
-import { pins } from "../state/pins";
-import { saveTalkAudio } from "../talk/saveTalkAudio";
-import { toggleTalk } from "../talk/toggleTalk";
-import type { NoteView } from "../types/NoteView";
+import { noteToPin, save, saveSoon } from "../pins";
+import { pins } from "../state";
+import { saveTalkAudio, toggleTalk } from "../talk";
 import { askKnowledge } from "./askKnowledge";
 import { closeNote } from "./closeNote";
 import { flipNote } from "./flipNote";
@@ -13,6 +9,7 @@ import { positionNote } from "./positionNote";
 import { renderMatches } from "./renderMatches";
 import { saveContactFollowup } from "./saveContactFollowup";
 import { showContactFollowup } from "./showContactFollowup";
+import type { NoteView } from "../types";
 
 /* Every button in the window belongs to THIS window. Hence wiring it here
    rather than once per id: there are two of everything. */

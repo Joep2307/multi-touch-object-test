@@ -1,6 +1,4 @@
-import type { LearnMeasure } from "../types/LearnMeasure";
-import type { LearnPhase } from "../types/LearnPhase";
-import type { LearnSample } from "../types/LearnSample";
+import type { LearnMeasure, LearnPhase, LearnSample } from "../types";
 
 /* The "Recognize puck" measurement window. It doesn't take a single frame
    but a series: a finger or a sticker jitters by a few pixels, and the

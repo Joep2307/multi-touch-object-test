@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 import { LAPSE_PLAY_FPS, REC_BITRATE } from "./constants";
 import { pickMime } from "./pickMime";
 import { wait } from "./wait";

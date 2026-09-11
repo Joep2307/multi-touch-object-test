@@ -1,5 +1,5 @@
 import { CentreSolver } from "./CentreSolver";
-import type { SensedContact } from "../../contact/SensedContact";
+import type { SensedContact } from "../../contact";
 import type { CentreFit } from "./CentreFit";
 
 /* The middle of a three-foot object: the centroid of its feet.

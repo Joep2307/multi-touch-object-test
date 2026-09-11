@@ -1,6 +1,5 @@
-import { NOISE } from "../../config/NOISE";
-import type { NoiseFoot } from "../../types/NoiseFoot";
-import type { Point } from "../../types/Point";
+import { NOISE } from "../../config";
+import type { NoiseFoot, Point } from "../../types";
 
 /* Which contact point belongs to which foot: the nearest anchor within
    `MATCH_MM`, each point used once. Returns the index per foot (-1 for a

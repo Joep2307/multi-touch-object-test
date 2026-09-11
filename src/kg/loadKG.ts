@@ -1,8 +1,8 @@
-import { defaultClient } from "@biblio";
-import type { KgNode } from "../types/KgNode";
 import { cellOf } from "./cellOf";
-import { kg } from "./kg";
 import { kgStatusText } from "./kgStatusText";
+import { kg } from "./kg";
+import { defaultClient } from "@biblio";
+import type { KgNode } from "../types";
 
 /* ── Loading ────────────────────────────────────────────────────────────
    The graph is a snapshot: fetched once, after that only projected.

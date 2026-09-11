@@ -1,11 +1,9 @@
-import { topicLabel } from "../i18n/topicLabel";
-import { vName } from "../i18n/vName";
-import { notePart } from "../notes/notePart";
-import { noteViewFor } from "../notes/noteViewFor";
-import { save } from "../pins/save";
-import { pins } from "../state/pins";
-import type { Track } from "../types/Track";
-import { puckTopic } from "./ring/puckTopic";
+import { topicLabel, vName } from "../i18n";
+import { notePart, noteViewFor } from "../notes";
+import { save } from "../pins";
+import { pins } from "../state";
+import { puckTopic } from "./ring";
+import type { Track } from "../types";
 
 /* If the puck is rotated to a different topic after being placed, the
    marker follows along — and so does the panel attached to it. */

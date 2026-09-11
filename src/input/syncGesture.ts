@@ -1,4 +1,4 @@
-import { touches } from "../state/touches";
+import { touches } from "../state";
 import { mapMovable } from "./mapMovable";
 
 /* Derive the map gesture from the real touches: one finger pans, two

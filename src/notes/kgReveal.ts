@@ -1,9 +1,9 @@
-import { tr } from "../i18n/tr";
-import { knowledgeOf } from "../kg/knowledgeOf";
-import type { KgNode } from "../types/KgNode";
-import { openDocument } from "../ui/kgInfo/openDocument";
+import { tr } from "../i18n";
+import { knowledgeOf } from "../kg";
+import { openDocument } from "../ui/kgInfo";
 import { noteViewOf } from "./noteViewOf";
 import { positionNote } from "./positionNote";
+import type { KgNode } from "../types";
 
 /* Tapping a row. A document opens itself; for a place, we fetch
    what is literally written about it and unfold that underneath. */

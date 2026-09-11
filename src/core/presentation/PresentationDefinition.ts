@@ -1,5 +1,5 @@
+import type { ExtensionProperties } from "../programme";
 import type { Binding } from "./Binding";
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
 import type { PresentationId } from "./PresentationId";
 import type { Renderer } from "./Renderer";
 

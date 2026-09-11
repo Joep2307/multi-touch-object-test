@@ -12,24 +12,30 @@
  * reading the same contact points give the same answer, which is the
  * part that would otherwise be discovered on the afternoon.
  */
-import { describe, expect, it } from "vitest";
 import {
     ApexHeadingSource,
     CentroidSolver,
     Direction,
     DirectionPolicy,
+    FootprintCompletion,
+    FootprintCompletionPolicy,
     PointMatchRotationSource,
     Position,
     PositionPolicy,
+    Rotate,
     RotatePolicy,
 } from "../../../core/base";
-import { describe as describeTriangle } from "../../../puck/geometry/describe";
+import { describe as describeTriangle } from "../../../puck/geometry";
+import { describe, expect, it } from "vitest";
 import type { BaseSample, FootprintSpec } from "../../../core/base";
 import type { ContactRecording, SensedContact } from "../../../core/contact";
-import stillPuck from "./fixtures/contacts-table-19-18529.json";
-import turningPuck from "./fixtures/contacts-table-44-43582.json";
-import slidingPuck from "./fixtures/contacts-table-68-68030.json";
-import palmAndSleeve from "./fixtures/contacts-table-292-291704.json";
+import stillPuck from "../core/fixtures/contacts-table-19-18529.json";
+import turningPuck from "../core/fixtures/contacts-table-44-43582.json";
+import slidingPuck from "../core/fixtures/contacts-table-68-68030.json";
+import palmAndSleeve from "../core/fixtures/contacts-table-292-291704.json";
+import emptyGlass from "../core/fixtures/contacts-table-2-1739.json";
+import droppingPuck from "../core/fixtures/contacts-table-122-122231.json";
+import manyFeet from "../core/fixtures/contacts-table-214-214278.json";
 
 /* Measured at the table on 9 September 2026, not assumed. */
 const PX_PER_MM = 2.02;
@@ -318,5 +324,159 @@ describe("the new pipeline reports a puck when the old one could", () => {
         }
         expect(describable).toBeGreaterThan(400);
         expect(sensed).toBe(describable);
+    });
+});
+
+/* ── Holding a puck on two feet, on the recordings ───────────────
+ *
+ * The same `Position`, with `FootprintCompletion` in front of it, which
+ * is where `Base.update` puts it. What is being measured is how often a
+ * two-foot frame that used to be nothing at all becomes a reading.
+ */
+const heldRig = (): {
+    position: Position;
+    step: (frame: Frame) => void;
+    reconstructed: () => number;
+} => {
+    const position = new Position(new CentroidSolver(), new PositionPolicy());
+    const completion = new FootprintCompletion(
+        new FootprintCompletionPolicy(),
+    );
+    let reconstructed = 0;
+    return {
+        position,
+        reconstructed: () => reconstructed,
+        step(frame) {
+            const contacts = completion.complete(
+                { at: frame.at, points: frame.points },
+                SPEC,
+            );
+            const sample: BaseSample = {
+                at: frame.at,
+                contacts,
+                spec: SPEC,
+                pxPerMM: PX_PER_MM,
+            };
+            position.update(sample);
+            completion.remember(contacts, position.snapshot());
+            if (position.snapshot().held) reconstructed += 1;
+        },
+    };
+};
+
+/* Frames where exactly two contacts are down, between two frames where
+   three or more were: a genuine dropout rather than an empty table. */
+const dropoutFrames = (frames: readonly Frame[]): number => {
+    let count = 0;
+    for (let i = 1; i < frames.length - 1; i += 1) {
+        if (frames[i]?.points.length !== 2) continue;
+        let before = i - 1;
+        while (before >= 0 && (frames[before]?.points.length ?? 0) < 3) {
+            before -= 1;
+        }
+        let after = i + 1;
+        while (
+            after < frames.length &&
+            (frames[after]?.points.length ?? 0) < 3
+        ) {
+            after += 1;
+        }
+        if (before >= 0 && after < frames.length) count += 1;
+    }
+    return count;
+};
+
+describe("a puck holds on while two of its feet are down", () => {
+    it("is what the recordings are actually short of", () => {
+        /* Worth stating plainly, because the plan this was built from
+           got it wrong. "Three feet are present on only 57 to 64 per
+           cent of frames" is arithmetically right and misleading: most
+           of the shortfall is an **empty table**, not a puck with a
+           foot missing. On the still puck, 238 of 717 frames have no
+           contacts at all and only 7 have two.
+         *
+         * So the win here is not the two-thirds of a session the plan
+         * expected. It is every dropout there actually is. */
+        const still = framesOf(stillPuck as ContactRecording);
+        const empty = still.filter((f) => f.points.length === 0).length;
+        expect(empty).toBeGreaterThan(200);
+        expect(dropoutFrames(still)).toBeLessThan(10);
+
+        /* And a recording that does drop out, properly. */
+        const dropping = framesOf(droppingPuck as ContactRecording);
+        expect(dropoutFrames(dropping)).toBeGreaterThan(60);
+    });
+
+    it("reads a puck on every frame of a long dropout", () => {
+        /* 82 two-foot frames in two runs, and before this they were 82
+           frames of nothing: `Move` reset, the swipe was lost, and the
+           puck came back as though it had never gone anywhere. */
+        const frames = framesOf(droppingPuck as ContactRecording);
+        const plain = rig();
+        const held = heldRig();
+        let plainSensed = 0;
+        let heldSensed = 0;
+        for (const frame of frames) {
+            plain.step(frame);
+            held.step(frame);
+            if (plain.position.snapshot().sensed) plainSensed += 1;
+            if (held.position.snapshot().sensed) heldSensed += 1;
+        }
+        expect(held.reconstructed()).toBe(dropoutFrames(frames));
+        expect(heldSensed - plainSensed).toBe(held.reconstructed());
+    });
+
+    it("still reads the full circle as a full circle", () => {
+        const frames = framesOf(turningPuck as ContactRecording);
+        const rotate = new Rotate(
+            new PointMatchRotationSource(new RotatePolicy()),
+            new RotatePolicy(),
+        );
+        const completion = new FootprintCompletion(
+            new FootprintCompletionPolicy(),
+        );
+        const position = new Position(
+            new CentroidSolver(),
+            new PositionPolicy(),
+        );
+        for (const frame of frames) {
+            const contacts = completion.complete(
+                { at: frame.at, points: frame.points },
+                SPEC,
+            );
+            const sample: BaseSample = {
+                at: frame.at,
+                contacts,
+                spec: SPEC,
+                pxPerMM: PX_PER_MM,
+            };
+            position.update(sample);
+            completion.remember(contacts, position.snapshot());
+            rotate.update(sample);
+        }
+        const turned = Math.abs(rotate.snapshot().deltaTotalDeg);
+        expect(turned).toBeGreaterThan(330);
+        expect(turned).toBeLessThan(375);
+    });
+
+    it("is still not fooled by a palm, a sleeve or an empty table", () => {
+        /* The safety property, and the one this feature could most
+           easily have cost. Completion can only ever add feet to a
+           footprint it has already seen whole and believed, so a
+           recording that was never sensed cannot start being sensed. */
+        for (const recording of [
+            palmAndSleeve as ContactRecording,
+            emptyGlass as ContactRecording,
+            manyFeet as ContactRecording,
+        ]) {
+            const held = heldRig();
+            let sensed = 0;
+            for (const frame of framesOf(recording)) {
+                held.step(frame);
+                if (held.position.snapshot().sensed) sensed += 1;
+            }
+            expect(sensed).toBe(0);
+            expect(held.reconstructed()).toBe(0);
+        }
     });
 });

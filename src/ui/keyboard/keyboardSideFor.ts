@@ -1,7 +1,7 @@
-import { noteViewOf } from "../../notes/noteViewOf";
-import type { Side } from "../../types/Side";
-import { menuFlipped } from "../menu/menuFlipped";
+import { noteViewOf } from "../../notes";
+import { menuFlipped } from "../menu";
 import { sidesActive } from "../sidesActive";
+import type { Side } from "../../types";
 
 /* Which side does this field belong to? A field in a window belongs to the
    side of that window, a field in the menu to the side the menu is open on. */

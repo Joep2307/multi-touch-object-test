@@ -1,4 +1,4 @@
-import type { Template } from "../types/Template";
+import type { Template } from "../types";
 
 /* The factory default: the four pucks from the build drawing, plus the duo.
 

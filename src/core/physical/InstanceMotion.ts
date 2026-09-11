@@ -1,4 +1,4 @@
-import type { Vec2 } from "../base/Vec2";
+import type { Vec2 } from "../base";
 
 /* How the object is moving, in pixels and seconds.
  *

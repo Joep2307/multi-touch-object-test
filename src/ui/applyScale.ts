@@ -1,12 +1,10 @@
-import { UI_SCALES } from "../config/UI_SCALES";
-import { el } from "../dom/el";
-import { openNotes } from "../notes/openNotes";
-import { positionNote } from "../notes/positionNote";
-import { positionNoteX } from "../notes/positionNoteX";
-import { readChip } from "../render/readChip";
-import { ui } from "../state/ui";
-import { positionKgInfo } from "./kgInfo/positionKgInfo";
-import { refreshPanelOffsets } from "./panels/refreshPanelOffsets";
+import { UI_SCALES } from "../config";
+import { el } from "../dom";
+import { openNotes, positionNote, positionNoteX } from "../notes";
+import { readChip } from "../render";
+import { ui } from "../state";
+import { positionKgInfo } from "./kgInfo";
+import { refreshPanelOffsets } from "./panels";
 
 export function applyScale(): void {
     document.documentElement.style.setProperty("--ui-scale", String(ui.scale));

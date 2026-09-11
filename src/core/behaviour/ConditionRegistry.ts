@@ -1,13 +1,15 @@
-import { AffordanceSubject } from "./subjects/AffordanceSubject";
-import { DistanceSubject } from "./subjects/DistanceSubject";
-import { KindSubject } from "./subjects/KindSubject";
-import { ModeSubject } from "./subjects/ModeSubject";
-import { PropertySubject } from "./subjects/PropertySubject";
-import { RegionSubject } from "./subjects/RegionSubject";
-import { RelationSubject } from "./subjects/RelationSubject";
-import { RoleSubject } from "./subjects/RoleSubject";
-import { StateSubject } from "./subjects/StateSubject";
-import { VariableSubject } from "./subjects/VariableSubject";
+import {
+    AffordanceSubject,
+    DistanceSubject,
+    KindSubject,
+    ModeSubject,
+    PropertySubject,
+    RegionSubject,
+    RelationSubject,
+    RoleSubject,
+    StateSubject,
+    VariableSubject,
+} from "./subjects";
 import type { ConditionSubject } from "./ConditionSubject";
 
 /* Everything a condition can look at, by name.

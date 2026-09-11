@@ -1,4 +1,4 @@
-import { el } from "../../dom/el";
+import { el } from "../../dom";
 import { activeTemplates } from "../activeTemplates";
 import { sheetCard } from "./sheetCard";
 import { slotProposals } from "./slotProposals";

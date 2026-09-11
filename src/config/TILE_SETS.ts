@@ -1,4 +1,4 @@
-import type { TileSet } from "../types/TileSet";
+import type { TileSet } from "../types";
 
 /* Map views. Each view is a different reading of the same city: where the
    green is, where things are built, how traffic flows. `max` is the
@@ -18,27 +18,37 @@ export const TILE_SETS: Record<string, TileSet | null> = {
         credit: "© OpenStreetMap contributors — openstreetmap.org/copyright",
     },
     brt: {
-        url: "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png",
+        url:
+            "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0" +
+            "/standaard/EPSG:3857/{z}/{x}/{y}.png",
         max: 19,
         credit: "© Kadaster / PDOK — BRT Achtergrondkaart",
     },
     brtgrijs: {
-        url: "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/grijs/EPSG:3857/{z}/{x}/{y}.png",
+        url:
+            "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0" +
+            "/grijs/EPSG:3857/{z}/{x}/{y}.png",
         max: 19,
         credit: "© Kadaster / PDOK — BRT Achtergrondkaart (grijs)",
     },
     brtpastel: {
-        url: "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/pastel/EPSG:3857/{z}/{x}/{y}.png",
+        url:
+            "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0" +
+            "/pastel/EPSG:3857/{z}/{x}/{y}.png",
         max: 19,
         credit: "© Kadaster / PDOK — BRT Achtergrondkaart (pastel)",
     },
     water: {
-        url: "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/water/EPSG:3857/{z}/{x}/{y}.png",
+        url:
+            "https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0" +
+            "/water/EPSG:3857/{z}/{x}/{y}.png",
         max: 19,
         credit: "© Kadaster / PDOK — BRT Achtergrondkaart (water)",
     },
     lucht: {
-        url: "https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_ortho25/EPSG:3857/{z}/{x}/{y}.jpeg",
+        url:
+            "https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0" +
+            "/Actueel_ortho25/EPSG:3857/{z}/{x}/{y}.jpeg",
         max: 19,
         credit: "© Kadaster / Beeldmateriaal.nl — luchtfoto 25 cm",
     },
@@ -53,7 +63,9 @@ export const TILE_SETS: Record<string, TileSet | null> = {
         credit: "© OpenStreetMap contributors · Humanitarian OSM Team",
     },
     verkeer: {
-        url: "https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png",
+        url:
+            "https://{s}.tile-cyclosm.openstreetmap.fr" +
+            "/cyclosm/{z}/{x}/{y}.png",
         max: 18,
         credit: "© OpenStreetMap contributors · CyclOSM",
     },

@@ -1,4 +1,4 @@
-import type { Vec2 } from "../core/base/Vec2";
+import type { Vec2 } from "../core/base";
 
 /* Where a taped triangle's three corners sit, from the shape the old
    templates record: the longest side in millimetres, and the two

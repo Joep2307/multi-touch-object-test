@@ -1,8 +1,8 @@
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
-import type { KindId } from "../physical/KindId";
+import type { StateId } from "../behaviour";
+import type { KindId } from "../physical";
+import type { ExtensionProperties } from "../programme";
 import type { PresentationId } from "./PresentationId";
 import type { RegionDefinition } from "./RegionDefinition";
-import type { StateId } from "../behaviour/StateId";
 
 /* Everything the table shows, for one mode.
  *

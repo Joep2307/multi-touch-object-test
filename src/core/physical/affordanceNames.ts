@@ -1,13 +1,15 @@
-import { Apertured } from "./affordance/Apertured";
-import { Nestable } from "./affordance/Nestable";
-import { Nesting } from "./affordance/Nesting";
-import { Passive } from "./affordance/Passive";
-import { Placeable } from "./affordance/Placeable";
-import { Rotatable } from "./affordance/Rotatable";
-import { Tappable } from "./affordance/Tappable";
 import { affordanceOf } from "./affordanceOf";
-import type { AffordanceName } from "./affordance/AffordanceName";
+import {
+    Apertured,
+    Nestable,
+    Nesting,
+    Passive,
+    Placeable,
+    Rotatable,
+    Tappable,
+} from "./affordance";
 import type { PhysicalKindDefinition } from "./PhysicalKindDefinition";
+import type { AffordanceName } from "./affordance";
 
 /* What a programme file is allowed to say this kind permits.
  *

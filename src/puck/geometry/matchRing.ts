@@ -1,10 +1,8 @@
-import type { RingMatch } from "../../types/RingMatch";
-import type { RingShape } from "../../types/RingShape";
-import type { Template } from "../../types/Template";
 import { gapErr } from "./gapErr";
 import { gapsOf } from "./gapsOf";
 import { norm360 } from "./norm360";
 import { shiftGaps } from "./shiftGaps";
+import type { RingMatch, RingShape, Template } from "../../types";
 
 /* Does this measurement fit this template? The gaps lie in a ring, so which
    foot is "the first" only depends on how the puck happens to lie: all

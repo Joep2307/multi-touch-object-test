@@ -1,5 +1,5 @@
-import { randomId } from "../dom/randomId";
-import type { Pin } from "../types/Pin";
+import { randomId } from "../dom";
+import type { Pin } from "../types";
 
 /* Fill out a valid marker to the full shape: numbers as numbers,
    every text field a string, and an id and timestamp if missing.

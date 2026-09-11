@@ -1,4 +1,4 @@
-import { sim } from "../../state/sim";
+import { sim } from "../../state";
 
 /* The tray no longer blocks anything: two people each with a Problem puck is
    just a normal table, not an error. It only shows what's out there. */

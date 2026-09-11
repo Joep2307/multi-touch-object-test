@@ -1,6 +1,5 @@
-import { vColor } from "../../i18n/vColor";
-import { vName } from "../../i18n/vName";
-import { templates } from "../../state/templates";
+import { vColor, vName } from "../../i18n";
+import { templates } from "../../state";
 import { markTray } from "./markTray";
 import { trays } from "./trays";
 

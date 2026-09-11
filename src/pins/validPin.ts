@@ -1,4 +1,4 @@
-import { VERDICT_KEYS } from "../config/VERDICT_KEYS";
+import { VERDICT_KEYS } from "../config";
 
 /* ═══════════════════════════════════════════════════════════════
    MARKERS — what is allowed back out of storage

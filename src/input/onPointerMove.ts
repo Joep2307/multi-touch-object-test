@@ -1,7 +1,7 @@
-import { MV } from "../map/MV";
-import { movePinTo } from "../pins/movePinTo";
-import { setSimPuckPosition } from "../puck/sim/setSimPuckPosition";
-import { touches } from "../state/touches";
+import { MV } from "../map";
+import { movePinTo } from "../pins";
+import { setSimPuckPosition } from "../puck/sim";
+import { touches } from "../state";
 import { mapMovable } from "./mapMovable";
 import { movePanelScroll } from "./movePanelScroll";
 import { puckTouchByPtr } from "./puckTouchByPtr";

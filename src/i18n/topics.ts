@@ -1,6 +1,6 @@
+import { kg } from "../kg";
+import { ui } from "../state";
 import { L } from "./L";
-import { kg } from "../kg/kg";
-import { ui } from "../state/ui";
 
 /* The topics on the pucks: from the graph if that toggle is on and the
    graph has them, otherwise the fixed list in the current language. */

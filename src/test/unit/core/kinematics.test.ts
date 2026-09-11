@@ -324,10 +324,7 @@ const heldRig = (): HeldRig => {
         gestures,
         step(points, at) {
             base.update(at, { at, points }, SPEC);
-            const state = presence.update(
-                base.position.snapshot().sensed,
-                at,
-            );
+            const state = presence.update(base.position.snapshot().sensed, at);
             gestures.push(...recogniser.update(base.snapshot(at), state));
         },
     };
@@ -382,7 +379,7 @@ describe("FootprintCompletion", () => {
         let at = 0;
         let expected = 0;
         for (let f = 0; f < 30; f += 1) {
-            const points = feet(400, 300, f * 3, 0, at);
+            const points = feet(400, 300, f * 3, at);
             r.step(f === 15 ? points.slice(0, 2) : points, at);
             expected = f * 3;
             at += FRAME_MS;
@@ -400,13 +397,13 @@ describe("FootprintCompletion", () => {
         const r = heldRig();
         let at = 0;
         for (let f = 0; f < 5; f += 1) {
-            r.step(feet(400, 300, f * 2, 0, at), at);
+            r.step(feet(400, 300, f * 2, at), at);
             at += FRAME_MS;
         }
         /* One frame on two feet, and then the third foot returns. Its
            reconstructed place and its real one must agree, because
            everything measured in between was measured from it. */
-        const withoutThird = feet(430, 320, 12, 0, at).slice(0, 2);
+        const withoutThird = feet(430, 320, 12, at).slice(0, 2);
         r.step(withoutThird, at);
         const held = r.base.position.snapshot();
         expect(held.held).toBe(true);
@@ -415,7 +412,7 @@ describe("FootprintCompletion", () => {
 
         const centreHeld = held.centre;
         at += FRAME_MS;
-        r.step(feet(430, 320, 12, 0, at), at);
+        r.step(feet(430, 320, 12, at), at);
         const whole = r.base.position.snapshot();
         expect(whole.held).toBe(false);
         expect(centreHeld?.x).toBeCloseTo(whole.centre?.x ?? NaN, 1);
@@ -428,7 +425,7 @@ describe("FootprintCompletion", () => {
         const r = heldRig();
         let at = 0;
         for (let f = 0; f < 10; f += 1) {
-            r.step(feet(400, 300, 0, 0, at).slice(0, 2), at);
+            r.step(feet(400, 300, 0, at).slice(0, 2), at);
             at += FRAME_MS;
         }
         expect(r.base.position.snapshot().sensed).toBe(false);

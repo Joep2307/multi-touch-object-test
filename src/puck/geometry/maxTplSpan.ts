@@ -1,4 +1,4 @@
-import { CFG } from "../../config/CFG";
+import { CFG } from "../../config";
 import { activeTemplates } from "../activeTemplates";
 import { tplSpanMM } from "./tplSpanMM";
 

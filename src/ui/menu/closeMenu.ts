@@ -1,6 +1,6 @@
-import { el } from "../../dom/el";
-import { menu } from "../../state/menu";
-import { hideKeyboardIn } from "../keyboard/hideKeyboardIn";
+import { el } from "../../dom";
+import { menu } from "../../state";
+import { hideKeyboardIn } from "../keyboard";
 import { MENU_BTNS } from "./MENU_BTNS";
 
 export function closeMenu(): void {
@@ -11,6 +11,7 @@ export function closeMenu(): void {
         el(id).classList.remove("on");
         el(id).setAttribute("aria-expanded", "false");
     });
-    // Typing was happening in a field that's now gone; the keyboard should go too.
+    // Typing was happening in a field that's now gone; the keyboard should go
+    // too.
     hideKeyboardIn(el("menu"));
 }

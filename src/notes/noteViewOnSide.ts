@@ -1,6 +1,5 @@
-import { notes } from "../state/notes";
-import type { NoteView } from "../types/NoteView";
-import type { Side } from "../types/Side";
+import { notes } from "../state";
+import type { NoteView, Side } from "../types";
 
 /* Het notitievenster van deze kant, of anders dat van de andere. Zie
    `kbOnSide` voor waarom dit uitgeschreven staat. */

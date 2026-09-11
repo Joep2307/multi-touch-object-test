@@ -1,12 +1,12 @@
+import { matchesTrigger } from "./matchesTrigger";
 import { byPriority } from "./byPriority";
 import { firstUnmetCondition } from "./firstUnmetCondition";
-import { matchesTrigger } from "./TriggerMatcher";
+import type { InteractionEvent } from "../events";
 import type { ActionDefinition } from "./ActionDefinition";
 import type { ActionId } from "./ActionId";
 import type { ConditionRegistry } from "./ConditionRegistry";
 import type { EffectDefinition } from "./EffectDefinition";
 import type { EffectRegistry } from "./EffectRegistry";
-import type { InteractionEvent } from "../events/InteractionEvent";
 import type { RuleContext } from "./RuleContext";
 import type { RuleTrace } from "./RuleTrace";
 

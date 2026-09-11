@@ -1,7 +1,6 @@
-import { kgUrl } from "../../config/kgUrl";
-import { ensureKG } from "../../kg/ensureKG";
-import { kg } from "../../kg/kg";
-import { markLayerMenu } from "../menu/markLayerMenu";
+import { kgUrl } from "../../config";
+import { ensureKG, kg } from "../../kg";
+import { markLayerMenu } from "../menu";
 
 export async function toggleGaps(): Promise<void> {
     kg.gaps = !kg.gaps;

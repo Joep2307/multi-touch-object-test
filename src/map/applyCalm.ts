@@ -1,7 +1,6 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { ui } from "../state/ui";
-import { view } from "../state/view";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { ui, view } from "../state";
 
 /* Quiet map, loud content. A map is designed to be saturated: white roads,
    blue water, green areas. On top of that we place four verdict colors and

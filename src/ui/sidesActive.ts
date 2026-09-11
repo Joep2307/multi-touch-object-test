@@ -1,4 +1,4 @@
-import { ui } from "../state/ui";
+import { ui } from "../state";
 import { tableUi } from "./tableUi";
 
 /* The "two sides" setting stays saved, but only counts at a table: on a

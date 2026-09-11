@@ -1,6 +1,6 @@
-import { noteViewFor } from "../notes/noteViewFor";
-import { talk } from "../state/talk";
-import type { NoteView } from "../types/NoteView";
+import { noteViewFor } from "../notes";
+import { talk } from "../state";
+import type { NoteView } from "../types";
 
 /* The window that holds the running recording, if it's still open. There is
    one microphone, so at most one window is recording; the other side sees

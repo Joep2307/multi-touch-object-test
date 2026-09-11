@@ -1,33 +1,28 @@
+import type { TouchPoint } from "../types";
 import type { TrackBridgeContact } from "./TrackBridgeContact";
-import type { Point } from "../types/Point";
-import type { TouchPoint } from "../types/TouchPoint";
 
-/* Add stable identities without changing what the recogniser sees. Pointer
-   ids come from the browser; a simulated foot is identified by its puck and
-   its position within that puck's generated pad list. */
+/* Name the contacts the recogniser saw, in the order it saw them.
+ *
+ * Takes the very array that was handed to `recognise()` rather than
+ * rebuilding an equivalent one, and that is the point: a detection's
+ * `contactIndices` index into that array, so two lists that merely happen
+ * to agree today would put the new model on the wrong feet the first time
+ * anything reordered either of them.
+ *
+ * The identity itself is already on the point — a pointer id from the
+ * browser, or a negative id from `simContactId` — so this only has to say
+ * which kind it is. */
 export function trackBridgeContacts(
-    real: readonly (readonly [number, Point])[],
-    simulated: readonly TouchPoint[],
+    points: readonly TouchPoint[],
 ): TrackBridgeContact[] {
-    const contacts: TrackBridgeContact[] = real.map(([id, point]) => ({
-        sourceId: `pointer:${id}`,
-        x: point.x,
-        y: point.y,
-        radiusPX: 0,
-        simulated: false,
-    }));
-    const nextForPuck = new Map<number, number>();
-    for (const point of simulated) {
-        const uid = point.uid ?? 0;
-        const index = nextForPuck.get(uid) ?? 0;
-        nextForPuck.set(uid, index + 1);
-        contacts.push({
-            sourceId: `simulated:${uid}:${index}`,
+    return points.map((point) => {
+        const simulated = point.sim === true;
+        return {
+            sourceId: `${simulated ? "simulated" : "pointer"}:${point.id}`,
             x: point.x,
             y: point.y,
             radiusPX: 0,
-            simulated: true,
-        });
-    }
-    return contacts;
+            simulated,
+        };
+    });
 }

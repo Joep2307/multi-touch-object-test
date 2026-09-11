@@ -1,5 +1,6 @@
 export { applyRigidMotion } from "./applyRigidMotion";
 export { Base } from "./Base";
+export { MIN_MATCHED_POINTS } from "./constants";
 export { FootprintCompletion } from "./FootprintCompletion";
 export { FootprintCompletionPolicy } from "./FootprintCompletionPolicy";
 export { footprintFrom } from "./footprintFrom";

@@ -1,5 +1,5 @@
-import { UI_SCALES } from "../config/UI_SCALES";
-import { ui } from "../state/ui";
+import { UI_SCALES } from "../config";
+import { ui } from "../state";
 import { applyScale } from "./applyScale";
 
 export function stepScale(step: number): void {

@@ -1,8 +1,7 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { save } from "../pins/save";
-import { pins } from "../state/pins";
-import { wipe } from "../state/wipe";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { save } from "../pins";
+import { pins, wipe } from "../state";
 import { resetWipeButton } from "./resetWipeButton";
 
 /* `confirm()` appears in the browser's orientation — so upside down for

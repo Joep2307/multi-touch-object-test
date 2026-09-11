@@ -1,6 +1,5 @@
-import { NOISE } from "../config/NOISE";
-import { noise } from "../state/noise";
-import { view } from "../state/view";
+import { NOISE } from "../config";
+import { noise, view } from "../state";
 
 /* Dutch decimals, like the rest of this panel reads. */
 const nl = (n: number, d = 1): string => n.toFixed(d).replace(".", ",");

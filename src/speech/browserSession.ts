@@ -1,7 +1,5 @@
-import type { Lang } from "../types/Lang";
-import type { TalkSay } from "../types/TalkSay";
-import type { TalkSession } from "../types/TalkSession";
 import { Recognition } from "./Recognition";
+import type { Lang, TalkSay, TalkSession } from "../types";
 
 /* The browser listens by itself. Chrome stops recognition on its own as
    soon as it's quiet for a moment — at a participation table that's every

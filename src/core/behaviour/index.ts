@@ -19,21 +19,20 @@ export { byPriority } from "./byPriority";
 export { enabledActionsFor } from "./enabledActionsFor";
 export { evaluateCondition } from "./evaluateCondition";
 export { firstUnmetCondition } from "./firstUnmetCondition";
-export { matchesTrigger } from "./TriggerMatcher";
+export { matchesTrigger } from "./matchesTrigger";
 export * from "./effects";
 export * from "./subjects";
 export type { ActionDefinition } from "./ActionDefinition";
 export type { ActionId } from "./ActionId";
-export type {
-    ConditionDefinition,
-    ConditionSubjectType,
-} from "./ConditionDefinition";
+export type { ConditionDefinition } from "./ConditionDefinition";
 export type { ConditionOperator } from "./ConditionOperator";
 export type { ConditionResult } from "./ConditionResult";
-export type { EffectDefinition, EffectType } from "./EffectDefinition";
+export type { ConditionSubjectType } from "./ConditionSubjectType";
+export type { EffectDefinition } from "./EffectDefinition";
+export type { EffectType } from "./EffectType";
 export type { OutboxRequest } from "./OutboxRequest";
 export type { RuleContext } from "./RuleContext";
-export type { RuleTraceEntry } from "./RuleTrace";
+export type { RuleTraceEntry } from "./RuleTraceEntry";
 export type { StateDefinition } from "./StateDefinition";
 export type { StateId } from "./StateId";
 export type { StateMachineDefinition } from "./StateMachineDefinition";

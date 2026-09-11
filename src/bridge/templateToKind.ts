@@ -1,23 +1,26 @@
-import { Apertured } from "../core/physical/affordance/Apertured";
-import { CFG } from "../config/CFG";
+import { CFG } from "../config";
+import {
+    Apertured,
+    Nestable,
+    Nesting,
+    Opaque,
+    Rotatable,
+    Tappable,
+} from "../core/physical/affordance";
+import { signatureFrom } from "../core/physical";
+import { isRing, isSlotted } from "../puck/geometry";
 import { DEFAULT_OUTER_DIAMETER_MM, TEMPLATE_TOLERANCE_MM } from "./constants";
-import { Nestable } from "../core/physical/affordance/Nestable";
-import { Nesting } from "../core/physical/affordance/Nesting";
-import { Opaque } from "../core/physical/affordance/Opaque";
-import { Rotatable } from "../core/physical/affordance/Rotatable";
-import { Tappable } from "../core/physical/affordance/Tappable";
-import { isRing } from "../puck/geometry/isRing";
-import { isSlotted } from "../puck/geometry/isSlotted";
 import { ringCornersMM } from "./ringCornersMM";
-import { signatureFrom } from "../core/physical/signatureFrom";
 import { triadCornersMM } from "./triadCornersMM";
-import type { Affordance } from "../core/physical/affordance/Affordance";
-import type { KindFamily } from "../core/physical/KindFamily";
-import type { KindId } from "../core/physical/KindId";
-import type { PhysicalKindDefinition } from "../core/physical/PhysicalKindDefinition";
-import type { PhysicalSignature } from "../core/physical/PhysicalSignature";
-import type { SignatureId } from "../core/physical/SignatureId";
-import type { Template } from "../types/Template";
+import type { Affordance } from "../core/physical/affordance";
+import type {
+    KindFamily,
+    KindId,
+    PhysicalKindDefinition,
+    PhysicalSignature,
+    SignatureId,
+} from "../core/physical";
+import type { Template } from "../types";
 
 /* Turn one of today's templates into a kind the new model understands.
  *

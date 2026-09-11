@@ -1,4 +1,4 @@
-import { talk } from "../state/talk";
+import { talk } from "../state";
 
 export function talkClock(): string {
     const s = Math.max(

@@ -1,4 +1,4 @@
-import { analytics } from "../../state/analytics";
+import { analytics } from "../../state";
 import { applyAnalyticsOrientation } from "./applyAnalyticsOrientation";
 
 export function flipAnalytics(): void {

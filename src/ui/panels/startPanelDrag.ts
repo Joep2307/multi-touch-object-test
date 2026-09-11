@@ -1,4 +1,4 @@
-import { panels } from "../../state/panels";
+import { panels } from "../../state";
 import { PANEL_SNAP_DISTANCE } from "./PANEL_SNAP_DISTANCE";
 import { applyPanelOffset } from "./applyPanelOffset";
 import { clampPanel } from "./clampPanel";

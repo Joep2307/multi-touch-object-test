@@ -1,10 +1,10 @@
-import { footprintFrom } from "../base/footprintFrom";
+import { footprintFrom } from "../base";
 import { solverForFamily } from "./solverForFamily";
+import type { Vec2 } from "../base";
 import type { KindFamily } from "./KindFamily";
 import type { PhysicalSignature } from "./PhysicalSignature";
 import type { SignatureId } from "./SignatureId";
 import type { SlotCode } from "./SlotCode";
-import type { Vec2 } from "../base/Vec2";
 
 /* Build a signature from where the feet actually are.
  *

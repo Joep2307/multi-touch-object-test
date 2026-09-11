@@ -1,8 +1,8 @@
 import { Trait } from "../Trait";
 import type { BaseSample } from "../BaseSample";
-import type { Position } from "../position/Position";
-import type { TapSnapshot } from "./TapSnapshot";
 import type { Vec2 } from "../Vec2";
+import type { Position } from "../position";
+import type { TapSnapshot } from "./TapSnapshot";
 
 const EMPTY: TapSnapshot = {
     down: false,

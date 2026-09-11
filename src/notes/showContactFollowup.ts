@@ -1,7 +1,6 @@
-import type { NoteView } from "../types/NoteView";
-import type { Pin } from "../types/Pin";
 import { notePart } from "./notePart";
 import { positionNote } from "./positionNote";
+import type { NoteView, Pin } from "../types";
 
 export function showContactFollowup(v: NoteView, pin: Pin): void {
     const contact = pin.contact;

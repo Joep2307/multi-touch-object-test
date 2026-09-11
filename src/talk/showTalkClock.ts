@@ -1,5 +1,5 @@
-import { notePart } from "../notes/notePart";
-import { talk } from "../state/talk";
+import { notePart } from "../notes";
+import { talk } from "../state";
 import { talkClock } from "./talkClock";
 import { talkView } from "./talkView";
 

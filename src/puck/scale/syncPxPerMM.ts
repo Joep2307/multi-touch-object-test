@@ -1,5 +1,4 @@
-import { scale } from "../../state/scale";
-import { view } from "../../state/view";
+import { scale, view } from "../../state";
 
 /* Put the two halves of the scale together. Everything that draws or
    recognises reads `view.pxPerMM`, and this is the only place that writes

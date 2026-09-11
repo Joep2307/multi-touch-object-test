@@ -1,8 +1,8 @@
 import { isTangible } from "./isTangible";
+import type { Vec2 } from "../base";
 import type { KindId } from "./KindId";
-import type { Physical } from "./Physical";
 import type { PhysicalRegistry } from "./PhysicalRegistry";
-import type { Vec2 } from "../base/Vec2";
+import type { Physical } from "./Physical";
 
 /* Is this a returning object, or a new one?
  *

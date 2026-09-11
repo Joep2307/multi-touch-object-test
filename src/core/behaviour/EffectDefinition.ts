@@ -52,6 +52,3 @@ export type EffectDefinition =
           readonly note: string;
           readonly payload?: Readonly<Record<string, unknown>>;
       };
-
-/* The nine names, for a validator that has only a string to check. */
-export type EffectType = EffectDefinition["type"];

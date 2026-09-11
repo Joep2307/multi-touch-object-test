@@ -1,5 +1,5 @@
-import { talk } from "../state/talk";
-import type { Pin } from "../types/Pin";
+import { talk } from "../state";
+import type { Pin } from "../types";
 
 export const talkRunning = (pin: Pin | null | undefined): boolean =>
     !!talk.session && talk.pin === pin;

@@ -1,6 +1,5 @@
-import { el } from "../dom/el";
-import { ui } from "../state/ui";
-import { view } from "../state/view";
+import { el } from "../dom";
+import { ui, view } from "../state";
 
 export function applyColorTheme(theme: string): void {
     ui.colorTheme = theme === "light" ? "light" : "dark";

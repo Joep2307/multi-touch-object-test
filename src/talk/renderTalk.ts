@@ -1,9 +1,9 @@
-import { tr } from "../i18n/tr";
-import { notePart } from "../notes/notePart";
-import { talk } from "../state/talk";
-import type { NoteView } from "../types/NoteView";
+import { tr } from "../i18n";
+import { notePart } from "../notes";
+import { talk } from "../state";
 import { talkRunning } from "./talkRunning";
 import { talkTextOf } from "./talkTextOf";
+import type { NoteView } from "../types";
 
 export function renderTalk(v: NoteView): void {
     const pin = v.pin,

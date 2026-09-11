@@ -1,4 +1,4 @@
-import { download } from "../dom/download";
+import { download } from "../dom";
 import type { BaseRuntime } from "./BaseRuntime";
 import type { BaseSessionRecorder } from "./BaseSessionRecorder";
 
@@ -14,43 +14,54 @@ import type { BaseSessionRecorder } from "./BaseSessionRecorder";
  * Nothing here runs unless `?base` is on the URL.
  */
 export function installBaseHooks(
-    recorder: BaseSessionRecorder,
-    /* Asked for on every call rather than captured once. The frame
-       loop throws its runtime away if the diagnostic ever fails, and a
-       hook holding the old one would go on cheerfully reporting a
-       model that had stopped running. */
+    /* Both asked for on every call rather than captured once, and for
+       the same reason: the frame loop throws the whole diagnostic away
+       if it ever fails, and a hook holding the old objects would go on
+       cheerfully reporting a model that had stopped running. The
+       recorder used to be the exception, captured by value — so after
+       one caught error it stayed bound to the dead bridge and every
+       later recording captured that bridge's frozen last frame,
+       thousands of byte-identical copies of it, beside a parity
+       summary nobody was updating. A recording that replays
+       differently from its session is worse than no recording. */
+    recorder: () => BaseSessionRecorder | null,
     runtime: () => BaseRuntime | null,
 ): void {
     const startedAt = (): number => performance.now();
+    const STOPPED = "recorder: stopped";
 
     const start = (name = "table"): string => {
-        recorder.start(name, startedAt());
+        const r = recorder();
+        if (r === null) return STOPPED;
+        r.start(name, startedAt());
         return `recording "${name}"`;
     };
     const save = (): string => {
-        const json = recorder.toJSON(new Date().toISOString());
+        const r = recorder();
+        if (r === null) return STOPPED;
+        const json = r.toJSON(new Date().toISOString());
         if (json === null) return "nothing captured — was it armed?";
-        download(recorder.fileName(), json, "application/json");
-        return `saved ${recorder.fileName()} (${String(
-            recorder.frameCount,
-        )} frames)`;
+        download(r.fileName(), json, "application/json");
+        return `saved ${r.fileName()} (${String(r.frameCount)} frames)`;
     };
-    const parity = (): string => recorder.paritySummary();
+    const parity = (): string => recorder()?.paritySummary() ?? STOPPED;
 
     window.__base = {
         start,
         stop: () => {
-            recorder.stop(performance.now());
+            const r = recorder();
+            if (r === null) return STOPPED;
+            r.stop(performance.now());
             return "stopped";
         },
         save,
         parity,
         model: () => runtime()?.summary() ?? "model: stopped",
         get recording() {
-            return recorder.recording;
+            return recorder()?.recording ?? false;
         },
         get frames() {
-            return recorder.frameCount;
+            return recorder()?.frameCount ?? 0;
         },
     };
 
@@ -59,8 +70,9 @@ export function installBaseHooks(
         switch (e.key.toLowerCase()) {
             case "r": {
                 e.preventDefault();
-                if (recorder.recording) {
-                    recorder.stop(performance.now());
+                const r = recorder();
+                if (r !== null && r.recording) {
+                    r.stop(performance.now());
                     console.info("stopped");
                 } else {
                     console.info(start());

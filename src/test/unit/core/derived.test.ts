@@ -3,17 +3,14 @@
  * A hand-written `MoveSnapshot` keeps raw contacts out of this rig. If
  * either trait starts depending on them, these tests stop compiling.
  */
-import { describe, expect, it } from "vitest";
 import {
     Acceleration,
     AccelerationPolicy,
 } from "../../../core/base/acceleration";
 import { MotionHistory, MotionHistoryPolicy } from "../../../core/base/motion";
-import type { BaseSample } from "../../../core/base/BaseSample";
-import type { FootprintSpec } from "../../../core/base/FootprintSpec";
-import type { Move } from "../../../core/base/move/Move";
-import type { MoveSnapshot } from "../../../core/base/move/MoveSnapshot";
-import type { Vec2 } from "../../../core/base/Vec2";
+import { describe, expect, it } from "vitest";
+import type { Move, MoveSnapshot } from "../../../core/base/move";
+import type { BaseSample, FootprintSpec, Vec2 } from "../../../core/base";
 
 const SPEC: FootprintSpec = {
     expectedCount: 3,

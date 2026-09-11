@@ -1,7 +1,6 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { touches } from "../state/touches";
-import { ui } from "../state/ui";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { touches, ui } from "../state";
 
 export function applyPinMoveMode(): void {
     el("btnMoveDots").classList.toggle("on", ui.pinMoveMode);

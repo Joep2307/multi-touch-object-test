@@ -1,9 +1,7 @@
-import { CHIP_FAMILY } from "../config/CHIP_FAMILY";
-import { tr } from "../i18n/tr";
-import { CHIP } from "../state/chip";
-import { ui } from "../state/ui";
-import { view } from "../state/view";
-import { sidesActive } from "../ui/sidesActive";
+import { CHIP_FAMILY } from "../config";
+import { tr } from "../i18n";
+import { CHIP, ui, view } from "../state";
+import { sidesActive } from "../ui";
 import { chipHeight } from "./chipHeight";
 import { drawChip } from "./drawChip";
 

@@ -1,10 +1,10 @@
-import { el } from "../dom/el";
-import { MV } from "../map/MV";
-import { tiles } from "../state/tiles";
-import { view } from "../state/view";
+import { el } from "../dom";
+import { MV } from "../map";
+import { tiles, view } from "../state";
 
-/* Drop a map picture (PNG/JPG) to use it as the background. It is pinned to the
-   coordinates currently on screen, so panning and zooming still work afterwards. */
+/* Drop a map picture (PNG/JPG) to use it as the background. It is pinned to
+   the coordinates currently on screen, so panning and zooming still work
+   afterwards. */
 export function onImageDrop(e: DragEvent): void {
     e.preventDefault();
     const f = e.dataTransfer?.files && e.dataTransfer.files[0];

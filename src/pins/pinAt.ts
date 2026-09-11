@@ -1,6 +1,6 @@
-import { MV } from "../map/MV";
-import { pins } from "../state/pins";
-import type { Pin } from "../types/Pin";
+import { MV } from "../map";
+import { pins } from "../state";
+import type { Pin } from "../types";
 
 /* The topmost marker under a point, with a finger-width margin. */
 export function pinAt(x: number, y: number): Pin | undefined {

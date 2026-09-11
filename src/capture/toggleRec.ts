@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 import { beginRec } from "./beginRec";
 import { finishRec } from "./finishRec";
 

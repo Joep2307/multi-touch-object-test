@@ -6,17 +6,16 @@
  * from would be worse than having none — it would produce confident
  * test results about a table that never happened.
  */
-import { describe, expect, it } from "vitest";
 import {
     BaseSessionRecorder,
     ParityCheck,
     TrackBridge,
 } from "../../../bridge";
 import { ReplayContactSource } from "../../../core/contact";
+import { describe, expect, it } from "vitest";
+import type { TrackBridgeContact } from "../../../bridge";
 import type { ContactRecording } from "../../../core/contact";
-import type { Detection } from "../../../types/Detection";
-import type { Template } from "../../../types/Template";
-import type { TrackBridgeContact } from "../../../bridge/TrackBridgeContact";
+import type { Detection, Template } from "../../../types";
 
 const TPL: Template = {
     id: "ring-1",

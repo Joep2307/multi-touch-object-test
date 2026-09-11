@@ -1,4 +1,4 @@
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
+import type { PhysicalInstance } from "../physical";
 import type { PresentationView } from "./PresentationView";
 
 const VARIABLES = "variables.";

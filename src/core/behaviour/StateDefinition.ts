@@ -1,7 +1,7 @@
+import type { PresentationId } from "../presentation";
+import type { ExtensionProperties } from "../programme";
 import type { ActionId } from "./ActionId";
 import type { EffectDefinition } from "./EffectDefinition";
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
-import type { PresentationId } from "../presentation/PresentationId";
 import type { StateId } from "./StateId";
 
 /* One position an object, role or mode can be in.

@@ -1,7 +1,7 @@
-import { stt } from "../speech/stt";
-import { talk } from "../state/talk";
-import type { NoteView } from "../types/NoteView";
+import { stt } from "../speech";
+import { talk } from "../state";
 import { setTalkMsg } from "./setTalkMsg";
+import type { NoteView } from "../types";
 
 export function talkReady(v: NoteView): void {
     if (talk.session) {

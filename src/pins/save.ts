@@ -1,5 +1,5 @@
-import { el } from "../dom/el";
-import { pins } from "../state/pins";
+import { el } from "../dom";
+import { pins } from "../state";
 
 /* Saving used to be `try{...}catch(e){}` — a full browser storage quota made
    the save vanish without a trace, and that's exactly what happens the

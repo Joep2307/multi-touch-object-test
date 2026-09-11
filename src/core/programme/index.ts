@@ -8,6 +8,6 @@
 export { ProgrammeLoader } from "./ProgrammeLoader";
 export { validateProgramme } from "./validateProgramme";
 export type { ExtensionProperties } from "./ExtensionProperties";
-export type { LoadResult } from "./ProgrammeLoader";
+export type { LoadResult } from "./LoadResult";
 export type { ProgrammeDefinition } from "./ProgrammeDefinition";
 export type { ValidationError } from "./ValidationError";

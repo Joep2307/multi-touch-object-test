@@ -1,17 +1,10 @@
 import { regionContains } from "./regionContains";
-import type { PhysicalId } from "../physical/PhysicalId";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
+import type { PhysicalId, PhysicalInstance } from "../physical";
 import type { RegionCrossing } from "./RegionCrossing";
 import type { RegionDefinition } from "./RegionDefinition";
 import type { RegionId } from "./RegionId";
 import type { RegionPolicy } from "./RegionPolicy";
-
-/* What one frame's worth of looking at the regions produced. */
-export type RegionUpdate = {
-    readonly membership: ReadonlyMap<string, readonly RegionId[]>;
-    readonly entered: readonly RegionCrossing[];
-    readonly exited: readonly RegionCrossing[];
-};
+import type { RegionUpdate } from "./RegionUpdate";
 
 const NONE: RegionUpdate = Object.freeze({
     membership: new Map<string, readonly RegionId[]>(),

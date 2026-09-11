@@ -13,12 +13,12 @@
  *
  * Nothing here loads state, so no DOM is needed; the HTML is read as text.
  */
+import { L } from "../../i18n";
+import { KG_PHRASES } from "../../kg";
 import { readFileSync } from "node:fs";
-import { fileURLToPath, URL } from "node:url";
+import { URL, fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { L } from "../../i18n/L";
-import { KG_PHRASES } from "../../kg/KG_PHRASES";
-import type { Lang } from "../../types/Lang";
+import type { Lang } from "../../types";
 
 const LANGS = Object.keys(L) as Lang[];
 
@@ -61,41 +61,44 @@ describe("the language table", () => {
             expect(L[lang].topics).toHaveLength(L.en.topics.length);
     });
 
-    it("leaves nothing untranslated: no Dutch value repeated as English", () => {
-        /* A key copied over but not translated shows up as an identical
+    it(
+        "leaves nothing untranslated: no Dutch value repeated as " + "English",
+        () => {
+            /* A key copied over but not translated shows up as an identical
            string. Words that genuinely are the same in both languages are
            listed here, so a real oversight still stands out. */
-        const same = new Set([
-            "locale",
-            "docTitle",
-            "menu",
-            "language",
-            "document",
-            "touchscreen",
-            "modePuck",
-            "puckAdd",
-            "puckCount",
-            "keyEnter",
-            "exportGeo",
-            "exportCsv",
-            "tileOsm",
-            "grpOther",
-            "sheetPad",
-            "searchPh",
-            "tilePastel",
-            "tileWater",
-            "overlaysHead",
-            "duoTheme",
-            "talkLangAuto",
-        ]);
-        const copied = Object.keys(L.en).filter(
-            (k) =>
-                !same.has(k) &&
-                typeof L.en[k] === "string" &&
-                L.en[k] === L.nl[k],
-        );
-        expect(copied).toEqual([]);
-    });
+            const same = new Set([
+                "locale",
+                "docTitle",
+                "menu",
+                "language",
+                "document",
+                "touchscreen",
+                "modePuck",
+                "puckAdd",
+                "puckCount",
+                "keyEnter",
+                "exportGeo",
+                "exportCsv",
+                "tileOsm",
+                "grpOther",
+                "sheetPad",
+                "searchPh",
+                "tilePastel",
+                "tileWater",
+                "overlaysHead",
+                "duoTheme",
+                "talkLangAuto",
+            ]);
+            const copied = Object.keys(L.en).filter(
+                (k) =>
+                    !same.has(k) &&
+                    typeof L.en[k] === "string" &&
+                    L.en[k] === L.nl[k],
+            );
+            expect(copied).toEqual([]);
+        },
+    );
 
     it("has a phrase behind every data-i18n in the page", () => {
         const missing = keysInHtml().filter((k) => L.en[k] === undefined);

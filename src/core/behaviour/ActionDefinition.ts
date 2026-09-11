@@ -1,7 +1,7 @@
+import type { ExtensionProperties } from "../programme";
 import type { ActionId } from "./ActionId";
 import type { ConditionDefinition } from "./ConditionDefinition";
 import type { EffectDefinition } from "./EffectDefinition";
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
 import type { TriggerDefinition } from "./TriggerDefinition";
 
 /* Something a programme can do, on its own.

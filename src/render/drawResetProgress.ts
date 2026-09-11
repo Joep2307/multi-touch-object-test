@@ -1,11 +1,8 @@
-import { CFG } from "../config/CFG";
-import { CHIP_FAMILY } from "../config/CHIP_FAMILY";
-import { tr } from "../i18n/tr";
-import { CHIP } from "../state/chip";
-import { reset } from "../state/reset";
-import { view } from "../state/view";
-import { doReset } from "../ui/resetKey/doReset";
-import { sidesActive } from "../ui/sidesActive";
+import { CFG, CHIP_FAMILY } from "../config";
+import { tr } from "../i18n";
+import { CHIP, reset, view } from "../state";
+import { doReset } from "../ui/resetKey";
+import { sidesActive } from "../ui";
 import { chipHeight } from "./chipHeight";
 import { drawChip } from "./drawChip";
 

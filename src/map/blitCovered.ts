@@ -1,9 +1,10 @@
 import { getTile } from "./getTile";
 import { peekTile } from "./peekTile";
 
-/* Draw one tile slot. If its own tile isn't loaded yet, fill the slot from whatever
-   is already cached — a patch of a coarser parent tile (zoom-in) or the four finer
-   child tiles (zoom-out) — so the map never flashes empty while zooming. */
+/* Draw one tile slot. If its own tile isn't loaded yet, fill the slot from
+   whatever is already cached — a patch of a coarser parent tile (zoom-in) or
+   the four finer child tiles (zoom-out) — so the map never flashes empty while
+   zooming. */
 export function blitCovered(
     g: CanvasRenderingContext2D,
     z: number,

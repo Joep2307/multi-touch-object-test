@@ -1,5 +1,5 @@
-import { noise } from "../../state/noise";
-import type { Point } from "../../types/Point";
+import { noise } from "../../state";
+import type { Point } from "../../types";
 
 /* Start over: these points are the new anchors, and the series settles for
    a moment before it starts counting. */

@@ -1,12 +1,12 @@
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
+import type { StateId } from "../behaviour";
+import type { ExtensionProperties } from "../programme";
+import type { RoleId } from "../session";
 import type { InstanceMotion } from "./InstanceMotion";
 import type { InstancePose } from "./InstancePose";
 import type { InstanceStatus } from "./InstanceStatus";
 import type { KindId } from "./KindId";
 import type { PhysicalId } from "./PhysicalId";
-import type { RoleId } from "../session/RoleId";
 import type { SignatureId } from "./SignatureId";
-import type { StateId } from "../behaviour/StateId";
 
 /* The object on the table, as everything above recognition sees it.
  *

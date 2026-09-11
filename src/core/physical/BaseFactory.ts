@@ -1,23 +1,26 @@
-import { Acceleration } from "../base/acceleration/Acceleration";
-import { ApexHeadingSource } from "../base/direction/ApexHeadingSource";
-import { Base } from "../base/Base";
-import { Direction } from "../base/direction/Direction";
-import { FootprintCompletion } from "../base/FootprintCompletion";
-import { GapHeadingSource } from "../base/direction/GapHeadingSource";
-import { HeadingRotationSource } from "../base/rotate/HeadingRotationSource";
-import { Move } from "../base/move/Move";
-import { PointMatchRotationSource } from "../base/rotate/PointMatchRotationSource";
-import { Position } from "../base/position/Position";
-import { Rotate } from "../base/rotate/Rotate";
-import { SlotHeadingSource } from "../base/direction/SlotHeadingSource";
-import { MotionHistory } from "../base/motion/MotionHistory";
-import { Tap } from "../base/tap/Tap";
+import { Acceleration } from "../base/acceleration";
+import {
+    ApexHeadingSource,
+    Direction,
+    GapHeadingSource,
+    SlotHeadingSource,
+} from "../base/direction";
+import { MotionHistory } from "../base/motion";
+import { Move } from "../base/move";
+import { Position } from "../base/position";
+import {
+    HeadingRotationSource,
+    PointMatchRotationSource,
+    Rotate,
+} from "../base/rotate";
+import { Tap } from "../base/tap";
+import { Base, FootprintCompletion } from "../base";
 import { solverForFamily } from "./solverForFamily";
+import type { HeadingSource } from "../base/direction";
+import type { PxPerMMEstimator } from "../base/position";
+import type { RotationSource } from "../base/rotate";
 import type { BasePolicies } from "./BasePolicies";
-import type { HeadingSource } from "../base/direction/HeadingSource";
-import type { RotationSource } from "../base/rotate/RotationSource";
 import type { PhysicalSignature } from "./PhysicalSignature";
-import type { PxPerMMEstimator } from "../base/position/PxPerMMEstimator";
 
 /* Builds the right `Base` for one way of reading one object.
  *

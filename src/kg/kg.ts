@@ -1,8 +1,5 @@
+import type { Heat, KgEdge, KgNode, Lang } from "../types";
 import type { BiblioClient } from "@biblio";
-import type { Heat } from "../types/Heat";
-import type { KgEdge } from "../types/KgEdge";
-import type { KgNode } from "../types/KgNode";
-import type { Lang } from "../types/Lang";
 
 /* ═══════════════════════════════════════════════════════════════
    KNOWLEDGE GRAPH — the coco-biblio layer under the participation table
@@ -25,7 +22,8 @@ export const kg = {
     themes: [] as string[], // theme labels from the graph
     themeOf: new Map<string, string[]>(), // node id → [theme, …]
     nodeById: new Map<string, KgNode>(), // id → node with a coordinate
-    linksOf: new Map<string, Set<string>>(), // id → Set(ids) — substantive relations
+    // id → Set(ids) — substantive relations.
+    linksOf: new Map<string, Set<string>>(),
     edges: [] as KgEdge[], // relations where both ends have a place on the map
     relations: false, // show all relations at once, even without a selection
     grid: new Map<string, number>(), // cell key → number of nodes
@@ -46,6 +44,7 @@ export const kg = {
      and the type label above a tapped point. They're translated here,
      because only these modules know when they change. */
     lang: "en" as Lang,
-    /* Whoever wants to be notified when the graph loads or fails; see onKgChange. */
+    /* Whoever wants to be notified when the graph loads or fails; see
+       onKgChange. */
     listener: (() => {}) as () => void,
 };

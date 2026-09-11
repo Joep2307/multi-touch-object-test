@@ -48,7 +48,7 @@ class TestTable implements RuleContext {
     at = 0;
     activeModeId: ModeId | null = null;
     enabled: Set<ActionId> | null = null;
-    readonly instances = new Map<string, PhysicalInstance>();
+    readonly table = new Map<string, PhysicalInstance>();
     readonly variables = new Map<string, unknown>();
     readonly outbox: OutboxRequest[] = [];
     readonly notes: { note: string; payload: unknown }[] = [];
@@ -71,11 +71,15 @@ class TestTable implements RuleContext {
     }
 
     instance(id: string): PhysicalInstance | null {
-        return this.instances.get(id) ?? null;
+        return this.table.get(id) ?? null;
+    }
+
+    instances(): readonly PhysicalInstance[] {
+        return [...this.table.values()];
     }
 
     kindOf(id: string): PhysicalKindDefinition | null {
-        const instance = this.instances.get(id);
+        const instance = this.table.get(id);
         if (instance === undefined) return null;
         return {
             id: instance.kindId,
@@ -121,9 +125,9 @@ class TestTable implements RuleContext {
     }
 
     assign(id: PhysicalId, change: PhysicalAssignment): void {
-        const was = this.instances.get(id);
+        const was = this.table.get(id);
         if (was === undefined) return;
-        this.instances.set(id, {
+        this.table.set(id, {
             ...was,
             ...(change.roleId === undefined ? {} : { roleId: change.roleId }),
             ...(change.currentStateId === undefined
@@ -167,7 +171,7 @@ class TestTable implements RuleContext {
     }
 
     put(id: string, over: Partial<PhysicalInstance> = {}): void {
-        this.instances.set(id, {
+        this.table.set(id, {
             id: id as PhysicalId,
             kindId: "VotingToken" as KindId,
             signatureId: null,
@@ -813,14 +817,18 @@ describe("StateMachineRunner", () => {
         expect(r.table.instance("t1")?.currentStateId).toBe("Voted");
     });
 
-    it("refuses a transition whose condition does not hold, with a reason", () => {
-        const r = runnerRig();
-        r.table.put("t1", {
-            roleId: "Observer" as RoleId,
-            currentStateId: stateId("Ready"),
-        });
-        tap(r.bus, "t1", 100);
-        expect(r.table.instance("t1")?.currentStateId).toBe("Ready");
-        expect(r.trace.lastRefusal("toVoted")?.reason?.type).toBe("role");
-    });
+    it(
+        "refuses a transition whose condition does not hold, with a " +
+            "reason",
+        () => {
+            const r = runnerRig();
+            r.table.put("t1", {
+                roleId: "Observer" as RoleId,
+                currentStateId: stateId("Ready"),
+            });
+            tap(r.bus, "t1", 100);
+            expect(r.table.instance("t1")?.currentStateId).toBe("Ready");
+            expect(r.trace.lastRefusal("toVoted")?.reason?.type).toBe("role");
+        },
+    );
 });

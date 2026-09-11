@@ -1,6 +1,5 @@
-import { MV } from "../../map/MV";
-import { sim } from "../../state/sim";
-import { touches } from "../../state/touches";
+import { MV } from "../../map";
+import { sim, touches } from "../../state";
 import { trackForSim } from "../trackForSim";
 
 /* Simulated pucks are map markers: their physical size stays constant, while

@@ -1,4 +1,4 @@
-import { el } from "../../dom/el";
+import { el } from "../../dom";
 
 export function closeDocumentViewer(): void {
     el("documentViewer").classList.remove("open");

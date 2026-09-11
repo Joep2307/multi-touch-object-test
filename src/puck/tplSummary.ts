@@ -1,11 +1,13 @@
-import type { Template } from "../types/Template";
-import { gapText } from "./geometry/gapText";
-import { codeText } from "./geometry/codeText";
-import { isRing } from "./geometry/isRing";
-import { isSlotted } from "./geometry/isSlotted";
-import { tplRing } from "./geometry/tplRing";
-import { tplSlots } from "./geometry/tplSlots";
+import {
+    codeText,
+    gapText,
+    isRing,
+    isSlotted,
+    tplRing,
+    tplSlots,
+} from "./geometry";
 import { tplLongest } from "./tplLongest";
+import type { Template } from "../types";
 
 /* One line that says what the table has of this puck. */
 export const tplSummary = (t: Template): string =>

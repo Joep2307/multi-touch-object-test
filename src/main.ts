@@ -1,26 +1,22 @@
-import { loadFonts } from "./boot/loadFonts";
-import { wireEvents } from "./boot/wireEvents";
-import { MV } from "./map/MV";
-import { resize } from "./map/resize";
-import { restoreBasemap } from "./map/restoreBasemap";
-import { setNorth } from "./map/setNorth";
-import { buildNoteViews } from "./notes/buildNoteViews";
-import { restore } from "./pins/restore";
-import { loadPuckGeometry } from "./puck/geometry/loadPuckGeometry";
-import { restoreOwnPucks } from "./puck/restoreOwnPucks";
-import { restoreTemplates } from "./puck/restoreTemplates";
-import { restoreScale } from "./puck/scale/restoreScale";
-import { renderTray } from "./puck/tray/renderTray";
-import { frame } from "./render/frame";
-import { ui } from "./state/ui";
-import { applyColorTheme } from "./ui/applyColorTheme";
-import { applyLang } from "./ui/applyLang";
-import { applyLock } from "./ui/applyLock";
-import { applyMode } from "./ui/applyMode";
-import { applyPinMoveMode } from "./ui/applyPinMoveMode";
-import { applyScale } from "./ui/applyScale";
-import { buildKeyboards } from "./ui/keyboard/buildKeyboards";
-import { installTestHooks } from "./boot/installTestHooks";
+import { installTestHooks, loadFonts, wireEvents } from "./boot";
+import { MV, resize, restoreBasemap, setNorth } from "./map";
+import { buildNoteViews } from "./notes";
+import { restore } from "./pins";
+import { loadPuckGeometry } from "./puck/geometry";
+import { restoreScale } from "./puck/scale";
+import { renderTray } from "./puck/tray";
+import { restoreOwnPucks, restoreTemplates } from "./puck";
+import { frame } from "./render";
+import { ui } from "./state";
+import { buildKeyboards } from "./ui/keyboard";
+import {
+    applyColorTheme,
+    applyLang,
+    applyLock,
+    applyMode,
+    applyPinMoveMode,
+    applyScale,
+} from "./ui";
 
 /* ═══════════════════════════════════════════════════════════════
    PUCK TABLE — the participation table

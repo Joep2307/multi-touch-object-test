@@ -1,4 +1,4 @@
-import { Policy } from "../base/Policy";
+import { Policy } from "../base";
 import { CONTACT_MOVE_MIN_PX } from "./constants";
 
 /* When a touch has moved enough to be worth an event.

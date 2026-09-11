@@ -1,6 +1,5 @@
-import { CentroidSolver } from "../base/position/CentroidSolver";
-import { CircleFitSolver } from "../base/position/CircleFitSolver";
-import type { CentreSolver } from "../base/position/CentreSolver";
+import { CentroidSolver, CircleFitSolver } from "../base/position";
+import type { CentreSolver } from "../base/position";
 import type { KindFamily } from "./KindFamily";
 
 /* Which solver reads this family's feet.

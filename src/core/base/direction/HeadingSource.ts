@@ -1,4 +1,4 @@
-import type { SensedContact } from "../../contact/SensedContact";
+import type { SensedContact } from "../../contact";
 import type { Vec2 } from "../Vec2";
 
 /* How the nose of an object is derived from its feet.

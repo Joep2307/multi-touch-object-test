@@ -1,14 +1,10 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { MV } from "../map/MV";
-import { tiles } from "../state/tiles";
-import { view } from "../state/view";
-import type { CapKind } from "../types/CapKind";
-import type { CapReason } from "../types/CapReason";
-import type { Side } from "../types/Side";
-import { sidesActive } from "../ui/sidesActive";
-import { resetPanelOffset } from "../ui/panels/resetPanelOffset";
-import { closeMenu } from "../ui/menu/closeMenu";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { MV } from "../map";
+import { tiles, view } from "../state";
+import { closeMenu } from "../ui/menu";
+import { resetPanelOffset } from "../ui/panels";
+import { sidesActive } from "../ui";
 import { canFilm } from "./canFilm";
 import { captureExt } from "./captureExt";
 import { captureShot } from "./captureShot";
@@ -16,6 +12,7 @@ import { captureState } from "./captureState";
 import { initCapture } from "./initCapture";
 import { toggleLapse } from "./toggleLapse";
 import { toggleRec } from "./toggleRec";
+import type { CapKind, CapReason, Side } from "../types";
 
 const BUTTONS = [
     ["btnCapA", "a"],

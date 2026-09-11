@@ -1,4 +1,4 @@
-import type { Side } from "../types/Side";
+import type { Side } from "../types";
 
 /* The analysis window: which side it opened on, how it's rotated, and for
    which state of the pins it was last built. */

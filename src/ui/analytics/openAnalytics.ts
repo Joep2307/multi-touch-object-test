@@ -1,9 +1,7 @@
-import { el } from "../../dom/el";
-import { closeNotes } from "../../notes/closeNotes";
-import { analytics } from "../../state/analytics";
-import { menu } from "../../state/menu";
-import { pins } from "../../state/pins";
-import { closeMenu } from "../menu/closeMenu";
+import { el } from "../../dom";
+import { closeNotes } from "../../notes";
+import { analytics, menu, pins } from "../../state";
+import { closeMenu } from "../menu";
 import { sidesActive } from "../sidesActive";
 import { applyAnalyticsOrientation } from "./applyAnalyticsOrientation";
 import { renderAnalytics } from "./renderAnalytics";

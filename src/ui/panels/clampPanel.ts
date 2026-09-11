@@ -1,4 +1,4 @@
-import { panels } from "../../state/panels";
+import { panels } from "../../state";
 
 /* A panel may be pushed off the map, but never so far that there's nothing
    left of it to grab to bring it back. */

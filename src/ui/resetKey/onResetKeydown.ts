@@ -1,4 +1,4 @@
-import { reset } from "../../state/reset";
+import { reset } from "../../state";
 import { applyResetKey } from "./applyResetKey";
 import { setResetKey } from "./setResetKey";
 

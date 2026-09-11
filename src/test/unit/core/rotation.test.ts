@@ -173,6 +173,41 @@ describe("Rotate, driven by point matching", () => {
         expect(rotate.snapshot().turning).toBe(false);
     });
 
+    it("counts a turn too slow to trip the dead zone", () => {
+        /* 0.3 degrees a frame for three hundred frames: a real
+           90-degree turn over five seconds, and every single step
+           inside the 0.4-degree dead zone. Adding only the steps that
+           beat the dead zone reported zero, so a puck turned slowly
+           never turned at all. */
+        const rotate = rig();
+        let at = 0;
+        for (let f = 0; f <= 300; f += 1) {
+            rotate.update(sample(feet(f * 0.3, at), at));
+            at += FRAME_MS;
+        }
+        expect(rotate.snapshot().deltaTotalDeg).toBeCloseTo(90, 3);
+        /* And it is still not *turning*: that is this frame's
+           question, and the dead zone is the right answer to it. */
+        expect(rotate.snapshot().turning).toBe(false);
+        expect(rotate.snapshot().deltaFrameDeg).toBe(0);
+    });
+
+    it("does not wander when a still puck is only noisy", () => {
+        /* The other half of accumulating every step. Measurement noise
+           is zero-mean, so summing it goes nowhere — which is what
+           makes the dead zone unnecessary for the total. */
+        const rotate = rig();
+        let at = 0;
+        for (let f = 0; f <= 300; f += 1) {
+            /* Deterministic, so a failure is reproducible: ±0.3
+               degrees alternating, which is the amplitude measured on
+               a puck lying still. */
+            rotate.update(sample(feet(f % 2 === 0 ? 0.3 : -0.3, at), at));
+            at += FRAME_MS;
+        }
+        expect(Math.abs(rotate.snapshot().deltaTotalDeg)).toBeLessThan(2);
+    });
+
     it("reads the real full circle as a full circle", () => {
         /* The measurement that changed the design. This is the
            recording made at the table on 9 September 2026 of a puck

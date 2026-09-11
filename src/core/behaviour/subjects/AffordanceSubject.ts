@@ -1,5 +1,5 @@
+import { affordanceNames } from "../../physical";
 import { ConditionSubject } from "../ConditionSubject";
-import { affordanceNames } from "../../physical/affordanceNames";
 import type { ConditionDefinition } from "../ConditionDefinition";
 import type { RuleContext } from "../RuleContext";
 

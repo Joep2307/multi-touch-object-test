@@ -1,13 +1,7 @@
 import { validateProgramme } from "./validateProgramme";
-import type { KindRegistry } from "../physical/KindRegistry";
+import type { KindRegistry } from "../physical";
+import type { LoadResult } from "./LoadResult";
 import type { ProgrammeDefinition } from "./ProgrammeDefinition";
-import type { ValidationError } from "./ValidationError";
-
-/* What a load produced: the programme, or every reason it was
-   refused. */
-export type LoadResult =
-    | { readonly ok: true; readonly programme: ProgrammeDefinition }
-    | { readonly ok: false; readonly errors: readonly ValidationError[] };
 
 /* Reads a programme, checks it, and only then believes it.
  *

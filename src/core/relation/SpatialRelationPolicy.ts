@@ -1,4 +1,4 @@
-import { Policy } from "../base/Policy";
+import { Policy } from "../base";
 import { FAR_MM, NEAR_MM, TOUCH_TOLERANCE_MM } from "./constants";
 
 /* What counts as near, and what counts as having stopped being near.

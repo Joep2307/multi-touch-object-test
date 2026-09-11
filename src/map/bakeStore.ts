@@ -1,5 +1,5 @@
-import type { BasemapRecord } from "../types/BasemapRecord";
 import { bakeIDB } from "./bakeIDB";
+import type { BasemapRecord } from "../types";
 
 /* De ene bewaarde kaart: wegschrijven, ophalen, wissen. */
 const BAKE_KEY = "current";

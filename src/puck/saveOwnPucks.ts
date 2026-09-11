@@ -1,20 +1,18 @@
-import { templates } from "../state/templates";
+import { templates } from "../state";
+import { OWN_KEY } from "./constants";
+import { tplWire } from "./tplWire";
 
-export const OWN_KEY = "pucktable-own-pucks";
-
+/* Through `tplWire`, so all three shapes go to disk. Writing only the
+   triangle fields is what made a puck learned in the stand as a ring or a
+   grid code disappear on the next reload: it was saved without the
+   numbers that said what it was, and `restoreOwnPucks` then had nothing
+   to recognise it by. `saveTemplates` had exactly this bug and exactly
+   this fix. */
 export function saveOwnPucks(): void {
     try {
         localStorage.setItem(
             OWN_KEY,
-            JSON.stringify(
-                templates.own.map((t) => ({
-                    id: t.id,
-                    verdict: t.verdict,
-                    ratios: t.ratios,
-                    longestMM: t.longestMM ?? null,
-                    learnedAt: t.learnedAt || null,
-                })),
-            ),
+            JSON.stringify(templates.own.map(tplWire)),
         );
     } catch (e) {}
 }

@@ -1,5 +1,4 @@
-import { sim } from "../../state/sim";
-import { ui } from "../../state/ui";
+import { sim, ui } from "../../state";
 
 export function moveGhost(e: PointerEvent): void {
     const d = sim.trayDrags.get(e.pointerId);

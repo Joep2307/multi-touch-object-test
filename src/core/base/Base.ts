@@ -1,16 +1,15 @@
+import type { ContactSet } from "../contact";
 import type { BaseSample } from "./BaseSample";
 import type { BaseSnapshot } from "./BaseSnapshot";
-import type { ContactSet } from "../contact/ContactSet";
-import type { Direction } from "./direction/Direction";
 import type { FootprintCompletion } from "./FootprintCompletion";
 import type { FootprintSpec } from "./FootprintSpec";
-import type { Acceleration } from "./acceleration/Acceleration";
-import type { Move } from "./move/Move";
-import type { Position } from "./position/Position";
-import type { PxPerMMEstimator } from "./position/PxPerMMEstimator";
-import type { Rotate } from "./rotate/Rotate";
-import type { MotionHistory } from "./motion/MotionHistory";
-import type { Tap } from "./tap/Tap";
+import type { Acceleration } from "./acceleration";
+import type { Direction } from "./direction";
+import type { MotionHistory } from "./motion";
+import type { Move } from "./move";
+import type { Position, PxPerMMEstimator } from "./position";
+import type { Rotate } from "./rotate";
+import type { Tap } from "./tap";
 
 /* The kinematic truth about one object, and the container its traits
    live in.

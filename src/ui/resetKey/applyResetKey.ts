@@ -1,6 +1,6 @@
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
-import { reset } from "../../state/reset";
+import { el } from "../../dom";
+import { tr } from "../../i18n";
+import { reset } from "../../state";
 import { keyLabel } from "./keyLabel";
 
 export function applyResetKey(): void {

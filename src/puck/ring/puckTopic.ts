@@ -1,5 +1,5 @@
-import { topics } from "../../i18n/topics";
-import type { Track } from "../../types/Track";
+import { topics } from "../../i18n";
+import type { Track } from "../../types";
 
 export const puckTopic = (t: Track): string => {
     const list = topics();

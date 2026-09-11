@@ -1,5 +1,5 @@
-import { tr } from "../i18n/tr";
-import { notes } from "../state/notes";
+import { tr } from "../i18n";
+import { notes } from "../state";
 import { notePart } from "./notePart";
 
 export function refreshNoteFlipLabels(): void {

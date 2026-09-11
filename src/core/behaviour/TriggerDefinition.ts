@@ -1,4 +1,4 @@
-import type { EventType } from "../events/EventType";
+import type { EventType } from "../events";
 
 /* When a rule is considered at all.
  *

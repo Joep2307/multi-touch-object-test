@@ -1,10 +1,6 @@
-import { CFG } from "../config/CFG";
-import { CHIP_FAMILY } from "../config/CHIP_FAMILY";
-import { TILE_SETS } from "../config/TILE_SETS";
-import { tr } from "../i18n/tr";
-import { tiles } from "../state/tiles";
-import { ui } from "../state/ui";
-import { view } from "../state/view";
+import { CFG, CHIP_FAMILY, TILE_SETS } from "../config";
+import { tr } from "../i18n";
+import { tiles, ui, view } from "../state";
 import { CALM_FILTER } from "./CALM_FILTER";
 import { MV } from "./MV";
 import { blitCovered } from "./blitCovered";
@@ -50,7 +46,8 @@ export function drawMap(g: CanvasRenderingContext2D): void {
     for (let ty = y0; ty <= y1; ty++)
         for (let tx = x0; tx <= x1; tx++) {
             const wrapped = ((tx % n) + n) % n;
-            // snap every edge to a whole pixel so neighbouring tiles butt together with no seam and no half-pixel blur
+            // snap every edge to a whole pixel so neighbouring tiles butt
+            // together with no seam and no half-pixel blur
             const rx = Math.round(tx * ts - centerX + W / 2),
                 ry = Math.round(ty * ts - centerY + H / 2);
             const rw = Math.round((tx + 1) * ts - centerX + W / 2) - rx,

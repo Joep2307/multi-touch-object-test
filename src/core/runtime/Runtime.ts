@@ -1,31 +1,32 @@
-import { ContactEventSource } from "../events/ContactEventSource";
-import { PhysicalEventSource } from "../events/PhysicalEventSource";
-import { RegionTracker } from "../presentation/RegionTracker";
-import { RuleEngine } from "../behaviour/RuleEngine";
-import { SpatialIndex } from "../relation/SpatialIndex";
-import { StateMachineRunner } from "../behaviour/StateMachineRunner";
-import { buildRenderPlan } from "../presentation/buildRenderPlan";
-import { isTangible } from "../physical/isTangible";
-import { physicalInstanceOf } from "../physical/physicalInstanceOf";
-import type { ContactEventPolicy } from "../events/ContactEventPolicy";
-import type { ContactFrame } from "../contact/ContactFrame";
-import type { ConditionRegistry } from "../behaviour/ConditionRegistry";
-import type { EffectRegistry } from "../behaviour/EffectRegistry";
-import type { EventBus } from "../events/EventBus";
-import type { InteractionEvent } from "../events/InteractionEvent";
-import type { PhysicalEventPolicy } from "../events/PhysicalEventPolicy";
-import type { PhysicalId } from "../physical/PhysicalId";
-import type { PhysicalRegistry } from "../physical/PhysicalRegistry";
-import type { ProgrammeDefinition } from "../programme/ProgrammeDefinition";
-import type { RegionPolicy } from "../presentation/RegionPolicy";
-import type { RenderPlan } from "../presentation/RenderPlan";
-import type { RuleTrace } from "../behaviour/RuleTrace";
-import type { Session } from "../session/Session";
-import type { SpatialRelationPolicy } from "../relation/SpatialRelationPolicy";
-import type { ActionId } from "../behaviour/ActionId";
-import type { StateMachineId } from "../behaviour/StateMachineId";
-import type { TransitionId } from "../behaviour/TransitionId";
-import type { TablePresentation } from "../presentation/TablePresentation";
+import { RuleEngine, StateMachineRunner } from "../behaviour";
+import { ContactEventSource, PhysicalEventSource } from "../events";
+import { isTangible, physicalInstanceOf } from "../physical";
+import { RegionTracker, buildRenderPlan } from "../presentation";
+import { SpatialIndex } from "../relation";
+import type {
+    ActionId,
+    ConditionRegistry,
+    EffectRegistry,
+    RuleTrace,
+    StateMachineId,
+    TransitionId,
+} from "../behaviour";
+import type { ContactFrame } from "../contact";
+import type {
+    ContactEventPolicy,
+    EventBus,
+    InteractionEvent,
+    PhysicalEventPolicy,
+} from "../events";
+import type { PhysicalId, PhysicalRegistry } from "../physical";
+import type {
+    RegionPolicy,
+    RenderPlan,
+    TablePresentation,
+} from "../presentation";
+import type { ProgrammeDefinition } from "../programme";
+import type { SpatialRelationPolicy } from "../relation";
+import type { Session } from "../session";
 
 /* The loop in section 00 of the model, as one object.
  *
@@ -116,10 +117,14 @@ export class Runtime {
            exactly when a part should expire. */
         this.registry.subscribe((registryEvent) => {
             if (registryEvent.type !== "left") return;
-            this.session.roles.departed(
-                registryEvent.physical.id,
-                this.session.at,
-            );
+            /* Through the session rather than straight into the
+               ledger. `departed` expires the part and promotes whoever
+               was next in line, but only the session walks the table
+               afterwards and tells the objects what they now hold — so
+               calling the ledger directly left the promoted object's
+               own `roleId` null until some unrelated mode change
+               happened to reconcile it. */
+            this.session.assignRole(registryEvent.physical.id, null);
             this.#physicals.forget(registryEvent.physical.id);
             this.#entered.delete(registryEvent.physical.id);
         });
@@ -271,14 +276,19 @@ export class Runtime {
         if (instance.roleId !== null) return;
         const roleId = physical.kind.defaultRoleId;
         if (roleId === undefined) return;
+        /* Already standing in line for it. An object in a queue holds
+           no role, so without this it is offered the part again on
+           every mode change and every detection — and taking the offer
+           means giving up the place it was holding and rejoining at the
+           back. Offered often enough, whoever is at the head of the
+           queue never reaches the front of it. */
+        if (this.session.roles.waitingFor(physical.id) === roleId) return;
         const mode = this.session.activeMode;
         if (mode !== null && !mode.enabledRoleIds.includes(roleId)) return;
-        const role = this.programme.roles.find((r) => r.id === roleId);
-        if (role === undefined) return;
-        if (!this.session.roles.eligible(instance, role)) return;
-        /* Through the session, so the ledger and every object's
-           `roleId` are reconciled together — including whoever this
-           grant may have displaced. */
+        /* Through the session, which asks whether this object may play
+           this part and reconciles the ledger with every object's own
+           `roleId` afterwards — including whoever this grant may have
+           displaced. */
         this.session.assignRole(physical.id, roleId);
     }
 

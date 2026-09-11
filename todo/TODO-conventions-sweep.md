@@ -157,6 +157,9 @@ them.
   `constants` export, then `export type` lines, alphabetical within
   each group. Helpers only used inside the folder are still their own
   files but are not re-exported.
+- **A file imports files from its own folder and from any folder above
+  it; everything else goes through the target's barrel.** Found in
+  phase 4; see there.
 - **The barrel rule is enforced by a static test, not ESLint.**
   `no-restricted-imports` cannot tell `../core/physical` (a barrel
   directory) from `../core/foo` (a file) by glob. A Vitest test that
@@ -258,122 +261,184 @@ survives a wipe. Worth a line in `TODO.md`.
 
 ## Phase 3 — One symbol per file
 
-- [ ] Split the 13 files listed above. Each companion gets its own
-      file, named after itself: `TPL_KEY.ts`, `OWN_KEY.ts`,
-      `DuoSplit.ts`, `Phrase.ts`, `SettingsQuery.ts`,
+**Done 11 September 2026.**
+
+- [x] The 13 files split. Two departures from the sketch, both to
+      follow rules this plan already states: `TPL_KEY` and `OWN_KEY`
+      are constants, so they went into a new `src/puck/constants.ts`
+      rather than a file each; `DuoSplit` is a type, so it joined the
+      others in `src/types/`. The rest are next to their main symbol:
+      `Phrase.ts` in `types/`, and in `src/core/` `SettingsQuery.ts`,
       `OverflowDecision.ts`, `LoadResult.ts`, `RegionUpdate.ts`,
       `SignatureMatch.ts`, `RuleTraceEntry.ts`, `EffectType.ts`,
-      `ConditionSubjectType.ts`, `FootprintScore.ts`. The original
-      file imports its companion; the doc comment that explains the
-      pair stays with the main symbol.
-- [ ] The six `src/core/` barrels that already re-export nine of the
-      companions (`session`, `programme`, `presentation`, `physical`,
-      `behaviour`, `base/position`) point at the new files.
-- [ ] The ten consumer files outside the defining ones import from
-      the new files — through the barrel where they already do.
-- [ ] Check: `npm run check`, `npm run typecheck:core`,
-      `npm run build`.
+      `ConditionSubjectType.ts`, `FootprintScore.ts`. Each companion
+      took its own comment along; the essays stayed with the main
+      symbol.
+- [x] The six core barrels point at the new files; single-line
+      `export type` runs in them are kept alphabetical.
+- [x] The ten consumer files import from the new files. The compiler
+      then named nine type imports the three originals no longer
+      used, and those are gone.
+- [x] Check: tsc (repo and core), lint, spell, 494 unit tests and
+      `npm run build` green.
 
 ## Phase 4 — Barrels for the app tree
 
-The big one: 29 barrels, ~1,073 import rewrites in ~326 files. Done
-by script, reviewed by eye, verified by compiler.
+**Done 11 September 2026.** 30 barrels rather than 29: `src/puck/scale/`
+arrived in the tree while this plan was being written. 488 files had
+their imports rewritten, 78 of them a second time (see the first
+finding below). The rewriter and its companion live in the session
+scratchpad, not the repo; the tests below are what outlive them.
 
-- [ ] Write the barrels, leaves first so each step compiles, in
-      this order:
+Three things the build learned that the sketch did not know:
 
-1. `types`, `config`, `dom`, `speech` — no app-tree imports.
-2. `state`, `i18n`, `kg`, `map` — the inner ring.
-3. `puck/geometry`, `puck/noise`, `puck/ring`, `puck/sim`,
-   `puck/tray`, `puck/learn`, then `puck`.
-4. `pins`, `notes`, `talk`, `render`.
-5. `ui/analytics`, `ui/keyboard`, `ui/kgInfo`, `ui/menu`,
-   `ui/panels`, `ui/resetKey`, then `ui`.
-6. `input`, `capture`, `boot`.
+1. **An import up the tree stays a file import.** The sketch had every
+   cross-folder import going through a barrel, including a child
+   importing its parent (`from ".."`). The first test run showed why
+   that cannot hold: `direction/Direction.ts` importing `Trait` from
+   `..` while `base/index.ts` re-exports `./direction` is a cycle by
+   construction, and `class Direction extends Trait` reads `Trait` at
+   evaluation time — the one top-level read the audit's scan had not
+   looked for. The subclass evaluated first and its base was
+   `undefined`. So the rule is: a barrel is for outsiders; inside a
+   folder, and from a folder into any folder above it, files import
+   files. `conventions.test.ts` states the exception in those words.
+2. **Where an import lands is the target's own barrel**, not the
+   nearest ancestor's. `render/frame.ts` imports `../puck/geometry`,
+   `../puck/learn` and `../puck` as three statements, not one
+   `../puck`. That is what the core tests already did
+   (`../../../core/events`), it keeps fan-in small, and it makes the
+   `export *` lines in `puck/index.ts` and `ui/index.ts` a
+   convenience rather than a load-bearing part. They are kept because
+   `core/index.ts` does the same.
+3. **`parity.test.ts` belongs to the bridge, not the core.** It
+   compares the Base pipeline with the legacy `describe`, which is
+   exactly what `src/bridge/ParityCheck` exists for. Under the core
+   typecheck (`lib: ES2022`, no DOM) its one reach into the app tree
+   now pulled the whole `types` barrel in through `describe.ts`, DOM
+   types included. Moved to `src/test/unit/bridge/`, where
+   `bridge.test.ts` already lives, it needs no exception.
 
-A barrel lists every file's symbol except the folder-private helpers
-(see Decisions). Sub-barrels are re-exported by the parent
-(`puck/index.ts` does `export * from "./learn"` — the one place
-`export *` is allowed, because a sub-barrel is already curated).
+- [x] The 30 barrels, written from the import graph: a barrel lists
+      what something outside the folder imports; `src/types/` lists
+      every type, since a type barrel has nothing to hide and nothing
+      to load. Values, then `export *` for sub-barrels, then the
+      `constants` group, then `export type` lines, each run
+      alphabetical.
+- [x] Every import rewritten to the rule above, merged one statement
+      per barrel, `import type` in its own statement, value
+      statements before type statements, each run sorted by
+      specifier. Files with no cross-folder change were left alone.
+      `src/i18n/L.ts` came out as one 41-column line and needed no
+      hand-formatting.
+- [x] Three files renamed after their symbol on the way, all found by
+      the new test: `state/chip.ts` → `CHIP.ts`,
+      `puck/geometry/layout.ts` → `LAYOUT.ts` (the two Rust doc
+      comments and the console message that name it updated), and a
+      pre-existing one in the core, `behaviour/TriggerMatcher.ts` →
+      `matchesTrigger.ts`. `puck/scale/saveScale.ts` carried a
+      `SCALE_KEY` beside its function, the phase-3 pattern; it went
+      into `puck/scale/constants.ts`.
+- [x] `src/test/unit/barrels.test.ts`: each of the 30 barrels imported
+      first in a fresh module graph under Node, plus the
+      no-work-at-import-time timing on the three biggest.
+- [x] `src/test/unit/conventions.test.ts`: barrels exist; a
+      cross-folder import resolves to a directory unless it goes up
+      the tree; one export per file, named after the file. Its first
+      run found the `TriggerMatcher` rename above and nothing else.
+- [x] Check: 539 unit tests, tsc (repo and core), lint, spell,
+      `npm run build`, `npm run smoke` green.
 
-- [ ] Rewrite the imports with a script kept in the session
-      scratchpad, not the repo: for each relative specifier that
-      resolves to a file in another folder, replace it with the
-      nearest barrel on the path, then merge all imports from one
-      barrel into a single statement with specifiers sorted, `type`
-      imports in their own `import type` statement. Run Prettier.
-      Then `tsc` — the compiler finds every name that two barrels
-      both export under one import, or that a barrel forgot.
-- [ ] `src/main.ts` and the unit tests under `src/test/unit/` get the
-      same treatment; `src/test/smoke.ts` imports nothing from the
-      tree and is untouched.
-- [ ] `src/test/unit/barrels.test.ts` — the app-tree twin of
-      `core/barrels.test.ts`: for each of the 29 barrels,
-      `vi.resetModules()` then `await import(barrel)`, expect no
-      throw, at least one export, and the whole import under 500 ms.
-      Runs under Node, which is the point: it proves nothing in the
-      tree needs a browser to _load_. Each barrel imported first in a
-      fresh graph is what catches an order-dependent
-      `ReferenceError`.
-- [ ] `src/test/unit/conventions.test.ts` — the static guard,
-      reading the tree with `node:fs`. Its checks:
-- [ ] every folder under `src/` (except `src/wasm/`, `src/test/`)
-      has an `index.ts`;
-- [ ] every relative import specifier in `src/` (tests included)
-      that leaves its folder resolves to a directory, not a file;
-- [ ] every non-`index`, non-`constants`, non-`.d.ts`,
-      non-`.test.ts` file has exactly one top-level `export` and
-      its name equals the file's basename;
-- [ ] (the 79-column check joins in phase 5).
-- [ ] Check: `npm run check`, `npm run build`, `npm run smoke`.
+Not typechecked, before or after: the unit tests outside
+`src/test/unit/core/`. `tsconfig.json` excludes `src/test`, and
+`tsconfig.core.json` includes only the core tests. Vitest transpiles
+without checking. A `tsconfig.test.json` would close that; a
+follow-up, not this plan.
 
 ## Phase 5 — 79 columns
 
-231 lines, by hand; no tool reflows a comment well.
+**Done 11 September 2026.** 145 lines, not the 231 the audit counted:
+the barrels of phase 4 shortened every long `import` line on their own,
+and the decorative rules turned out to be inside the count only because
+the audit measured bytes where the rule measures characters — a `═` is
+three bytes and one column.
 
-- [ ] Decorative rules (68): trim `═══`/`───` lines to end at column
-      79; the box headers in `CFG.ts`, `MV.ts`, `KEY_ROWS.ts`,
-      `renderTray.ts`, `smoke.ts` and the like.
-- [ ] Comment prose (~108): rewrap at 79. Block comments keep their
-      3-space continuation indent, line comments stay line comments.
-- [ ] String literals: `DEMO_PINS.ts` demo texts and
-      `buildQuestion.ts` prompts become adjacent-string concatenation
-      broken at a space; tile and font URLs in `TILE_SETS.ts` and
-      `loadFonts.ts` break at a `/` the same way; HTML template
-      literals in `sheetCard.ts`, `renderLearn.ts`, `ownPuckList.ts`,
-      `drawLearnPoints.ts`, `renderRecent.ts`, `renderAnalytics.ts`,
-      `renderKeyboard.ts` are split at tag boundaries into
-      `\n`-free pieces joined with `+`, so the produced markup is
-      byte-identical (assert this for `sheetCard` and
-      `renderKeyboard` in a small unit test before touching them).
-- [ ] `exe/styles/base/_tokens.scss` (3) and
-      `components/_note.scss` (1): break the long values.
-- [ ] Long `import` lines in `src/core/`: already resolved by
-      phase 4's shorter specifiers; verify none remain.
-- [ ] Add to `conventions.test.ts`: no line over 79 columns in
-      `src/**/*.ts` and `exe/styles/**/*.scss`, with `src/i18n/L.ts`
-      and `exe/index.html` as the only exemptions, named in the test
-      with the reason from `.prettierignore`.
-- [ ] Check: `npm run check`, `npm run build`. Smoke is not needed;
-      nothing here changes a module's behaviour, and the unit test
-      above guards the markup.
+The order was: strings and markup first, behind a verifier; then the
+prose; then the two lines Prettier itself produces too long.
+
+- [x] **A verifier rather than a spot check.** Before touching a single
+      literal, every `.ts` file was copied aside. A script parses both
+      versions with the TypeScript compiler's own parser and folds each
+      `+` chain of string and template literals into the sequence of
+      static text and expressions it produces — recursively, so a
+      literal split inside an interpolation folds too, and ignoring the
+      whitespace and trailing commas Prettier moves around. A literal
+      only broken across lines therefore compares equal and one whose
+      value moved does not. All 18 files with a string or a piece of
+      markup in them came back identical. The script stayed in the
+      session scratchpad: it answers a question this phase asked once.
+- [x] Strings and markup (66 lines): the demo texts in `DEMO_PINS.ts`
+      and the two prompts in `buildQuestion.ts` became adjacent-string
+      concatenation broken at a space; tile and font URLs in
+      `TILE_SETS.ts`, `loadFonts.ts` and `onSearchKeydown.ts` broke at a
+      `/` or a `?`; the HTML template literals in `sheetCard.ts`,
+      `renderLearn.ts`, `ownPuckList.ts`, `drawLearnPoints.ts`,
+      `renderRecent.ts`, `renderAnalytics.ts` and `renderKeyboard.ts`
+      broke at tag and attribute boundaries.
+- [x] Comment prose (53 lines): block comments and `//` runs reflowed
+      to 79, keeping their own continuation indent. Seven trailing
+      comments on code lines — `CFG.ts`, `kg.ts`, `MV.ts` ×3,
+      `noteToPin.ts`, `endTrayDrag.ts`, `makeDraggable.ts` — moved above
+      the line they explain rather than being squeezed.
+- [x] Test names (8 lines): the `it("…")` sentences split at a space.
+- [x] The two lines Prettier produces at exactly 80 columns and will
+      not break itself:
+      the named `export` of `ReplaceLowestPriorityOverflow` from its own
+      file became `export *` — the file holds one symbol, so it names
+      exactly the same thing, with a comment saying why this one line
+      is not in the barrel's usual style. In `_note.scss` the note's opening
+      easing became a `$note-open-ease` variable, which is shorter at
+      the call site and gives the overshoot the name a comment would
+      otherwise have had to give it.
+- [x] `exe/styles/base/_tokens.scss` needed nothing: its three long
+      lines were gone before this phase reached them.
+- [x] The width check joined `conventions.test.ts`, counting characters
+      rather than bytes, over `src/**/*.ts` **and**
+      `exe/styles/**/*.scss`. `src/i18n/L.ts` is the one exemption and
+      is named in the test with the reason from `.prettierignore`;
+      `exe/index.html` is not scanned.
+- [x] Check: `npm run check` (561 tests) and `npm run build` green.
+      Smoke was not needed — nothing here changes a module's behaviour,
+      and the verifier is a stronger statement about the markup than a
+      click-through would be.
 
 ## Phase 6 — Documentation and configuration
 
-- [ ] `README.md`: the directory tree gains `capture/`, `legacy/`,
-      `boot/installTestHooks`; the line "Eén symbool
-      per bestand" under `src/` gains "en elke map een index.ts".
-- [ ] `ARCHITECTURE.md`: where it describes imports, say that the
-      whole tree — not only `src/core/` — imports through barrels and
-      does no work at import time.
-- [ ] `todo/TODO.md`: one line under Ground rules pointing here for
-      the tree-wide guards.
-- [ ] `tsconfig.core.json` header comment: "the existing 489 files"
-      is stale; fix the number or drop it.
-- [ ] `vitest.config.js` comment (done in phase 1; re-read it here).
-- [ ] `.vscode/settings.json`: nothing to change; confirm.
-- [ ] Final: `npm run check`, `npm run build`, `npm run smoke`, and
-      `git status` shows only intended files.
+**Done 11 September 2026.**
+
+- [x] `README.md`: the tree gains `capture/`, `legacy/`, `core/` and
+      `bridge/`, and the `src/` line now reads "Eén symbool per bestand,
+      een index.ts per map". A new section, _Hoe de boom in elkaar zit_,
+      states the three checked rules and the fourth habit — nothing does
+      work at import time — and names the tests that hold them.
+- [x] `ARCHITECTURE.md`: the headless-core section says which two of its
+      habits now hold for the whole tree, including the import-up-the-tree
+      exception and why it exists; the layer rules gain "nothing anywhere
+      in `src/` does work at import time except `src/main.ts`".
+- [x] `todo/TODO.md`: the barrel ground rule names the exception and
+      points here.
+- [x] `tsconfig.core.json`: the stale "existing 489 files" opening
+      rewritten — `tsconfig.json` has had `noUncheckedIndexedAccess` and
+      `exactOptionalPropertyTypes` since 9 September, so what is left in
+      that file is the DOM-free `lib`/`types` boundary and nothing else.
+      The duplicated paragraph about `lib` went with it.
+- [x] `vitest.config.js`: done in phase 1, re-read here.
+- [x] `.vscode/settings.json`: nothing to change. Its ruler is already
+      79, its formatter already Prettier, and its note about
+      `.prettierignore` is still true — that file now names `legacy/`
+      where it used to name eight root files.
+- [x] `project-words.txt`: one new Dutch word.
+- [x] Final: `npm run check`, `npm run build` and `npm run smoke` green.
 
 ---
 
@@ -385,7 +450,7 @@ A barrel lists every file's symbol except the folder-private helpers
 | 2     | yes   | yes   | yes   | record button, no-mic message    |
 | 3     | yes   | yes   | —     | typecheck:core                   |
 | 4     | yes   | yes   | yes   | barrels + conventions tests      |
-| 5     | yes   | yes   | —     | markup byte-identical test       |
+| 5     | yes   | yes   | —     | literal-identity verifier        |
 | 6     | yes   | yes   | yes   | —                                |
 
 ## Risks

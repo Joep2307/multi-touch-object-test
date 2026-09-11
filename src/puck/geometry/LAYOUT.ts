@@ -1,6 +1,7 @@
 /* The layout of the buffers through which TypeScript and the Rust crate
    exchange numbers. The same numbers live in
-   src/wasm/puck-geometry/src/abi/layout.rs; change something here, change it there too. */
+   src/wasm/puck-geometry/src/abi/layout.rs; change something here, change it
+   there too. */
 export const LAYOUT = {
     MAX_POINTS: 128,
     POINT_STRIDE: 3, // x, y, uid (−1 = real touch)

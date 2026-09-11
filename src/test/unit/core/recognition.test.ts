@@ -626,20 +626,25 @@ describe("GestureRecogniser", () => {
         ).toEqual([]);
     });
 
-    it("recognises placing and removing when a programme asks for them", () => {
-        /* Not in the default set: being put down and picked up reaches
+    it(
+        "recognises placing and removing when a programme asks for " + "them",
+        () => {
+            /* Not in the default set: being put down and picked up reaches
            rules as `physical.detected` and `physical.removed`, taken
            from `Presence` itself. A programme that wants a separately
            named gesture for it can still have one, and this is that. */
-        const r = new GestureRecogniser([
-            { id: "g.place" as GestureId, gesture: "place" },
-            { id: "g.remove" as GestureId, gesture: "remove" },
-        ]);
-        expect(names(r.update(snap(0, {}), "unseen"))).toEqual([]);
-        expect(names(r.update(snap(16, {}), "placed"))).toEqual(["place"]);
-        expect(names(r.update(snap(32, {}), "placed"))).toEqual([]);
-        expect(names(r.update(snap(1000, {}), "lifted"))).toEqual(["remove"]);
-    });
+            const r = new GestureRecogniser([
+                { id: "g.place" as GestureId, gesture: "place" },
+                { id: "g.remove" as GestureId, gesture: "remove" },
+            ]);
+            expect(names(r.update(snap(0, {}), "unseen"))).toEqual([]);
+            expect(names(r.update(snap(16, {}), "placed"))).toEqual(["place"]);
+            expect(names(r.update(snap(32, {}), "placed"))).toEqual([]);
+            expect(names(r.update(snap(1000, {}), "lifted"))).toEqual([
+                "remove",
+            ]);
+        },
+    );
 
     it("leaves placing out of the standard definitions", () => {
         expect(
@@ -692,18 +697,24 @@ describe("GestureRecogniser", () => {
         expect(pressWith(3, 2)).toEqual([]);
     });
 
-    it("measures the double-tap gap off the glass, not release to release", () => {
-        /* The second press's own dwell used to count against the
+    it(
+        "measures the double-tap gap off the glass, not release to " +
+            "release",
+        () => {
+            /* The second press's own dwell used to count against the
            window, so two deliberate quarter-second presses a fifth of
            a second apart fell outside a four-hundred-millisecond
            gap. */
-        const r = new GestureRecogniser(defaultGestureDefinitions());
-        r.update(snap(0, {}), "placed");
-        r.update(down(0, 0), "placed");
-        r.update(up(250, 250), "placed");
-        r.update(down(450, 0), "placed");
-        expect(names(r.update(up(700, 250), "placed"))).toEqual(["doubleTap"]);
-    });
+            const r = new GestureRecogniser(defaultGestureDefinitions());
+            r.update(snap(0, {}), "placed");
+            r.update(down(0, 0), "placed");
+            r.update(up(250, 250), "placed");
+            r.update(down(450, 0), "placed");
+            expect(names(r.update(up(700, 250), "placed"))).toEqual([
+                "doubleTap",
+            ]);
+        },
+    );
 
     it("reports every whole step of a turn, keeping the remainder", () => {
         /* Snapping the baseline to wherever the turn had got to threw

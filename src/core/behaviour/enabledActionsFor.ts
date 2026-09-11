@@ -1,7 +1,7 @@
 import { byPriority } from "./byPriority";
+import type { PhysicalInstance } from "../physical";
 import type { ActionDefinition } from "./ActionDefinition";
 import type { ActionId } from "./ActionId";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
 import type { StateDefinition } from "./StateDefinition";
 
 /* What this object can be asked to do, right now.

@@ -1,6 +1,6 @@
-import type { BasemapRecord } from "../types/BasemapRecord";
 import { bakeStore } from "./bakeStore";
 import { showBasemap } from "./showBasemap";
+import type { BasemapRecord } from "../types";
 
 export function restoreBasemap(): void {
     // A map saved before the move to IndexedDB gets migrated over and then

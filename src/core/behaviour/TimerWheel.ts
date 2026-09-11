@@ -1,4 +1,4 @@
-import type { EventDraft } from "../events/EventDraft";
+import type { EventDraft } from "../events";
 
 type Pending = {
     readonly name: string;

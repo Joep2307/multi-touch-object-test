@@ -1,5 +1,5 @@
-import { tr } from "../../i18n/tr";
-import { learn } from "../../state/learn";
+import { tr } from "../../i18n";
+import { learn } from "../../state";
 import { learnedTemplates } from "./learnedTemplates";
 
 /* If a learned puck is lying there but isn't recognised, its points simply

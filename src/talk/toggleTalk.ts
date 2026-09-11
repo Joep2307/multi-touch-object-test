@@ -1,12 +1,7 @@
-import { sttUrl } from "../config/sttUrl";
-import { notePart } from "../notes/notePart";
-import { noteViewFor } from "../notes/noteViewFor";
-import { probeSTT } from "../speech/probeSTT";
-import { startTalk } from "../speech/startTalk";
-import { stt } from "../speech/stt";
-import { talk } from "../state/talk";
-import { ui } from "../state/ui";
-import type { NoteView } from "../types/NoteView";
+import { sttUrl } from "../config";
+import { notePart, noteViewFor } from "../notes";
+import { probeSTT, startTalk, stt } from "../speech";
+import { talk, ui } from "../state";
 import { appendTalk } from "./appendTalk";
 import { renderTalk } from "./renderTalk";
 import { setTalkMsg } from "./setTalkMsg";
@@ -15,6 +10,7 @@ import { stopTalk } from "./stopTalk";
 import { talkError } from "./talkError";
 import { talkReady } from "./talkReady";
 import { talkRunning } from "./talkRunning";
+import type { NoteView } from "../types";
 
 export async function toggleTalk(v: NoteView): Promise<void> {
     if (talkRunning(v.pin)) {

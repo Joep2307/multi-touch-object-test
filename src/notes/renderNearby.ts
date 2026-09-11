@@ -1,14 +1,11 @@
-import { emptyLine } from "../dom/emptyLine";
-import { tr } from "../i18n/tr";
-import { formatDistance } from "../kg/formatDistance";
-import { kg } from "../kg/kg";
-import { nearby } from "../kg/nearby";
-import type { NoteView } from "../types/NoteView";
-import type { Pin } from "../types/Pin";
+import { emptyLine } from "../dom";
+import { tr } from "../i18n";
+import { formatDistance, kg, nearby } from "../kg";
 import { kgReveal } from "./kgReveal";
 import { kgRow } from "./kgRow";
 import { notePart } from "./notePart";
 import { positionNote } from "./positionNote";
+import type { NoteView, Pin } from "../types";
 
 export function renderNearby(v: NoteView, pin: Pin): void {
     const box = notePart(v, "noteNearby");

@@ -1,6 +1,4 @@
-import type { CapEvents } from "../types/CapEvents";
-import type { CapReason } from "../types/CapReason";
-import type { Lapse } from "../types/Lapse";
+import type { CapEvents, CapReason, Lapse } from "../types";
 
 /* What the capture module is doing. One recording or one time-lapse at
    a time, never both: the buttons disable each other, and `busy` is the

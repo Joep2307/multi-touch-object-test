@@ -229,21 +229,25 @@ describe("validateProgramme", () => {
         ).toHaveLength(1);
     });
 
-    it("catches a kind pointing at a role, machine or drawing that is not there", () => {
-        expect(
-            errorsFor((p) => ({
-                ...p,
-                kinds: [
-                    {
-                        ...p.kinds[0]!,
-                        defaultRoleId: "Ghost" as RoleId,
-                        stateMachineId: "Ghost" as StateMachineId,
-                        presentationId: "Ghost" as PresentationId,
-                    },
-                ],
-            })),
-        ).toHaveLength(3);
-    });
+    it(
+        "catches a kind pointing at a role, machine or drawing that " +
+            "is not there",
+        () => {
+            expect(
+                errorsFor((p) => ({
+                    ...p,
+                    kinds: [
+                        {
+                            ...p.kinds[0]!,
+                            defaultRoleId: "Ghost" as RoleId,
+                            stateMachineId: "Ghost" as StateMachineId,
+                            presentationId: "Ghost" as PresentationId,
+                        },
+                    ],
+                })),
+            ).toHaveLength(3);
+        },
+    );
 
     it("catches a machine starting in a state it does not have", () => {
         const errors = errorsFor((p) => ({
@@ -356,20 +360,23 @@ describe("validateProgramme", () => {
         expect(errors[0]?.field).toBe("contactCount");
     });
 
-    it("catches a slot signature with no code, which has no orientation", () => {
-        const errors = errorsFor((p) => ({
-            ...p,
-            kinds: [
-                {
-                    ...p.kinds[0]!,
-                    signatures: [
-                        { ...p.kinds[0]!.signatures[0], family: "slot" },
-                    ],
-                },
-            ],
-        }));
-        expect(errors.map((e) => e.field)).toContain("slotCode");
-    });
+    it(
+        "catches a slot signature with no code, which has no " + "orientation",
+        () => {
+            const errors = errorsFor((p) => ({
+                ...p,
+                kinds: [
+                    {
+                        ...p.kinds[0]!,
+                        signatures: [
+                            { ...p.kinds[0]!.signatures[0], family: "slot" },
+                        ],
+                    },
+                ],
+            }));
+            expect(errors.map((e) => e.field)).toContain("slotCode");
+        },
+    );
 
     it("catches a region accepting a kind or role nobody defined", () => {
         const errors = errorsFor((p) => ({

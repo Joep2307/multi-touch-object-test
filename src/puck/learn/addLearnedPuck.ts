@@ -1,14 +1,13 @@
-import { VERDICTS } from "../../config/VERDICTS";
-import { el } from "../../dom/el";
-import { vName } from "../../i18n/vName";
-import { learn } from "../../state/learn";
-import { templates } from "../../state/templates";
-import type { Verdict } from "../../types/Verdict";
+import { VERDICTS } from "../../config";
+import { el } from "../../dom";
+import { vName } from "../../i18n";
+import { learn, templates } from "../../state";
 import { addOwnPuck } from "../addOwnPuck";
 import { buildSheet } from "./buildSheet";
 import { learnShape } from "./learnShape";
 import { renderLearn } from "./renderLearn";
 import { shapeClash } from "./shapeClash";
+import type { Verdict } from "../../types";
 
 /* Puck mode has no fixed four: every measurement is added as a new puck.
    If the shape looks too much like a puck you already have, that gets

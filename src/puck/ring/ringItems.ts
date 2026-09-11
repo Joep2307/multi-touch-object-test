@@ -1,7 +1,5 @@
-import { topics } from "../../i18n/topics";
-import { tr } from "../../i18n/tr";
-import type { RingItem } from "../../types/RingItem";
-import type { Track } from "../../types/Track";
+import { topics, tr } from "../../i18n";
+import type { RingItem, Track } from "../../types";
 
 /* The only puck menu is the topic list. It appears after a center tap and
    choices are made by tapping their visible segments. */

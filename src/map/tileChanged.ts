@@ -1,4 +1,4 @@
-import { tiles } from "../state/tiles";
+import { tiles } from "../state";
 
 /* A tile arrived (or failed): trigger a redraw of the map layer,
    but no more than a few times per second. */

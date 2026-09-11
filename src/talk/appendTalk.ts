@@ -1,8 +1,7 @@
-import { notePart } from "../notes/notePart";
-import { noteViewFor } from "../notes/noteViewFor";
-import { saveSoon } from "../pins/saveSoon";
-import type { Pin } from "../types/Pin";
+import { notePart, noteViewFor } from "../notes";
+import { saveSoon } from "../pins";
 import { talkTextOf } from "./talkTextOf";
+import type { Pin } from "../types";
 
 /* Append a finished chunk of speech after the text. */
 export function appendTalk(pin: Pin, text: string): void {

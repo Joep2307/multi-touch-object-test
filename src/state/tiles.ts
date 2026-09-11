@@ -1,5 +1,4 @@
-import type { BgImage } from "../types/BgImage";
-import type { TileImage } from "../types/TileImage";
+import type { BgImage, TileImage } from "../types";
 
 /* The tile cache and the state of the map background. */
 export const tiles = {

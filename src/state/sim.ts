@@ -1,5 +1,4 @@
-import type { SimPuck } from "../types/SimPuck";
-import type { TrayDrag } from "../types/TrayDrag";
+import type { SimPuck, TrayDrag } from "../types";
 
 /* The drag copies from the tray. `seq` gives each copy its own number: the
    type no longer says which one it is — there can be two of the same lying

@@ -1,5 +1,5 @@
-import { MV } from "../map/MV";
-import type { Pin } from "../types/Pin";
+import { MV } from "../map";
+import type { Pin } from "../types";
 
 export function movePinTo(pin: Pin, x: number, y: number): void {
     const ll = MV.unproject(x, y);

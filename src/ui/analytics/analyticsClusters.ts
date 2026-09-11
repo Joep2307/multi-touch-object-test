@@ -1,7 +1,6 @@
-import { pins } from "../../state/pins";
-import type { LatLng } from "../../types/LatLng";
-import type { Pin } from "../../types/Pin";
+import { pins } from "../../state";
 import { analyticsDistance } from "./analyticsDistance";
+import type { LatLng, Pin } from "../../types";
 
 /* Groups within about 250 meters, largest first. */
 export function analyticsClusters(): { items: Pin[]; center: LatLng }[] {

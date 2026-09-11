@@ -1,9 +1,7 @@
-import type { Lang } from "../types/Lang";
-import type { TalkSay } from "../types/TalkSay";
-import type { TalkSession } from "../types/TalkSession";
 import { CHUNK_MS } from "./CHUNK_MS";
 import { MIN_BYTES } from "./MIN_BYTES";
 import { stt } from "./stt";
+import type { Lang, TalkSay, TalkSession } from "../types";
 
 /* Record and send. One MediaRecorder per chunk instead of one long one with
    `timeslice`: a fragment from the middle of a webm stream can't be played

@@ -5,21 +5,21 @@
  * contact, a hand rests on the same circle -- and the answer still has to
  * be the same puck, or none, but never the wrong one.
  */
+import { CFG, SLOT_CODES } from "../../config";
+import {
+    codeDistance,
+    codeSelfSym,
+    codeSlots,
+    describeSlots,
+    matchSlots,
+    padsFor,
+    popCount,
+    rotateCode,
+    sizeErr,
+    wrapAngle,
+} from "../../puck/geometry";
 import { describe as suite, expect, it } from "vitest";
-import { CFG } from "../../config/CFG";
-import { SLOT_CODES } from "../../config/SLOT_CODES";
-import { codeDistance } from "../../puck/geometry/codeDistance";
-import { codeSelfSym } from "../../puck/geometry/codeSelfSym";
-import { codeSlots } from "../../puck/geometry/codeSlots";
-import { describeSlots } from "../../puck/geometry/describeSlots";
-import { matchSlots } from "../../puck/geometry/matchSlots";
-import { padsFor } from "../../puck/geometry/padsFor";
-import { popCount } from "../../puck/geometry/popCount";
-import { rotateCode } from "../../puck/geometry/rotateCode";
-import { sizeErr } from "../../puck/geometry/sizeErr";
-import { wrapAngle } from "../../puck/geometry/wrapAngle";
-import type { Point } from "../../types/Point";
-import type { Template } from "../../types/Template";
+import type { Point, Template } from "../../types";
 
 const N = SLOT_CODES.slots;
 const PX_PER_MM = 4; // roughly a 43 inch screen

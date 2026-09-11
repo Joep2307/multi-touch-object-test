@@ -1,13 +1,12 @@
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
-import { kg } from "../../kg/kg";
-import { kgDescribe } from "../../kg/kgDescribe";
-import { flippedFor } from "../../notes/flippedFor";
-import type { KgNode } from "../../types/KgNode";
-import { resetPanelOffset } from "../panels/resetPanelOffset";
+import { el } from "../../dom";
+import { tr } from "../../i18n";
+import { kg, kgDescribe } from "../../kg";
+import { flippedFor } from "../../notes";
+import { resetPanelOffset } from "../panels";
 import { openDocument } from "./openDocument";
 import { positionKgInfo } from "./positionKgInfo";
 import { showKgKnowledge } from "./showKgKnowledge";
+import type { KgNode } from "../../types";
 
 /* ── Knowledge graph: the reading window for a tapped point ──────────── */
 export function openKgInfo(node: KgNode, x: number, y: number): void {

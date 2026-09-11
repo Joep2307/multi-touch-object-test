@@ -1,6 +1,6 @@
 import { CentreSolver } from "./CentreSolver";
 import { CIRCLE_FIT_MIN_DET, CIRCLE_FIT_MIN_SPAN } from "./constants";
-import type { SensedContact } from "../../contact/SensedContact";
+import type { SensedContact } from "../../contact";
 import type { CentreFit } from "./CentreFit";
 
 /* The middle of a ring object: an algebraic circle through its feet.

@@ -1,4 +1,4 @@
-import type { Vec2 } from "../base/Vec2";
+import type { Vec2 } from "../base";
 
 /* Where an object is and which way it faces, as anything above the
    recognition layer sees it.

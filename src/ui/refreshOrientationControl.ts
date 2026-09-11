@@ -1,6 +1,6 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { ui } from "../state/ui";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { ui } from "../state";
 
 /* ── Screen orientation ────────────────────────────────────────────────
    The map is the shared object and stays put; only the control layers

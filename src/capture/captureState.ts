@@ -1,5 +1,5 @@
-import { capture } from "../state/capture";
-import type { CaptureStatus } from "../types/CaptureStatus";
+import { capture } from "../state";
+import type { CaptureStatus } from "../types";
 
 /* What the buttons show. `ms` is the clock of whatever is running — the
    button on the map shows it under the red dot, and it has to keep

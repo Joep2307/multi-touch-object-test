@@ -1,5 +1,4 @@
-import { CHIP } from "../state/chip";
-import { ui } from "../state/ui";
+import { CHIP, ui } from "../state";
 
 /* Read the chip sizes from the CSS tokens, times the UI scale. */
 export function readChip(): void {

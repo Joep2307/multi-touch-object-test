@@ -1,4 +1,4 @@
-import { menu } from "../../state/menu";
+import { menu } from "../../state";
 import { sidesActive } from "../sidesActive";
 import { openMenu } from "./openMenu";
 

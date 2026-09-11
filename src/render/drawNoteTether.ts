@@ -1,9 +1,8 @@
-import { CFG } from "../config/CFG";
-import { vColor } from "../i18n/vColor";
-import { openNotes } from "../notes/openNotes";
-import { view } from "../state/view";
-import type { NoteView } from "../types/NoteView";
-import type { Track } from "../types/Track";
+import { CFG } from "../config";
+import { vColor } from "../i18n";
+import { openNotes } from "../notes";
+import { view } from "../state";
+import type { NoteView, Track } from "../types";
 
 /* The note window is attached to one puck. Without a visible connection it
    just floats next to it, and with four pucks on the table there's no way to

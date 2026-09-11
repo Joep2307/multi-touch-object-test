@@ -1,15 +1,18 @@
-import type { ActionDefinition } from "../behaviour/ActionDefinition";
-import type { EventType } from "../events/EventType";
+import type { ActionDefinition, StateMachineDefinition } from "../behaviour";
+import type { EventType } from "../events";
+import type { GestureDefinition } from "../gesture";
+import type { PhysicalKindDefinition } from "../physical";
+import type {
+    PresentationDefinition,
+    TablePresentation,
+} from "../presentation";
+import type {
+    ModeDefinition,
+    ModeId,
+    RoleDefinition,
+    Settings,
+} from "../session";
 import type { ExtensionProperties } from "./ExtensionProperties";
-import type { GestureDefinition } from "../gesture/GestureDefinition";
-import type { ModeDefinition } from "../session/ModeDefinition";
-import type { ModeId } from "../session/ModeId";
-import type { PhysicalKindDefinition } from "../physical/PhysicalKindDefinition";
-import type { PresentationDefinition } from "../presentation/PresentationDefinition";
-import type { RoleDefinition } from "../session/RoleDefinition";
-import type { Settings } from "../session/Settings";
-import type { StateMachineDefinition } from "../behaviour/StateMachineDefinition";
-import type { TablePresentation } from "../presentation/TablePresentation";
 
 /* Everything a session runs, in one object.
  *

@@ -1,4 +1,4 @@
-import { touches } from "../state/touches";
+import { touches } from "../state";
 
 export function onControlTapUp(e: PointerEvent): void {
     const tap = touches.controlTaps.get(e.pointerId);

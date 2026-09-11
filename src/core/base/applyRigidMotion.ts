@@ -1,4 +1,4 @@
-import { FULL_TURN_DEG } from "./direction/constants";
+import { FULL_TURN_DEG } from "./direction";
 import type { RigidMotion } from "./RigidMotion";
 import type { Vec2 } from "./Vec2";
 

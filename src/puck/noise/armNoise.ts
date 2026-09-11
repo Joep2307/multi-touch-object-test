@@ -1,4 +1,4 @@
-import { noise } from "../../state/noise";
+import { noise } from "../../state";
 
 /* Holding still is over. Every foot moves to the middle of where it was
    seen while settling, and the counting starts from zero.

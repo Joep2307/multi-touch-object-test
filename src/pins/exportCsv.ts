@@ -1,11 +1,12 @@
-import { download } from "../dom/download";
-import { el } from "../dom/el";
-import { pins } from "../state/pins";
+import { download, el } from "../dom";
+import { pins } from "../state";
 
 export function exportCsv(): void {
     download(
         el<HTMLInputElement>("sess").value + ".csv",
-        "lat,lng,verdict,topic,title,description,transcript,contact_name,contact_email,contact_phone,contact_consent_at,time\n" +
+        "lat,lng,verdict,topic,title,description,transcript," +
+            "contact_name,contact_email,contact_phone," +
+            "contact_consent_at,time\n" +
             pins.list
                 .map((p) =>
                     [

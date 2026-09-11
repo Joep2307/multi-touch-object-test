@@ -1,5 +1,5 @@
 import { resolveBindings } from "./resolveBindings";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
+import type { PhysicalInstance } from "../physical";
 import type { PresentationDefinition } from "./PresentationDefinition";
 import type { PresentationId } from "./PresentationId";
 import type { PresentationView } from "./PresentationView";

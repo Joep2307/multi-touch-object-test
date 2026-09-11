@@ -1,6 +1,6 @@
-import { capture } from "../state/capture";
-import type { CapReason } from "../types/CapReason";
+import { capture } from "../state";
 import { endRec } from "./endRec";
+import type { CapReason } from "../types";
 
 /* Ask the recorder to stop; `endRec` follows from its `onstop`, or
    straight away if stopping itself fails. */

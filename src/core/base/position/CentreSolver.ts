@@ -1,4 +1,4 @@
-import type { SensedContact } from "../../contact/SensedContact";
+import type { SensedContact } from "../../contact";
 import type { CentreFit } from "./CentreFit";
 
 /* Contacts in, middle point out.

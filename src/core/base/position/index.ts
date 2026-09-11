@@ -5,7 +5,7 @@ export { Position } from "./Position";
 export { PositionPolicy } from "./PositionPolicy";
 export { PxPerMMEstimator } from "./PxPerMMEstimator";
 export { scoreFootprint } from "./scoreFootprint";
-export type { FootprintScore } from "./scoreFootprint";
+export type { FootprintScore } from "./FootprintScore";
 export { PxPerMMPolicy } from "./PxPerMMPolicy";
 export {
     CIRCLE_FIT_MIN_DET,

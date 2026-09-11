@@ -1,8 +1,8 @@
+import { puckGeometry } from "../../puck/geometry";
+import { fileURLToPath } from "node:url";
+import type { PuckGeometryExports } from "../../types";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { puckGeometry } from "../../puck/geometry/puckGeometry";
-import type { PuckGeometryExports } from "../../types/PuckGeometryExports";
 
 /* The browser fetches the wasm via vite (`?url` + fetch); a test under Node
    just reads it from disk and puts it in the same place. */

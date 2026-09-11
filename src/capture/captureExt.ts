@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 
 /* The file extension for a film: whatever the recorder produced, or the
    last mime it used when the blob does not say. */

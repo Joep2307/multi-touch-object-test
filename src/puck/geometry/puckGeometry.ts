@@ -1,4 +1,4 @@
-import type { PuckGeometryExports } from "../../types/PuckGeometryExports";
+import type { PuckGeometryExports } from "../../types";
 
 /* The loaded wasm module, or null while it's still on its way (or refused to
    load — then the table recognises nothing, but still renders). The views

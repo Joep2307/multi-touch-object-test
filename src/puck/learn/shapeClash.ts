@@ -1,14 +1,14 @@
-import { CFG } from "../../config/CFG";
-import type { RingShape } from "../../types/RingShape";
-import type { ShapeValue } from "../../types/ShapeValue";
-import type { Template } from "../../types/Template";
-import { codeDistance } from "../geometry/codeDistance";
-import { gapsOf } from "../geometry/gapsOf";
-import { isRing } from "../geometry/isRing";
-import { isSlotted } from "../geometry/isSlotted";
-import { matchRing } from "../geometry/matchRing";
-import { tplRing } from "../geometry/tplRing";
-import { tplSlots } from "../geometry/tplSlots";
+import { CFG } from "../../config";
+import {
+    codeDistance,
+    gapsOf,
+    isRing,
+    isSlotted,
+    matchRing,
+    tplRing,
+    tplSlots,
+} from "../geometry";
+import type { RingShape, ShapeValue, Template } from "../../types";
 
 /* Does this measurement look too much like a puck that already exists? For
    rings that is about the gaps between the feet, for triangles about the

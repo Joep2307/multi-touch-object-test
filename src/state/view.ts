@@ -1,4 +1,4 @@
-import { el } from "../dom/el";
+import { el } from "../dom";
 
 /* The screen and the two canvases: the top one draws every frame, the map
    layer underneath only when something about the map has changed. `W` and

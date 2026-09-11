@@ -1,6 +1,5 @@
-import type { Point } from "../../types/Point";
-import type { Shape } from "../../types/Shape";
 import { dist } from "./dist";
+import type { Point, Shape } from "../../types";
 
 /* Describe the triangle formed by three contact points: side ratios, the
    longest side, the nose, and the centroid. Null if it is too small. */

@@ -10,16 +10,11 @@
  * reason this exists: the declared 43 in screen behaves like 42 in, and
  * the table should be able to work that out on its own.
  */
+import { SCALE } from "../../config";
+import { observeScale, readScale, syncPxPerMM } from "../../puck/scale";
+import { scale, view } from "../../state";
 import { beforeEach, describe as suite, expect, it } from "vitest";
-import { SCALE } from "../../config/SCALE";
-import { observeScale } from "../../puck/scale/observeScale";
-import { readScale } from "../../puck/scale/readScale";
-import { syncPxPerMM } from "../../puck/scale/syncPxPerMM";
-import { scale } from "../../state/scale";
-import { view } from "../../state/view";
-import type { RingShape } from "../../types/RingShape";
-import type { Shape } from "../../types/Shape";
-import type { Template } from "../../types/Template";
+import type { RingShape, Shape, Template } from "../../types";
 import fixture from "./core/fixtures/contacts-table-19-18529.json";
 
 /* A 43 in screen at 1920x1080, which is what the table declares. */

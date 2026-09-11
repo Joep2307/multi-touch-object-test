@@ -1,6 +1,6 @@
-import { CFG } from "../../config/CFG";
-import { noise } from "../../state/noise";
-import type { NoiseReport } from "../../types/NoiseReport";
+import { CFG } from "../../config";
+import { noise } from "../../state";
+import type { NoiseReport } from "../../types";
 
 const median = (a: number[]): number => {
     if (!a.length) return 0;
@@ -68,12 +68,15 @@ export function noiseReport(pxPerMM: number): NoiseReport {
               : "slecht — meer pootjes nodig";
     const advice =
         miss >= 0.1
-            ? "veel uitval: de pootjes maken slecht contact of liggen te dicht op elkaar"
+            ? "veel uitval: de pootjes maken slecht contact of liggen " +
+              "te dicht op elkaar"
             : grade === "good"
               ? "tien codes met drie pootjes zijn haalbaar"
               : grade === "fair"
-                ? "houd het op vier patronen zonder buren, of neem een tweede ringmaat"
-                : `zes pootjes op ${CFG.slotCount} vakjes: die zwijgen in plaats van zich te vergissen`;
+                ? "houd het op vier patronen zonder buren, of neem " +
+                  "een tweede ringmaat"
+                : `zes pootjes op ${CFG.slotCount} vakjes: die zwijgen ` +
+                  "in plaats van zich te vergissen";
 
     return {
         frames: noise.frames,

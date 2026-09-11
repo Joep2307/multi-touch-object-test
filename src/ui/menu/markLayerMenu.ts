@@ -1,6 +1,6 @@
-import { el } from "../../dom/el";
-import { kg } from "../../kg/kg";
-import { MV } from "../../map/MV";
+import { el } from "../../dom";
+import { kg } from "../../kg";
+import { MV } from "../../map";
 
 export function markLayerMenu(): void {
     [

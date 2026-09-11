@@ -1,5 +1,5 @@
+import type { PhysicalId } from "../physical";
 import type { AssignmentStatus } from "./AssignmentStatus";
-import type { PhysicalId } from "../physical/PhysicalId";
 import type { RoleId } from "./RoleId";
 
 /* One object holding one part, at one time.

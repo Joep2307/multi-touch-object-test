@@ -1,5 +1,3 @@
-import type { Point } from "../../types/Point";
-import type { Template } from "../../types/Template";
 import { tplLongest } from "../tplLongest";
 import { codeSlots } from "./codeSlots";
 import { isRing } from "./isRing";
@@ -8,6 +6,7 @@ import { norm360 } from "./norm360";
 import { slotWidth } from "./slotWidth";
 import { tplRing } from "./tplRing";
 import { tplSlots } from "./tplSlots";
+import type { Point, Template } from "../../types";
 
 /* The contact points of a template, in millimetres times `k`: pass
    `pxPerMM` for the screen, or leave `k` out for millimetres on paper. On a

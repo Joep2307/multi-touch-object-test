@@ -1,4 +1,4 @@
-import type { NoteView } from "../types/NoteView";
+import type { NoteView } from "../types";
 
 /* A part of THIS window. Without a suffix it's the front side, so
    `notePart(frontSide,"noteTitle")` is simply `#noteTitle`. */

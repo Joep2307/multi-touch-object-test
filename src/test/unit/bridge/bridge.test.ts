@@ -5,21 +5,22 @@
  * phase 6 compares two pipelines that were never looking at the same
  * object, and reports differences that are its own fault.
  */
-import { describe, expect, it } from "vitest";
-import { ParityCheck } from "../../../bridge/ParityCheck";
-import { TrackBridge } from "../../../bridge/TrackBridge";
-import { templateToKind } from "../../../bridge/templateToKind";
-import { triadCornersMM } from "../../../bridge/triadCornersMM";
+import {
+    ParityCheck,
+    TrackBridge,
+    templateToKind,
+    triadCornersMM,
+} from "../../../bridge";
 import { CentroidSolver, footprintFrom } from "../../../core/base";
-import { SimulatedPuck } from "../../../core/physical";
-import { Apertured } from "../../../core/physical/affordance/Apertured";
-import { Nestable } from "../../../core/physical/affordance/Nestable";
-import { Nesting } from "../../../core/physical/affordance/Nesting";
-import { affordanceOf } from "../../../core/physical/affordanceOf";
-import type { TrackBridgeContact } from "../../../bridge/TrackBridgeContact";
-import type { Detection } from "../../../types/Detection";
-import type { Template } from "../../../types/Template";
-import type { TrackAssignment } from "../../../types/TrackAssignment";
+import {
+    Apertured,
+    Nestable,
+    Nesting,
+} from "../../../core/physical/affordance";
+import { SimulatedPuck, affordanceOf } from "../../../core/physical";
+import { describe, expect, it } from "vitest";
+import type { TrackBridgeContact } from "../../../bridge";
+import type { Detection, Template, TrackAssignment } from "../../../types";
 
 const ring = (extra: Partial<Template> = {}): Template => ({
     id: "ring-1",

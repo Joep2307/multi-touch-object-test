@@ -1,11 +1,12 @@
-import { AllowTemporarilyOverflow } from "./overflow/AllowTemporarilyOverflow";
-import { QueueOverflow } from "./overflow/QueueOverflow";
-import { RejectOverflow } from "./overflow/RejectOverflow";
-import { ReplaceLowestPriorityOverflow } from "./overflow/ReplaceLowestPriorityOverflow";
-import { ReplaceOldestOverflow } from "./overflow/ReplaceOldestOverflow";
+import {
+    AllowTemporarilyOverflow,
+    QueueOverflow,
+    RejectOverflow,
+    ReplaceLowestPriorityOverflow,
+    ReplaceOldestOverflow,
+} from "./overflow";
+import type { PhysicalId, PhysicalInstance } from "../physical";
 import type { OverflowResolver } from "./OverflowResolver";
-import type { PhysicalId } from "../physical/PhysicalId";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
 import type { RoleAssignment } from "./RoleAssignment";
 import type { RoleDefinition } from "./RoleDefinition";
 import type { RoleId } from "./RoleId";
@@ -82,7 +83,7 @@ export class RoleAssigner {
            could take it. Queued entries go too, or an object re-offered
            a part it is already waiting for stacks up duplicates and
            ends up holding one place twice. */
-        this.#release(assigneeId);
+        this.#release(assigneeId, at);
 
         const held = this.active(roleId);
         const max = role.maximumAssignments;
@@ -123,6 +124,35 @@ export class RoleAssigner {
         return kinds === undefined || kinds.includes(instance.kindId);
     }
 
+    /* The same question with the role looked up here, so a caller that
+       holds an id rather than a definition does not have to go find one
+       — and so there is one answer rather than two. A role nobody
+       defined is one nothing is eligible for. */
+    eligibleFor(instance: PhysicalInstance, roleId: RoleId): boolean {
+        const role = this.roles.find((r) => r.id === roleId);
+        return role !== undefined && this.eligible(instance, role);
+    }
+
+    /* The part this object is standing in line for, if any.
+     *
+     * Asked before a part is offered again. An object waiting in a
+     * queue holds no role, so anything that offers parts to whoever has
+     * none would offer this one again — and taking the offer means
+     * letting go of the place it was already holding and joining at the
+     * back. Re-offered once a frame, an object at the head of the queue
+     * would never reach the front of it. */
+    waitingFor(assigneeId: PhysicalId): RoleId | null {
+        for (const assignment of this.#assignments) {
+            if (
+                assignment.assigneeId === assigneeId &&
+                assignment.status === "queued"
+            ) {
+                return assignment.roleId;
+            }
+        }
+        return null;
+    }
+
     /* The object is gone for good, not merely lifted. Its part expires
        and the first thing waiting takes it. */
     departed(assigneeId: PhysicalId, at: number): void {
@@ -139,16 +169,27 @@ export class RoleAssigner {
     }
 
     /* Close every assignment this object still holds or is waiting
-       for. */
-    #release(assigneeId: PhysicalId): void {
+       for, and let the queue move up behind it.
+     *
+     * The promotion is the half that was missing. A place vacated by an
+     * object taking a different part is as open as one vacated by an
+     * object leaving the table, and `departed` promoted while this did
+     * not — so whether the queue moved depended on *why* the place came
+     * free, which is not something anybody standing at the table could
+     * have predicted. */
+    #release(assigneeId: PhysicalId, at: number): void {
+        const opened = new Set<RoleId>();
         for (const assignment of [...this.#assignments]) {
             if (assignment.assigneeId !== assigneeId) continue;
-            if (assignment.status === "active") {
-                this.#replace(assignment, "removed");
-            } else if (assignment.status === "queued") {
-                this.#replace(assignment, "removed");
-            }
+            if (
+                assignment.status !== "active" &&
+                assignment.status !== "queued"
+            )
+                continue;
+            if (assignment.status === "active") opened.add(assignment.roleId);
+            this.#replace(assignment, "removed");
         }
+        for (const roleId of opened) this.#promote(roleId, at);
     }
 
     /* Move the first object waiting into the place that just opened. */

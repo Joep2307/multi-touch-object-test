@@ -1,6 +1,6 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { MV } from "../map/MV";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { MV } from "../map";
 
 /* This is the only text input on the map side, and it used to fail
    completely silently: offline, on a typo, or hitting Nominatim's rate
@@ -18,7 +18,8 @@ export async function onSearchKeydown(e: KeyboardEvent): Promise<void> {
     hint.textContent = tr("searchBusy");
     try {
         const r = await fetch(
-            "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
+            "https://nominatim.openstreetmap.org/search" +
+                "?format=json&limit=1&q=" +
                 encodeURIComponent(q),
             { signal: AbortSignal.timeout(8000) },
         );

@@ -1,7 +1,7 @@
-import { TPL_FACTORY } from "../config/TPL_FACTORY";
-import { templates } from "../state/templates";
+import { TPL_FACTORY } from "../config";
+import { templates } from "../state";
 import { cloneTpl } from "./cloneTpl";
-import { TPL_KEY } from "./saveTemplates";
+import { TPL_KEY } from "./constants";
 
 /* Back to the blueprint. First all shape fields go: a puck that was learned
    as a triangle has to become the ring of the drawing again, not both at

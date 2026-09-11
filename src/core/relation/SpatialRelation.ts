@@ -1,4 +1,4 @@
-import type { PhysicalId } from "../physical/PhysicalId";
+import type { PhysicalId } from "../physical";
 import type { RelationKind } from "./RelationKind";
 
 /* How one object stands to another, this frame.

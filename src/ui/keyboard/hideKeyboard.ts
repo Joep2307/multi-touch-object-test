@@ -1,6 +1,6 @@
-import { keyboards } from "../../state/keyboards";
-import type { KeyboardView } from "../../types/KeyboardView";
+import { keyboards } from "../../state";
 import { kbVisible } from "./kbVisible";
+import type { KeyboardView } from "../../types";
 
 export function hideKeyboard(
     kb: KeyboardView | null | undefined,

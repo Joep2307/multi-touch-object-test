@@ -1,5 +1,5 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
+import { el } from "../dom";
+import { tr } from "../i18n";
 
 /* ── Fullscreen ────────────────────────────────────────────────────────
    Only the browser bar. The desktop environment's gestures — three

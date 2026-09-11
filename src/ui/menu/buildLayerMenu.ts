@@ -1,7 +1,6 @@
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
-import { toggleGaps } from "../kgInfo/toggleGaps";
-import { toggleRelations } from "../kgInfo/toggleRelations";
+import { el } from "../../dom";
+import { tr } from "../../i18n";
+import { toggleGaps, toggleRelations } from "../kgInfo";
 import { layerButton } from "./layerButton";
 import { markLayerMenu } from "./markLayerMenu";
 

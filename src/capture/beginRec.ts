@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 import { REC_BITRATE, REC_FPS, REC_MAX_BYTES, REC_MAX_MS } from "./constants";
 import { endRec } from "./endRec";
 import { finishRec } from "./finishRec";

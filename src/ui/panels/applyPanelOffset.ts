@@ -1,5 +1,4 @@
-import { panels } from "../../state/panels";
-import { ui } from "../../state/ui";
+import { panels, ui } from "../../state";
 
 /* ── Dragging panels ──────────────────────────────────────────────────
    At a table everyone stands somewhere different, and a panel that sits

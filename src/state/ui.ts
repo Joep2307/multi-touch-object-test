@@ -1,8 +1,6 @@
-import { CFG } from "../config/CFG";
-import type { ColorTheme } from "../types/ColorTheme";
-import type { Lang } from "../types/Lang";
-import type { UiMode } from "../types/UiMode";
+import { CFG } from "../config";
 import { storedUiScale } from "./storedUiScale";
+import type { ColorTheme, Lang, UiMode } from "../types";
 
 /* The state of the controls. What's here is read from localStorage on load,
    so a table that was set to English, or to 115%, stays that way after a

@@ -1,22 +1,19 @@
-import { el } from "../dom/el";
-import { resize } from "../map/resize";
-import { closeNotes } from "../notes/closeNotes";
-import { refreshNoteFlipLabels } from "../notes/refreshNoteFlipLabels";
-import { clearPucks } from "../puck/sim/clearPucks";
-import { ui } from "../state/ui";
-import type { UiMode } from "../types/UiMode";
+import { el } from "../dom";
+import { resize } from "../map";
+import { closeNotes, refreshNoteFlipLabels } from "../notes";
+import { clearPucks } from "../puck/sim";
+import { storedUiScale, ui } from "../state";
 import { applyScale } from "./applyScale";
 import { applySides } from "./applySides";
-import { hideKeyboards } from "./keyboard/hideKeyboards";
-import { refreshKeyboardFields } from "./keyboard/refreshKeyboardFields";
+import { hideKeyboards, refreshKeyboardFields } from "./keyboard";
 import { refreshModeTexts } from "./refreshModeTexts";
-import { storedUiScale } from "../state/storedUiScale";
+import type { UiMode } from "../types";
 
 export function applyMode(mode: UiMode): void {
     ui.mode = mode;
-    /* `mode-touch` is about the size of the controls and therefore also applies to
-     puck mode: that's also a table. What sets puck mode apart -- the bar
-     gone, an add button in its place -- is tied to `mode-puck`. */
+    /* `mode-touch` is about the size of the controls and therefore also
+       applies to puck mode: that's also a table. What sets puck mode apart --
+       the bar gone, an add button in its place -- is tied to `mode-puck`. */
     document.body.classList.toggle("mode-touch", mode !== "laptop");
     document.body.classList.toggle("mode-laptop", mode === "laptop");
     document.body.classList.toggle("mode-puck", mode === "puck");
@@ -42,8 +39,9 @@ export function applyMode(mode: UiMode): void {
     applySides();
     closeNotes();
     if (mode === "laptop") hideKeyboards();
-    /* Drag copies belong to the bar. If the bar goes away, they go with it: otherwise
-     a puck is left lying on the table that can no longer be picked up anywhere. */
+    /* Drag copies belong to the bar. If the bar goes away, they go with it:
+       otherwise a puck is left lying on the table that can no longer be picked
+       up anywhere. */
     if (mode === "puck") clearPucks();
     try {
         localStorage.setItem("pucktable-ui-mode", mode);

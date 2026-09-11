@@ -1,4 +1,4 @@
-import { tr } from "../../i18n/tr";
+import { tr } from "../../i18n";
 import { dragControl } from "./dragControl";
 import { resetPanelOffset } from "./resetPanelOffset";
 import { startPanelDrag } from "./startPanelDrag";
@@ -25,7 +25,8 @@ export function makeDraggable(
     }
     for (const zone of head ? [head] : [grip!]) {
         zone.addEventListener("pointerdown", (ev) => {
-            if (head && dragControl(ev.target)) return; // a button stays a button
+            // A button stays a button.
+            if (head && dragControl(ev.target)) return;
             startPanelDrag(panel, zone, ev);
         });
         zone.addEventListener("dblclick", () => resetPanelOffset(panel));

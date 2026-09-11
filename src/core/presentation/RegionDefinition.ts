@@ -1,9 +1,9 @@
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
-import type { KindId } from "../physical/KindId";
+import type { KindId } from "../physical";
+import type { ExtensionProperties } from "../programme";
+import type { RoleId } from "../session";
 import type { PresentationId } from "./PresentationId";
 import type { RegionId } from "./RegionId";
 import type { RegionShape } from "./RegionShape";
-import type { RoleId } from "../session/RoleId";
 
 /* A piece of table that means something.
  *

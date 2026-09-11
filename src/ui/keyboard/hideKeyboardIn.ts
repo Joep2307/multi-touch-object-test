@@ -1,4 +1,4 @@
-import { keyboards } from "../../state/keyboards";
+import { keyboards } from "../../state";
 import { hideKeyboard } from "./hideKeyboard";
 
 /* Everything that was being typed in this piece of screen is gone; the

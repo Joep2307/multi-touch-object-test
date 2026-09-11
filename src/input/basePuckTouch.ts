@@ -1,7 +1,8 @@
-import type { PuckTouch } from "../types/PuckTouch";
+import type { PuckTouch } from "../types";
 
-/* Snapshot the puck + finger geometry so the next move can be applied as a delta:
-   one finger slides the puck, two fingers only twist it — the puck stays put. */
+/* Snapshot the puck + finger geometry so the next move can be applied as a
+   delta: one finger slides the puck, two fingers only twist it — the puck
+   stays put. */
 export function basePuckTouch(pt: PuckTouch): void {
     const p = [...pt.ptrs.values()];
     const [p0, p1] = p;

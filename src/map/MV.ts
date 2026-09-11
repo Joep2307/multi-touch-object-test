@@ -1,7 +1,5 @@
-import { view } from "../state/view";
-import type { LatLng } from "../types/LatLng";
-import type { MapView } from "../types/MapView";
-import type { Point } from "../types/Point";
+import { view } from "../state";
+import type { LatLng, MapView, Point } from "../types";
 
 /* ═══════════════════════════════════════════════════════════════
    MAP — slippy tiles drawn straight onto the canvas.
@@ -87,9 +85,12 @@ export const MV: MapView = {
         ay = ay === undefined ? view.H / 2 : ay;
         const z = Math.max(3, Math.min(19, MV.zoom + dz));
         if (z === MV.zoom) return;
-        const anchor = MV.unproject(ax, ay); // geo point under the cursor, at the old zoom
+        // The geo point under the cursor, at the old zoom.
+        const anchor = MV.unproject(ax, ay);
         MV.zoom = z;
-        const p = MV.project(anchor.lng, anchor.lat); // where that same point lands after zooming
-        MV.panBy(ax - p.x, ay - p.y); // keep the anchor fixed, also on a rotated map
+        // Where that same point lands after zooming.
+        const p = MV.project(anchor.lng, anchor.lat);
+        // Keep the anchor fixed, also on a rotated map.
+        MV.panBy(ax - p.x, ay - p.y);
     },
 };

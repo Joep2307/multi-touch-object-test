@@ -1,6 +1,6 @@
-import { CFG } from "../../config/CFG";
-import { MV } from "../../map/MV";
-import { sim } from "../../state/sim";
+import { CFG } from "../../config";
+import { MV } from "../../map";
+import { sim } from "../../state";
 import { markTray } from "./markTray";
 
 export function endTrayDrag(e: PointerEvent): void {
@@ -9,9 +9,11 @@ export function endTrayDrag(e: PointerEvent): void {
     const { tpl, ghost, x0, y0 } = d;
     ghost.remove();
     sim.trayDrags.delete(e.pointerId);
-    if (Math.hypot(e.clientX - x0, e.clientY - y0) < 24) return; // a tap, not a drag — ignore
-    // Drop where released; if that's still under a panel, slide it toward the middle
-    // until it clears, so the puck actually lands somewhere visible on the table.
+    // A tap, not a drag — ignore.
+    if (Math.hypot(e.clientX - x0, e.clientY - y0) < 24) return;
+    // Drop where released; if that's still under a panel, slide it toward the
+    // middle until it clears, so the puck actually lands somewhere visible on
+    // the table.
     let x = e.clientX,
         y = e.clientY;
     // Only panels that are actually present: a closed menu or panel has an

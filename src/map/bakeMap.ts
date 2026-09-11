@@ -1,10 +1,9 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { tiles } from "../state/tiles";
-import { view } from "../state/view";
-import type { BasemapRecord } from "../types/BasemapRecord";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { tiles, view } from "../state";
 import { MV } from "./MV";
 import { bakeStore } from "./bakeStore";
+import type { BasemapRecord } from "../types";
 
 /* Capture the current map view as a JPEG and save it. */
 export function bakeMap(): void {

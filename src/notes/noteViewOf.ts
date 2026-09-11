@@ -1,5 +1,5 @@
-import { notes } from "../state/notes";
-import type { NoteView } from "../types/NoteView";
+import { notes } from "../state";
+import type { NoteView } from "../types";
 
 /* The window this element is in, if it is in a window. */
 export const noteViewOf = (node: Node | null): NoteView | null =>

@@ -1,4 +1,4 @@
-import type { Pin } from "../types/Pin";
+import type { Pin } from "../types";
 
 /* ── Transcribing the conversation ────────────────────────────────────────
    What gets typed is a summary; the conversation around it is what it was

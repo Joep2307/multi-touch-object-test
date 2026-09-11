@@ -1,5 +1,5 @@
-import { openNotes } from "../notes/openNotes";
-import { talk } from "../state/talk";
+import { openNotes } from "../notes";
+import { talk } from "../state";
 import { setTalkMsg } from "./setTalkMsg";
 import { stopTalk } from "./stopTalk";
 import { talkView } from "./talkView";

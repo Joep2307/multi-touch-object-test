@@ -1,4 +1,4 @@
-import { pins } from "../state/pins";
+import { pins } from "../state";
 import { save } from "./save";
 
 /* While typing, not every keystroke needs to go to storage. */

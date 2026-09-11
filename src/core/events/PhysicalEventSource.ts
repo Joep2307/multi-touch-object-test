@@ -1,15 +1,11 @@
-import { GestureRecogniser } from "../gesture/GestureRecogniser";
-import type { BaseSnapshot } from "../base/BaseSnapshot";
+import { GestureRecogniser } from "../gesture";
+import type { BaseSnapshot, Vec2 } from "../base";
+import type { GestureDefinition, GestureResult } from "../gesture";
+import type { PhysicalId, PhysicalInstance, PresenceState } from "../physical";
 import type { EventBus } from "./EventBus";
 import type { EventDraft } from "./EventDraft";
 import type { EventType } from "./EventType";
-import type { GestureDefinition } from "../gesture/GestureDefinition";
-import type { GestureResult } from "../gesture/GestureResult";
 import type { PhysicalEventPolicy } from "./PhysicalEventPolicy";
-import type { PhysicalId } from "../physical/PhysicalId";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
-import type { PresenceState } from "../physical/PresenceState";
-import type { Vec2 } from "../base/Vec2";
 
 const NO_PROPERTIES = Object.freeze({});
 

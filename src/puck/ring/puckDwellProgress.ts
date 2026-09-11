@@ -1,8 +1,9 @@
-import type { Track } from "../../types/Track";
 import { dwellMSFor } from "./dwellMSFor";
 import { ringItems } from "./ringItems";
+import type { Track } from "../../types";
 
-/* How far the dwell has progressed; 0 if nothing is running. Only for display. */
+/* How far the dwell has progressed; 0 if nothing is running. Only for display.
+ */
 export function puckDwellProgress(t: Track, now: number): number {
     if (t.dwellDone) return 0;
     const items = ringItems(t),

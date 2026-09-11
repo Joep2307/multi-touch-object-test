@@ -1,8 +1,7 @@
-import type { Point } from "../../types/Point";
-import type { RingShape } from "../../types/RingShape";
 import { fitCircle } from "./fitCircle";
 import { gapsOf } from "./gapsOf";
 import { norm360 } from "./norm360";
+import type { Point, RingShape } from "../../types";
 
 /* Five feet on one circle: fit the circle, then read the angles from its
    centre. */

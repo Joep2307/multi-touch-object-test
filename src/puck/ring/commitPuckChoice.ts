@@ -1,9 +1,9 @@
-import { openNote } from "../../notes/openNote";
-import { pins } from "../../state/pins";
-import type { Track } from "../../types/Track";
+import { openNote } from "../../notes";
+import { pins } from "../../state";
 import { dropPin } from "../dropPin";
 import { syncPlacedPinTopic } from "../syncPlacedPinTopic";
 import { ringItems } from "./ringItems";
+import type { Track } from "../../types";
 
 /* Carry out a choice from the ring. Only here does a puck's mode change,
    so there's a single place to read what each option does. */

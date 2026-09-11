@@ -1,5 +1,5 @@
-import { VERDICTS } from "../config/VERDICTS";
-import type { Verdict } from "../types/Verdict";
+import { VERDICTS } from "../config";
+import type { Verdict } from "../types";
 
 /* The colour of a puck type. Throws on an unknown type — which is why
    everything coming out of storage first goes through validPin. */

@@ -1,7 +1,8 @@
-import { touches } from "../state/touches";
-import type { PuckTouch } from "../types/PuckTouch";
+import { touches } from "../state";
+import type { PuckTouch } from "../types";
 
-/* A finger that lands next to the pucks belongs to whichever grip is closest to it. */
+/* A finger that lands next to the pucks belongs to whichever grip is closest
+   to it. */
 export function nearestPuckTouch(x: number, y: number): PuckTouch | null {
     let best: PuckTouch | null = null,
         bd = Infinity;

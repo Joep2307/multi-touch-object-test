@@ -1,7 +1,7 @@
 import { Puck } from "./Puck";
-import { Apertured } from "./affordance/Apertured";
 import { affordanceOf } from "./affordanceOf";
-import type { Vec2 } from "../base/Vec2";
+import { Apertured } from "./affordance";
+import type { Vec2 } from "../base";
 
 /* A puck with a viewing hole: the map stays visible through it, and
    the hole can be tapped into.

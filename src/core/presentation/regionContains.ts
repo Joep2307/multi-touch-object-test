@@ -1,5 +1,5 @@
+import type { Vec2 } from "../base";
 import type { RegionShape } from "./RegionShape";
-import type { Vec2 } from "../base/Vec2";
 
 /* Is this point inside this shape, allowing for a margin?
  *

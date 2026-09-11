@@ -1,10 +1,10 @@
-import type { Affordance } from "./affordance/Affordance";
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
+import type { StateMachineId } from "../behaviour";
+import type { PresentationId } from "../presentation";
+import type { ExtensionProperties } from "../programme";
+import type { RoleId } from "../session";
 import type { KindId } from "./KindId";
 import type { PhysicalSignature } from "./PhysicalSignature";
-import type { PresentationId } from "../presentation/PresentationId";
-import type { RoleId } from "../session/RoleId";
-import type { StateMachineId } from "../behaviour/StateMachineId";
+import type { Affordance } from "./affordance";
 
 /* What was manufactured: one entry per physical object design.
  *

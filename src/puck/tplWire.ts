@@ -1,4 +1,4 @@
-import type { Template } from "../types/Template";
+import type { Template } from "../types";
 
 /* A template as it goes to disk or into an export, whatever its shape. The
    fields of the other shape are written as null: that way the file shows

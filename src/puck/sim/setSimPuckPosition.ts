@@ -1,5 +1,5 @@
-import { MV } from "../../map/MV";
-import type { SimPuck } from "../../types/SimPuck";
+import { MV } from "../../map";
+import type { SimPuck } from "../../types";
 
 export function setSimPuckPosition(puck: SimPuck, x: number, y: number): void {
     puck.x = x;

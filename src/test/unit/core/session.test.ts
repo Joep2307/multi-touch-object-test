@@ -504,6 +504,123 @@ describe("Session", () => {
         expect(session.roles.active(roleId("Supervisor"))).toHaveLength(1);
     });
 
+    /* A table with a capped, queued role on it, and a few objects. The
+       queue is where the ledger and the objects most easily drift
+       apart: a promotion happens inside the ledger, and unless the
+       session walks the table afterwards nobody tells the promoted
+       object what it now holds. */
+    const queueTable = (
+        ids: readonly string[],
+    ): { session: Session; registry: PhysicalRegistry } => {
+        const registry = new PhysicalRegistry();
+        for (const id of ids) {
+            registry.add(
+                new SystemPhysical(
+                    physicalId(id),
+                    TOKEN,
+                    new Presence(new PresencePolicy()),
+                ),
+            );
+        }
+        const session = new Session(
+            "queue",
+            new EventBus(),
+            registry,
+            [],
+            [],
+            new EffectRegistry(),
+            new RoleAssigner([capped("queue"), VOTER]),
+            new SettingsResolver([]),
+        );
+        return { session, registry };
+    };
+
+    it("tells the promoted object it now holds the part", () => {
+        /* The whole bug: `departed` promoted b inside the ledger and
+           nothing wrote the part onto b itself, so `instance("b")`
+           went on saying null until some unrelated mode change
+           happened to reconcile. */
+        const t = queueTable(["a", "b", "c"]);
+        t.session.beginFrame(0);
+        t.session.assignRole(physicalId("a"), roleId("Supervisor"));
+        t.session.assignRole(physicalId("b"), roleId("Supervisor"));
+        t.session.assignRole(physicalId("c"), roleId("Supervisor"));
+        expect(t.session.instance("a")?.roleId).toBe("Supervisor");
+        expect(t.session.instance("b")?.roleId).toBeNull();
+
+        t.session.beginFrame(10);
+        t.session.assignRole(physicalId("a"), null);
+        expect(t.session.instance("b")?.roleId).toBe("Supervisor");
+        expect(t.session.instance("c")?.roleId).toBeNull();
+    });
+
+    it("moves the queue up whether the place was vacated or lost", () => {
+        /* `departed` promoted and `#release` did not, so whether the
+           queue moved depended on *why* a place came free — which is
+           not something anybody at the table could have predicted. */
+        const t = queueTable(["a", "b", "c"]);
+        t.session.beginFrame(0);
+        t.session.assignRole(physicalId("a"), roleId("Supervisor"));
+        t.session.assignRole(physicalId("b"), roleId("Supervisor"));
+        t.session.assignRole(physicalId("c"), roleId("Supervisor"));
+
+        /* a takes a different part rather than leaving. */
+        t.session.beginFrame(10);
+        t.session.assignRole(physicalId("a"), roleId("Voter"));
+        expect(t.session.instance("a")?.roleId).toBe("Voter");
+        expect(t.session.instance("b")?.roleId).toBe("Supervisor");
+    });
+
+    it("keeps the queue in the order people joined it", () => {
+        const t = queueTable(["a", "b", "c"]);
+        t.session.beginFrame(0);
+        t.session.assignRole(physicalId("a"), roleId("Supervisor"));
+        t.session.assignRole(physicalId("b"), roleId("Supervisor"));
+        t.session.assignRole(physicalId("c"), roleId("Supervisor"));
+        /* Being offered the part again must not send b to the back:
+           it is already standing in line for it. */
+        expect(t.session.roles.waitingFor(physicalId("b"))).toBe("Supervisor");
+        expect(t.session.roles.waitingFor(physicalId("c"))).toBe("Supervisor");
+        t.session.beginFrame(10);
+        t.session.assignRole(physicalId("a"), null);
+        expect(t.session.instance("b")?.roleId).toBe("Supervisor");
+    });
+
+    it("refuses a part to a kind the role is not for", () => {
+        /* Only the arrival path asked this, so a rule's `assignRole`
+           could hand a Moderator's part to a printed card and the
+           ledger would record it. Every grant goes through
+           `Session.assignRole`, so that is where it is asked. */
+        const registry = new PhysicalRegistry();
+        registry.add(
+            new SystemPhysical(
+                physicalId("a"),
+                TOKEN,
+                new Presence(new PresencePolicy()),
+            ),
+        );
+        const cardOnly: RoleDefinition = {
+            id: roleId("Supervisor"),
+            name: "Supervisor",
+            overflowPolicy: "reject",
+            eligiblePhysicalKinds: ["VoterCard" as KindId],
+        };
+        const session = new Session(
+            "eligibility",
+            new EventBus(),
+            registry,
+            [],
+            [],
+            new EffectRegistry(),
+            new RoleAssigner([cardOnly]),
+            new SettingsResolver([]),
+        );
+        session.beginFrame(0);
+        session.assignRole(physicalId("a"), roleId("Supervisor"));
+        expect(session.instance("a")?.roleId).toBeNull();
+        expect(session.roles.active(roleId("Supervisor"))).toHaveLength(0);
+    });
+
     it("hands the outbox over and keeps nothing back", () => {
         const t = table();
         t.session.beginFrame(0);

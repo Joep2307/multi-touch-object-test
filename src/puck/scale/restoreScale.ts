@@ -1,6 +1,6 @@
-import { SCALE } from "../../config/SCALE";
-import { scale } from "../../state/scale";
-import { SCALE_KEY } from "./saveScale";
+import { SCALE } from "../../config";
+import { scale } from "../../state";
+import { SCALE_KEY } from "./constants";
 
 /* Put back what an earlier session measured, if it is still believable.
    Out of range or unreadable means back to 1: a stored value is a

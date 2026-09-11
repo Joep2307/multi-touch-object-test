@@ -1,10 +1,9 @@
-import { vColor } from "../i18n/vColor";
-import { kg } from "../kg/kg";
-import { nearby } from "../kg/nearby";
-import { MV } from "../map/MV";
-import { puckTopic } from "../puck/ring/puckTopic";
-import { view } from "../state/view";
-import type { Track } from "../types/Track";
+import { vColor } from "../i18n";
+import { kg, nearby } from "../kg";
+import { MV } from "../map";
+import { puckTopic } from "../puck/ring";
+import { view } from "../state";
+import type { Track } from "../types";
 
 /* When the knowledge graph is open, a puck also gets a visible relationship
    with what is known at that location. The three best-matching nodes keep

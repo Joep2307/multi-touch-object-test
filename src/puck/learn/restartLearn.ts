@@ -1,4 +1,4 @@
-import { learn } from "../../state/learn";
+import { learn } from "../../state";
 import { learnPoints } from "./learnPoints";
 import { renderLearn } from "./renderLearn";
 import { setLearnBar } from "./setLearnBar";

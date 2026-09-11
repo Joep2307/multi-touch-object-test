@@ -1,4 +1,4 @@
-import { CHIP } from "../state/chip";
+import { CHIP } from "../state";
 import { chipHeight } from "./chipHeight";
 
 /* A yellow notification chip in the middle of the table — used for "Card is

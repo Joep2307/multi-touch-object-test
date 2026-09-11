@@ -1,13 +1,8 @@
-import { mdToHtml } from "../dom/mdToHtml";
-import { topicLabel } from "../i18n/topicLabel";
-import { tr } from "../i18n/tr";
-import { vName } from "../i18n/vName";
-import { ask } from "../kg/ask";
-import { buildQuestion } from "../kg/buildQuestion";
-import { kg } from "../kg/kg";
-import { nearby } from "../kg/nearby";
-import type { NoteView } from "../types/NoteView";
+import { mdToHtml } from "../dom";
+import { topicLabel, tr, vName } from "../i18n";
+import { ask, buildQuestion, kg, nearby } from "../kg";
 import { notePart } from "./notePart";
+import type { NoteView } from "../types";
 
 /* "Ask for a solution": build the question and let the answer
    stream in. */
@@ -27,7 +22,8 @@ export async function askKnowledge(
     src.style.display = "none";
     src.textContent = "";
     /* The box has a fixed height, so the text auto-scrolls along as long as
-     nobody has scrolled up themselves. Anyone reading back keeps their place. */
+       nobody has scrolled up themselves. Anyone reading back keeps their
+       place. */
     const atEnd = () =>
         out.scrollHeight - out.scrollTop - out.clientHeight < 24;
     let follow = true;

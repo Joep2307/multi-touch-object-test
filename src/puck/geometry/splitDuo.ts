@@ -1,14 +1,5 @@
-import type { Point } from "../../types/Point";
-import type { Shape } from "../../types/Shape";
 import { describe } from "./describe";
-
-export interface DuoSplit {
-    big: Shape;
-    small: Shape;
-    score: number;
-    bi: number[];
-    si: number[];
-}
+import type { DuoSplit, Point } from "../../types";
 
 /* Six points, split into the two triangles of the duo: a big one and a
    small one around the same centre. Returns the cleanest split, or null if

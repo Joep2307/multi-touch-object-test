@@ -1,4 +1,4 @@
-import { Policy } from "../base/Policy";
+import { Policy } from "../base";
 import { REGION_HYSTERESIS_MM } from "./constants";
 
 /* How far inside a region an object has to be before it counts, and

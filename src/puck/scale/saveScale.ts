@@ -1,6 +1,5 @@
-import { scale } from "../../state/scale";
-
-export const SCALE_KEY = "pucktable-scale";
+import { scale } from "../../state";
+import { SCALE_KEY } from "./constants";
 
 /* Keep the correction, not the scale: a factor still means something on a
    screen of another size, where a number of pixels per millimetre would

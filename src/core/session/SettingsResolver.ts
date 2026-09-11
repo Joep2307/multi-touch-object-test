@@ -1,14 +1,5 @@
-import type { KindId } from "../physical/KindId";
-import type { ModeId } from "./ModeId";
-import type { RoleId } from "./RoleId";
 import type { Settings } from "./Settings";
-
-/* Which scopes apply to the question being asked. */
-export type SettingsQuery = {
-    readonly modeId?: ModeId | null;
-    readonly roleId?: RoleId | null;
-    readonly kindId?: KindId | null;
-};
+import type { SettingsQuery } from "./SettingsQuery";
 
 /* The most specific answer wins.
  *

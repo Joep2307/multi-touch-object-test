@@ -1,10 +1,12 @@
-import { learn } from "../../state/learn";
-import type { DuoSample } from "../../types/DuoSample";
-import type { LearnMeasure } from "../../types/LearnMeasure";
-import type { RingSample } from "../../types/RingSample";
-import type { SlotSample } from "../../types/SlotSample";
-import type { TriSample } from "../../types/TriSample";
-import { norm360 } from "../geometry/norm360";
+import { learn } from "../../state";
+import { norm360 } from "../geometry";
+import type {
+    DuoSample,
+    LearnMeasure,
+    RingSample,
+    SlotSample,
+    TriSample,
+} from "../../types";
 
 /* The median over the series. For a triangle that goes number by number.
    For a ring it must first be settled which foot is which: the first frame

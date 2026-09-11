@@ -116,7 +116,7 @@ exe/                De app zelf: wat je in een browser opent. Vite's root.
     layout/             Het paneel zelf, het menu, de balken.
     components/         Elk venster: notitie, toetsenbord, graaf, analyse…
   public/fixtures/    De graaf van Breda, voor als er geen backend is.
-src/                Alle code. Eén symbool per bestand.
+src/                Alle code. Eén symbool per bestand, een index.ts per map.
   main.ts             Het enige bestand dat iets dóet bij het laden.
   config/             CFG en de vaste tabellen (kaartbeelden, demo, toetsen).
   state/              De veranderlijke toestand: ui, view, pins, tracks, …
@@ -134,12 +134,39 @@ src/                Alle code. Eén symbool per bestand.
   ui/                 Menu, toetsenbord, panelen, analyse, taal, …
   kg/                 De kennisgraaf — de enige plek die coco-biblio kent.
   speech/             Spraak naar tekst; kiest zelf tussen dienst en browser.
-  boot/               wireEvents: alle knoppen en listeners aansluiten.
+  capture/            Foto, opname en tijdlapse van het tafelbeeld.
+  boot/               wireEvents, de lettertypen, en de testhaken.
+  core/, bridge/      Het hoofdloze model en de brug ernaartoe; zie
+                      ARCHITECTURE.md.
   test/unit/          Eenheidstests (Vitest).
   test/smoke.ts       De rooktest (Playwright).
 vendor/             De BiblioClient uit sturnia-node. Andermans code.
+legacy/             De tafel van vóór de modulesplitsing. Niets gebruikt het.
 deploy/             Installeren en bijwerken op de NUC, plus de kioskstand.
 ```
+
+## Hoe de boom in elkaar zit
+
+Drie afspraken gelden voor `src/` als geheel, niet alleen voor de kern,
+en alle drie worden ze door een test bewaakt
+(`src/test/unit/conventions.test.ts`):
+
+- **Eén symbool per bestand**, en het bestand heet ernaar.
+  `constants.ts` is de uitzondering die de afspraak zelf noemt.
+- **Elke map heeft een `index.ts`.** Wie uit een andere map importeert
+  gaat door die barrel — nooit rechtstreeks naar een bestand erin. Naar
+  bóven mag wel: een bestand importeert gewoon een bestand uit een map
+  erboven, want die barrel exporteert het kind al, en de kring die dat
+  anders maakt geeft een subklasse een lege basis.
+- **79 kolommen**, ook waar Prettier niet komt: commentaar, teksten
+  tussen aanhalingstekens, de streepjeslijnen in een kop.
+
+Daar hoort een vierde bij die geen test maar een gewoonte is: **niets
+doet werk bij het laden.** `src/main.ts` is het enige bestand dat iets
+dóet zodra het geladen wordt; elk ander bestand exporteert één ding en
+wacht tot het geroepen wordt. `src/test/unit/barrels.test.ts` laadt elke
+barrel afzonderlijk onder Node — zonder pagina — en dat lukt alleen als
+dat waar blijft.
 
 ## De Rust-kant
 

@@ -1,5 +1,5 @@
-import { MV } from "../map/MV";
-import { view } from "../state/view";
+import { MV } from "../map";
+import { view } from "../state";
 import { NODE_COLOR } from "./NODE_COLOR";
 import { kg } from "./kg";
 

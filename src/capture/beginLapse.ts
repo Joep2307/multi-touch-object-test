@@ -1,7 +1,7 @@
-import { capture } from "../state/capture";
-import type { Lapse } from "../types/Lapse";
+import { capture } from "../state";
 import { LAPSE_EVERY_MS } from "./constants";
 import { grabFrame } from "./grabFrame";
+import type { Lapse } from "../types";
 
 /* Start a time-lapse: a first frame straight away, then one every few
    seconds. */

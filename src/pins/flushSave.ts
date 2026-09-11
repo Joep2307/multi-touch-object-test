@@ -1,4 +1,4 @@
-import { pins } from "../state/pins";
+import { pins } from "../state";
 import { save } from "./save";
 
 /* What was typed is already in the marker, but the save may still be

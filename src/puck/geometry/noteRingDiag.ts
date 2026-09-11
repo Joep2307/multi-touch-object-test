@@ -1,9 +1,5 @@
-import { diag } from "../../state/diag";
-import { ui } from "../../state/ui";
-import type { RingMatch } from "../../types/RingMatch";
-import type { RingShape } from "../../types/RingShape";
-import type { Template } from "../../types/Template";
-import { view } from "../../state/view";
+import { diag, ui, view } from "../../state";
+import type { RingMatch, RingShape, Template } from "../../types";
 
 /* Keep the best ring match of this frame for the diagnosis overlay. */
 export function noteRingDiag(

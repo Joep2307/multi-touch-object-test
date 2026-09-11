@@ -1,10 +1,10 @@
 import type { AccelerationPolicy } from "../base/acceleration";
-import type { DirectionPolicy } from "../base/direction/DirectionPolicy";
-import type { FootprintCompletionPolicy } from "../base/FootprintCompletionPolicy";
-import type { MovePolicy } from "../base/move/MovePolicy";
-import type { PositionPolicy } from "../base/position/PositionPolicy";
-import type { RotatePolicy } from "../base/rotate/RotatePolicy";
+import type { DirectionPolicy } from "../base/direction";
 import type { MotionHistoryPolicy } from "../base/motion";
+import type { MovePolicy } from "../base/move";
+import type { PositionPolicy } from "../base/position";
+import type { RotatePolicy } from "../base/rotate";
+import type { FootprintCompletionPolicy } from "../base";
 
 /* The tuning for every trait, in one bundle.
  *

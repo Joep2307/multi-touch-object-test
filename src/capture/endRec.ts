@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 import { stopTracks } from "./stopTracks";
 
 /* The recorder has stopped, for whatever reason: hand over what it

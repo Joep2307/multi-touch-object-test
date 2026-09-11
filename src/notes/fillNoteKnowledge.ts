@@ -1,12 +1,11 @@
-import { kgUrl } from "../config/kgUrl";
-import { emptyLine } from "../dom/emptyLine";
-import { tr } from "../i18n/tr";
-import { ensureKG } from "../kg/ensureKG";
-import type { NoteView } from "../types/NoteView";
-import type { Pin } from "../types/Pin";
+import { kgUrl } from "../config";
+import { emptyLine } from "../dom";
+import { tr } from "../i18n";
+import { ensureKG } from "../kg";
 import { notePart } from "./notePart";
 import { renderMatches } from "./renderMatches";
 import { renderNearby } from "./renderNearby";
+import type { NoteView, Pin } from "../types";
 
 /* ── What the knowledge graph knows about this place ─────────────────────
    Independent of the map layer: the window loads the graph itself if it

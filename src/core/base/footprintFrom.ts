@@ -1,7 +1,7 @@
-import type { CentreSolver } from "./position/CentreSolver";
-import type { SensedContact } from "../contact/SensedContact";
+import type { SensedContact } from "../contact";
 import type { FootprintSpec } from "./FootprintSpec";
 import type { Vec2 } from "./Vec2";
+import type { CentreSolver } from "./position";
 
 /* Derive a kind's size numbers from where its feet actually are.
  *

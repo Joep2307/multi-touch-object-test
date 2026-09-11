@@ -1,6 +1,5 @@
-import { download } from "../dom/download";
-import { el } from "../dom/el";
-import { pins } from "../state/pins";
+import { download, el } from "../dom";
+import { pins } from "../state";
 
 export function exportGeoJson(): void {
     download(

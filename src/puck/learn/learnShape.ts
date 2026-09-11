@@ -1,6 +1,5 @@
-import { learn } from "../../state/learn";
-import { view } from "../../state/view";
-import type { ShapeValue } from "../../types/ShapeValue";
+import { learn, view } from "../../state";
+import type { ShapeValue } from "../../types";
 
 /* The measurement as it goes into a template. */
 export function learnShape(): ShapeValue {

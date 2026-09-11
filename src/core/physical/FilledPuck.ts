@@ -1,5 +1,5 @@
 import { Puck } from "./Puck";
-import type { Vec2 } from "../base/Vec2";
+import type { Vec2 } from "../base";
 
 /* A puck with a solid face.
  *

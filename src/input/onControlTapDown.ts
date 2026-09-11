@@ -1,4 +1,4 @@
-import { touches } from "../state/touches";
+import { touches } from "../state";
 
 /* Some touchscreens don't fire a normal `click` when there are already
    three contacts on the glass. That's exactly the normal situation with a

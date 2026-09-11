@@ -1,4 +1,4 @@
-import type { PhysicalId } from "../physical/PhysicalId";
+import type { PhysicalId } from "../physical";
 import type { RegionId } from "./RegionId";
 
 /* An object arriving in, or leaving, a piece of table that means

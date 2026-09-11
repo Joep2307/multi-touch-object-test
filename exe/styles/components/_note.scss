@@ -1,5 +1,8 @@
 @use "../abstracts" as *;
 
+/* De opening veert een fractie door, vandaar de 1.12. */
+$note-open-ease: cubic-bezier(0.2, 0.85, 0.25, 1.12);
+
 /* Het notitievenster hangt aan een markering op de kaart. */
 .note {
     position: fixed;
@@ -19,7 +22,7 @@
     }
 
     &.opening {
-        animation: puck-note-out 0.32s cubic-bezier(0.2, 0.85, 0.25, 1.12) both;
+        animation: puck-note-out 0.32s $note-open-ease both;
     }
 
     /* De verbinding met de puck werd hier als ::before-stengel getekend,

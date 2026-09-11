@@ -1,5 +1,5 @@
-import { notePart } from "../notes/notePart";
-import type { NoteView } from "../types/NoteView";
+import { notePart } from "../notes";
+import type { NoteView } from "../types";
 
 /* Every keystroke goes straight to the marker. This is a table where
    multiple people work at the same time: there's one note window per side,
@@ -15,5 +15,6 @@ export function noteToPin(v: NoteView | null | undefined): void {
         v,
         "noteText",
     ).value.trim();
-    pin.note = pin.description; // keep older exports and saved sessions compatible
+    // Keep older exports and saved sessions compatible.
+    pin.note = pin.description;
 }

@@ -1,4 +1,4 @@
-import type { Vec2 } from "../core/base/Vec2";
+import type { Vec2 } from "../core/base";
 
 /* Where a ring puck's feet sit: `angles` degrees around a circle of
    `ringMM`, the way the old templates record them.

@@ -1,7 +1,7 @@
 import { evaluateCondition } from "./evaluateCondition";
+import type { InteractionEvent } from "../events";
 import type { ConditionDefinition } from "./ConditionDefinition";
 import type { ConditionRegistry } from "./ConditionRegistry";
-import type { InteractionEvent } from "../events/InteractionEvent";
 import type { RuleContext } from "./RuleContext";
 
 /* The first condition that does not hold, or null if they all do.

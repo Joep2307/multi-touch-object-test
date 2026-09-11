@@ -1,5 +1,5 @@
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
+import { el } from "../../dom";
+import { tr } from "../../i18n";
 import { closeMenu } from "./closeMenu";
 
 /* Choosing a map style closes the whole menu: the choice has been made and

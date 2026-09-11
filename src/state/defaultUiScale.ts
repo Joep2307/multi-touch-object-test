@@ -1,4 +1,4 @@
-import type { UiMode } from "../types/UiMode";
+import type { UiMode } from "../types";
 
 /* Table-first. The layout is written to the size of the table: someone
    standing, at about 80 cm, at an angle. The laptop is the exceptional case

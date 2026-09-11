@@ -1,8 +1,7 @@
-import type { ActionId } from "../behaviour/ActionId";
+import type { ActionId, TransitionId } from "../behaviour";
+import type { InteractionEvent } from "../events";
 import type { EventLogEntry } from "./EventLogEntry";
-import type { InteractionEvent } from "../events/InteractionEvent";
 import type { ModeId } from "./ModeId";
-import type { TransitionId } from "../behaviour/TransitionId";
 
 /* Everything that happened, in order, and never anything else.
  *

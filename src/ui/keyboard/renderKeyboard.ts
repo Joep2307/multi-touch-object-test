@@ -1,8 +1,8 @@
-import { KEY_ROWS } from "../../config/KEY_ROWS";
-import { keyboards } from "../../state/keyboards";
-import type { KeyboardView } from "../../types/KeyboardView";
+import { KEY_ROWS } from "../../config";
+import { keyboards } from "../../state";
 import { kbPart } from "./kbPart";
 import { keyboardLabel } from "./keyboardLabel";
+import type { KeyboardView } from "../../types";
 
 /* Without an argument: all keyboards (on a language switch). */
 export function renderKeyboard(kb?: KeyboardView): void {
@@ -29,7 +29,11 @@ export function renderKeyboard(kb?: KeyboardView): void {
                         /^[a-z]$/.test(key) && kb.shift
                             ? key.toUpperCase()
                             : keyboardLabel(key);
-                    return `<button type="button" class="${wide}${space}${active}" data-key="${key}">${label}</button>`;
+                    return (
+                        `<button type="button" ` +
+                        `class="${wide}${space}${active}" ` +
+                        `data-key="${key}">${label}</button>`
+                    );
                 })
                 .join("")}</div>`,
     ).join("");

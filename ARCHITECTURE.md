@@ -52,6 +52,17 @@ that rather than asking for it: `tsconfig.core.json` removes the DOM
 typings altogether, and a lint rule in `eslint.config.js` refuses the
 imports.
 
+Two habits that started here now hold for the whole tree, and
+`src/test/unit/` has a test for each. Every folder has an `index.ts`
+and a cross-folder import goes through it, so a folder has a surface
+rather than an inside anyone may reach into — with one exception, an
+import _up_ the tree, which stays a file import because the parent
+barrel already re-exports the child and the cycle that would make
+hands a subclass an undefined base. And nothing does work when it is
+loaded: `src/main.ts` is the only file that acts on import, which is
+what lets every barrel be loaded on its own, under Node, with no page
+present.
+
 | Folder          | What lives there                                             |
 | --------------- | ------------------------------------------------------------ |
 | `contact/`      | What the glass reports, and how to record and replay it      |
@@ -86,6 +97,11 @@ the first tier computed. A test asserts the second tier still works
 with the raw frame withheld, which is what makes the boundary real
 rather than a convention.
 
+One thing runs before all of them. `FootprintCompletion` fills in
+whatever feet the frame is short of, so every trait is handed a whole
+footprint and none of them learns that holding on exists — see **A
+puck holds on while two of its feet are down** below.
+
 ### One grammar, used twice
 
 An `ActionDefinition` is free-standing behaviour — cast a vote, place a
@@ -107,6 +123,8 @@ and `Voted` does not list `cast_vote` among its enabled actions.
   so a renderer cannot reach back into the model even by accident.
 - No number lives in a function body. Every tuning value is a field on
   a policy or on a descriptor.
+- Nothing anywhere in `src/` does work at import time except
+  `src/main.ts`.
 - Two effects reach outside the model — `playSound` and
   `changePresentation` — and neither does anything. They put a request
   on an outbox and something above the core drains it. The core plays
@@ -154,6 +172,23 @@ the difference. It needs nothing to be distinguishable. The recording
 of a full circle reads as 351.5 degrees that way, and read as 97 to
 203 the other way.
 
+**A puck holds on while two of its feet are down.** A dropout used to
+be nothing at all: no triple, no detection, and the kinematics stopped
+dead — `Move` reset and a drag through one bad frame reported that the
+puck had never moved. Two matched points fix a rigid motion in the
+plane completely, so the two feet still on the glass say how the puck
+moved and turned, and where the third must be. The identity is what
+makes this safe rather than a guess: the feet are matched by contact
+id and by `firstSeen`, so a finger landing where a foot was is a new
+touch and is refused, and there is no time limit — two feet that have
+been down without interruption since the last whole frame are still
+those two feet a minute later.
+
+Both pipelines do it, and deliberately not by sharing an answer: a
+held detection hands the new model the **real** feet only, so the
+reconstruction happens twice, independently, and parity has something
+to compare.
+
 **Recognition is the one thing the core does not own.** Grouping
 contact points into objects is done by the existing recogniser, and
 this architecture deliberately does not build a second one. The
@@ -162,8 +197,9 @@ it.
 
 ## Where to read next
 
-- [`todo/TODO.md`](todo/TODO.md) — what is next: holding a puck on
-  two feet, and the serious bugs found on 11 September 2026.
+- [`todo/TODO.md`](todo/TODO.md) — the plan of 11 September 2026, now
+  built: holding a puck on two feet, and ten serious bugs. Its tail is
+  the parked list, which is still open.
 - The two finished plans, the Base and the interaction model, are in
   git history at `d6f21d2` under `todo/`.
 - [`resources/physical-interaction-model.html`](resources/physical-interaction-model.html)

@@ -1,5 +1,5 @@
-import type { Affordance } from "./affordance/Affordance";
 import type { PhysicalKindDefinition } from "./PhysicalKindDefinition";
+import type { Affordance } from "./affordance";
 
 /* Find one affordance on a kind, typed.
  *

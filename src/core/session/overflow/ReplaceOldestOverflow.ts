@@ -1,5 +1,5 @@
 import { OverflowResolver } from "../OverflowResolver";
-import type { OverflowDecision } from "../OverflowResolver";
+import type { OverflowDecision } from "../OverflowDecision";
 import type { RoleAssignment } from "../RoleAssignment";
 
 /* Whoever has held it longest gives it up.

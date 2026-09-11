@@ -1,4 +1,4 @@
-import { touches } from "../state/touches";
+import { touches } from "../state";
 import { scrollableFrom } from "./scrollableFrom";
 
 /* ── Scrolling in the UI chrome ──────────────────────────────────────────

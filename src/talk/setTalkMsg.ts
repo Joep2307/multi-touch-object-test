@@ -1,6 +1,6 @@
-import { tr } from "../i18n/tr";
-import { notePart } from "../notes/notePart";
-import type { NoteView } from "../types/NoteView";
+import { tr } from "../i18n";
+import { notePart } from "../notes";
+import type { NoteView } from "../types";
 
 /* The message under the text field is set by JS, so we remember which one
    it is: on a language switch, the same sentence should appear in the other

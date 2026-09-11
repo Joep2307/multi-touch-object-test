@@ -1,8 +1,8 @@
-import { TILE_SETS } from "../config/TILE_SETS";
-import { tiles } from "../state/tiles";
-import type { TileImage } from "../types/TileImage";
+import { TILE_SETS } from "../config";
+import { tiles } from "../state";
 import { MV } from "./MV";
 import { tileChanged } from "./tileChanged";
+import type { TileImage } from "../types";
 
 export function getTile(z: number, x: number, y: number): TileImage | null {
     const set = TILE_SETS[MV.set];
@@ -19,7 +19,8 @@ export function getTile(z: number, x: number, y: number): TileImage | null {
     }
     if (img) {
         // Most recently used goes to the back: this way the area the table
-        // pans around all day survives, instead of being the first to be evicted.
+        // pans around all day survives, instead of being the first to be
+        // evicted.
         tiles.cache.delete(key);
         tiles.cache.set(key, img);
     }
@@ -40,8 +41,9 @@ export function getTile(z: number, x: number, y: number): TileImage | null {
         };
         fresh.onerror = () => {
             if (cors && tiles.cache.get(key) === fresh) {
-                // Second chance without CORS. A fresh Image, because setting the
-                // same src again doesn't always make the browser re-fetch it.
+                // Second chance without CORS. A fresh Image, because setting
+                // the same src again doesn't always make the browser re-fetch
+                // it.
                 tiles.tainted.add(setName);
                 const retry = new Image() as TileImage;
                 retry.ok = false;

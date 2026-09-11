@@ -1,8 +1,8 @@
-import { tr } from "../i18n/tr";
-import { save } from "../pins/save";
-import type { NoteView } from "../types/NoteView";
+import { tr } from "../i18n";
+import { save } from "../pins";
 import { closeNote } from "./closeNote";
 import { notePart } from "./notePart";
+import type { NoteView } from "../types";
 
 export function saveContactFollowup(v: NoteView): void {
     if (!v.pin) return;

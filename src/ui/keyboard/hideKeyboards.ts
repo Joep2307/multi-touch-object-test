@@ -1,4 +1,4 @@
-import { keyboards } from "../../state/keyboards";
+import { keyboards } from "../../state";
 import { hideKeyboard } from "./hideKeyboard";
 
 export function hideKeyboards(blur = false): void {

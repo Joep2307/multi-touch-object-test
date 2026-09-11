@@ -1,7 +1,4 @@
-import { learn } from "../state/learn";
-import { touches } from "../state/touches";
-import { tracks } from "../state/tracks";
-import { ui } from "../state/ui";
+import { learn, touches, tracks, ui } from "../state";
 
 /* Can the map move right now? Not if it's locked, not while dragging dots
    or measuring, and not while a puck is resting on it: a recognized puck

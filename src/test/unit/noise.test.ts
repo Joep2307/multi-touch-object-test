@@ -6,10 +6,10 @@
  * an audience around it. The numbers below are exact, not statistical: the
  * samples are placed by hand so the spread is known to the millimetre.
  */
+import { noiseReport } from "../../puck/noise";
+import { noise } from "../../state";
 import { beforeEach, describe as suite, expect, it } from "vitest";
-import { noiseReport } from "../../puck/noise/noiseReport";
-import { noise } from "../../state/noise";
-import type { NoiseFoot } from "../../types/NoiseFoot";
+import type { NoiseFoot } from "../../types";
 
 const PX_PER_MM = 4;
 

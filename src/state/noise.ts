@@ -1,5 +1,4 @@
-import type { NoiseFoot } from "../types/NoiseFoot";
-import type { NoiseReport } from "../types/NoiseReport";
+import type { NoiseFoot, NoiseReport } from "../types";
 
 /* The running noise measurement. Four phases: waiting for a puck, holding
    still, counting frames, and the finished report -- which stays on screen

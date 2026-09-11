@@ -1,4 +1,4 @@
-import type { ContactSet } from "../contact/ContactSet";
+import type { ContactSet } from "../contact";
 import type { FootprintSpec } from "./FootprintSpec";
 
 /* One frame of input for every trait on a base.

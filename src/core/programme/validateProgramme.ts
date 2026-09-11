@@ -1,5 +1,5 @@
-import type { EffectDefinition } from "../behaviour/EffectDefinition";
-import type { EventType } from "../events/EventType";
+import type { EffectDefinition } from "../behaviour";
+import type { EventType } from "../events";
 import type { ProgrammeDefinition } from "./ProgrammeDefinition";
 import type { ValidationError } from "./ValidationError";
 

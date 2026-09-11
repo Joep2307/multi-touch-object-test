@@ -1,7 +1,7 @@
-import { tr } from "../i18n/tr";
-import { notePart } from "../notes/notePart";
-import { save } from "../pins/save";
-import { talk } from "../state/talk";
+import { tr } from "../i18n";
+import { notePart } from "../notes";
+import { save } from "../pins";
+import { talk } from "../state";
 import { renderTalk } from "./renderTalk";
 import { setTalkMsg } from "./setTalkMsg";
 import { stopTalkClock } from "./stopTalkClock";

@@ -1,10 +1,8 @@
-import { VERDICTS } from "../../config/VERDICTS";
-import { el } from "../../dom/el";
-import { topicLabel } from "../../i18n/topicLabel";
-import { tr } from "../../i18n/tr";
-import { vName } from "../../i18n/vName";
-import { MV } from "../../map/MV";
-import { pins } from "../../state/pins";
+import { VERDICTS } from "../../config";
+import { el } from "../../dom";
+import { topicLabel, tr, vName } from "../../i18n";
+import { MV } from "../../map";
+import { pins } from "../../state";
 import { analyticsBar } from "./analyticsBar";
 import { analyticsClusters } from "./analyticsClusters";
 import { closeAnalytics } from "./closeAnalytics";
@@ -89,7 +87,13 @@ export function renderAnalytics(): void {
     if (hotspot) {
         const callout = document.createElement("div");
         callout.className = "analytics-hotspot";
-        callout.innerHTML = `<span>${tr("analyticsHotspot")}</span><b>${tr("analyticsHotspotShare", hotspot.items.length, Math.round((hotspot.items.length / total) * 100))}</b>`;
+        callout.innerHTML =
+            `<span>${tr("analyticsHotspot")}</span>` +
+            `<b>${tr(
+                "analyticsHotspotShare",
+                hotspot.items.length,
+                Math.round((hotspot.items.length / total) * 100),
+            )}</b>`;
         places.appendChild(callout);
     }
     clusters
@@ -102,7 +106,12 @@ export function renderAnalytics(): void {
             const themes = [
                 ...new Set(group.items.map((p) => topicLabel(p.topic))),
             ].join(" · ");
-            item.innerHTML = `<b>${group.items.length} ${tr("puckCount", group.items.length)}</b><span>${tr("analyticsAt")} ${group.center.lat.toFixed(4)}, ${group.center.lng.toFixed(4)} · ${themes}</span>`;
+            item.innerHTML =
+                `<b>${group.items.length} ` +
+                `${tr("puckCount", group.items.length)}</b>` +
+                `<span>${tr("analyticsAt")} ` +
+                `${group.center.lat.toFixed(4)}, ` +
+                `${group.center.lng.toFixed(4)} · ${themes}</span>`;
             item.onclick = () => {
                 MV.lat = group.center.lat;
                 MV.lng = group.center.lng;

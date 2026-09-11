@@ -1,10 +1,12 @@
-import type { ControlTap } from "../types/ControlTap";
-import type { Gesture } from "../types/Gesture";
-import type { MouseDrag } from "../types/MouseDrag";
-import type { PanelScroll } from "../types/PanelScroll";
-import type { PinDrag } from "../types/PinDrag";
-import type { Point } from "../types/Point";
-import type { PuckTouch } from "../types/PuckTouch";
+import type {
+    ControlTap,
+    Gesture,
+    MouseDrag,
+    PanelScroll,
+    PinDrag,
+    Point,
+    PuckTouch,
+} from "../types";
 
 /* Everything currently touching the glass or the mouse. */
 export const touches = {
@@ -15,7 +17,8 @@ export const touches = {
      at the same time. */
     puckTouches: [] as PuckTouch[],
     /* One finger drags the map, two fingers pinch it. Three or more is a puck,
-     and a recognised puck freezes the map so it can't slide out from under it. */
+       and a recognised puck freezes the map so it can't slide out from under
+       it. */
     gesture: null as Gesture | null,
     mousePan: null as Point | null,
     drag: null as MouseDrag | null,

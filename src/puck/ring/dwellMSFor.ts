@@ -1,5 +1,5 @@
-import { CFG } from "../../config/CFG";
-import type { Track } from "../../types/Track";
+import { CFG } from "../../config";
+import type { Track } from "../../types";
 
 /* How long holding still at this level counts as a choice. In the topic menu
    you rotate past all the topics to read them; lingering along the way

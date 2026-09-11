@@ -1,4 +1,4 @@
-import type { SimPuck } from "../types/SimPuck";
+import type { SimPuck } from "../types";
 
 /* What counts as a tap: touched briefly, barely moved, and barely rotated —
    that way dragging and rotating stay just dragging and rotating. */

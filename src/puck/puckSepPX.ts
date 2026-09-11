@@ -1,5 +1,5 @@
-import { CFG } from "../config/CFG";
-import { view } from "../state/view";
+import { CFG } from "../config";
+import { view } from "../state";
 
 /* How close two pucks can lie to each other. A puck is a disc, so two centers
    can never be closer together than its width; this measure keeps a

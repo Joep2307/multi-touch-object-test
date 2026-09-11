@@ -1,9 +1,7 @@
-import { cloneWithSuffix } from "../../dom/cloneWithSuffix";
-import { el } from "../../dom/el";
-import { keyboards } from "../../state/keyboards";
-import type { KeyboardView } from "../../types/KeyboardView";
-import type { Side } from "../../types/Side";
+import { cloneWithSuffix, el } from "../../dom";
+import { keyboards } from "../../state";
 import { wireKeyboard } from "./wireKeyboard";
+import type { KeyboardView, Side } from "../../types";
 
 /* Two keyboards, one per table edge. A single keyboard at the bottom is
    unreachable and upside down for whoever stands on the other side, and as
@@ -18,7 +16,8 @@ export function buildKeyboards(): void {
                 ? el("keyboard")
                 : cloneWithSuffix(el("keyboard"), suffix);
         if (side !== "a") document.body.appendChild(root);
-        // The other side is upside down and at the top; that's fixed, not per field.
+        // The other side is upside down and at the top; that's fixed, not per
+        // field.
         root.classList.toggle("flipped", side === "b");
         const kb: KeyboardView = {
             side,

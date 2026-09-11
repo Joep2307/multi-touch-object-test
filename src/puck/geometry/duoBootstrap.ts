@@ -1,11 +1,13 @@
-import { view } from "../../state/view";
-import type { PuckCandidate } from "../../types/PuckCandidate";
-import type { Shape } from "../../types/Shape";
-import type { Template } from "../../types/Template";
-import type { TouchPoint } from "../../types/TouchPoint";
+import { view } from "../../state";
 import { isToolPuck } from "../isToolPuck";
-import type { DuoSplit } from "./splitDuo";
 import { splitDuo } from "./splitDuo";
+import type {
+    DuoSplit,
+    PuckCandidate,
+    Shape,
+    Template,
+    TouchPoint,
+} from "../../types";
 
 /* ── The duo without measuring ────────────────────────────────────
    The two halves are ordinary triangles and are recognised by the triangle

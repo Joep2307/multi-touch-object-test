@@ -1,6 +1,6 @@
-import { CFG } from "../../config/CFG";
-import { download } from "../../dom/download";
-import { ui } from "../../state/ui";
+import { CFG } from "../../config";
+import { download } from "../../dom";
+import { ui } from "../../state";
 import { activeTemplates } from "../activeTemplates";
 
 export function exportConfig(): void {

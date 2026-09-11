@@ -1,4 +1,4 @@
-import type { TextField } from "../../types/TextField";
+import type { TextField } from "../../types";
 
 export function keyboardFields(): TextField[] {
     return [

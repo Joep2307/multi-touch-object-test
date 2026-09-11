@@ -1,9 +1,7 @@
-import { SCALE } from "../../config/SCALE";
-import type { PuckShape } from "../../types/PuckShape";
-import type { ScaleReading } from "../../types/ScaleReading";
-import type { Template } from "../../types/Template";
+import { SCALE } from "../../config";
+import { tplRing } from "../geometry";
 import { tplLongest } from "../tplLongest";
-import { tplRing } from "../geometry/tplRing";
+import type { PuckShape, ScaleReading, Template } from "../../types";
 
 /* What this puck says about the screen, or nothing if it may not say it.
 

@@ -1,4 +1,3 @@
-
 #
 #      "herlaadbeurt" zijn gewoon correct.
 #      elkaar en geen woordenboek bevat ze allemaal; "puckherkenning" en
@@ -231,3 +230,7 @@ replayable
 quadtree
 kaartstand
 destructures
+wght
+EPSG
+cyclosm
+hoofdloze

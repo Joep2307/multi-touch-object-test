@@ -1,7 +1,5 @@
-import { tr } from "../../i18n/tr";
-import { vColor } from "../../i18n/vColor";
-import { vName } from "../../i18n/vName";
-import { templates } from "../../state/templates";
+import { tr, vColor, vName } from "../../i18n";
+import { templates } from "../../state";
 import { tplSummary } from "../tplSummary";
 import { learnStamp } from "./learnStamp";
 
@@ -12,14 +10,17 @@ export function ownPuckList(): string {
     if (!templates.own.length)
         return `<p class="hint">${tr("recogNoneYet")}</p>`;
     return (
-        `<p class="learn-which">${tr("recogKnown", templates.own.length)}</p>` +
+        `<p class="learn-which">` +
+        `${tr("recogKnown", templates.own.length)}</p>` +
         templates.own
             .map(
                 (t) =>
                     `<div class="own-row" style="--c:${vColor(t.verdict)}">
        <b>${vName(t.verdict)}</b>
        <span>${t.id} &middot; ${tplSummary(t)} &middot; ${learnStamp(t)}</span>
-       <button class="own-del danger" data-id="${t.id}" aria-label="${tr("recogRemove")}" title="${tr("recogRemove")}">&times;</button>
+       <button class="own-del danger" data-id="${t.id}" ` +
+                    `aria-label="${tr("recogRemove")}" ` +
+                    `title="${tr("recogRemove")}">&times;</button>
      </div>`,
             )
             .join("")

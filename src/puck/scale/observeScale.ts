@@ -1,8 +1,8 @@
-import { SCALE } from "../../config/SCALE";
-import { scale } from "../../state/scale";
-import type { ScaleReading } from "../../types/ScaleReading";
+import { SCALE } from "../../config";
+import { scale } from "../../state";
 import { saveScale } from "./saveScale";
 import { syncPxPerMM } from "./syncPxPerMM";
+import type { ScaleReading } from "../../types";
 
 /* Fold one reading into what the table believes about its screen.
 

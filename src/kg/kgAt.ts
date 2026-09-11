@@ -1,6 +1,6 @@
-import { MV } from "../map/MV";
-import type { KgNode } from "../types/KgNode";
+import { MV } from "../map";
 import { kg } from "./kg";
+import type { KgNode } from "../types";
 
 /* Topmost node under a tap. A wider radius than the dot itself, because
    this is being pointed at with a finger on a 43" screen. */

@@ -1,4 +1,4 @@
-import type { LatLng } from "../../types/LatLng";
+import type { LatLng } from "../../types";
 
 /* Meters tussen twee punten, plat benaderd — genoeg om groepen te maken. */
 export const analyticsDistance = (a: LatLng, b: LatLng): number => {

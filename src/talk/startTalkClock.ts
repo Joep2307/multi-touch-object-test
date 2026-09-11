@@ -1,4 +1,4 @@
-import { talk } from "../state/talk";
+import { talk } from "../state";
 import { showTalkClock } from "./showTalkClock";
 import { stopTalkClock } from "./stopTalkClock";
 

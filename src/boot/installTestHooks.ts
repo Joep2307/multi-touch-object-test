@@ -1,9 +1,7 @@
-import { CFG } from "../config/CFG";
-import { QS } from "../config/QS";
-import { topics } from "../i18n/topics";
-import { ringStart } from "../puck/ring/ringStart";
-import { sim } from "../state/sim";
-import { tracks } from "../state/tracks";
+import { CFG, QS } from "../config";
+import { topics } from "../i18n";
+import { ringStart } from "../puck/ring";
+import { sim, tracks } from "../state";
 
 /* Read-only observability for the browser smoke test. Never exposed on a
    normal table URL. */

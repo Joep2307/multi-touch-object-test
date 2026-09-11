@@ -1,9 +1,9 @@
 import { Trait } from "../Trait";
 import type { BaseSample } from "../BaseSample";
-import type { Move } from "../move/Move";
-import type { MotionSample } from "./MotionSample";
+import type { Move } from "../move";
 import type { MotionHistoryPolicy } from "./MotionHistoryPolicy";
 import type { MotionHistorySnapshot } from "./MotionHistorySnapshot";
+import type { MotionSample } from "./MotionSample";
 
 const EMPTY_POINTS: readonly MotionSample[] = Object.freeze([]);
 const EMPTY: MotionHistorySnapshot = Object.freeze({ points: EMPTY_POINTS });

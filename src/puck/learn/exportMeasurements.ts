@@ -1,7 +1,6 @@
-import { CFG } from "../../config/CFG";
-import { download } from "../../dom/download";
-import { ui } from "../../state/ui";
-import { view } from "../../state/view";
+import { CFG } from "../../config";
+import { download } from "../../dom";
+import { ui, view } from "../../state";
 import { activeTemplates } from "../activeTemplates";
 import { tplLongest } from "../tplLongest";
 

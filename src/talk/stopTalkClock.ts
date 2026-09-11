@@ -1,6 +1,5 @@
-import { notePart } from "../notes/notePart";
-import { notes } from "../state/notes";
-import { talk } from "../state/talk";
+import { notePart } from "../notes";
+import { notes, talk } from "../state";
 
 export function stopTalkClock(): void {
     if (talk.tick) clearInterval(talk.tick);

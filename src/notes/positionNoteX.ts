@@ -1,5 +1,5 @@
-import { ui } from "../state/ui";
-import type { NoteView } from "../types/NoteView";
+import { ui } from "../state";
+import type { NoteView } from "../types";
 
 /* Which side of the marker the window opens on depends on where there's
    still room. That room changes as soon as the UI scale grows or shrinks,

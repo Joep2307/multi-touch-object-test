@@ -1,10 +1,10 @@
-import { el } from "../../dom/el";
-import { tr } from "../../i18n/tr";
-import { kg } from "../../kg/kg";
-import { knowledgeOf } from "../../kg/knowledgeOf";
-import type { KgNode } from "../../types/KgNode";
+import { el } from "../../dom";
+import { tr } from "../../i18n";
+import { kg, knowledgeOf } from "../../kg";
+import type { KgNode } from "../../types";
 
-/* The literal excerpts about a place, in the reading window next to the point. */
+/* The literal excerpts about a place, in the reading window next to the point.
+ */
 export async function showKgKnowledge(node: KgNode): Promise<void> {
     const body = el("kgInfoBody");
     body.textContent = tr("searching");

@@ -36,8 +36,10 @@ const work = fs.mkdtempSync(path.join(os.tmpdir(), "pucktable-smoke-"));
 const stub = path.join(work, "biblio-stub.ts");
 fs.writeFileSync(
     stub,
-    `export function defaultClient(){return{graph:async()=>({nodes:[],links:[],themes:[]}),documents:async()=>[],` +
-        `chat:async function*(){},knowledge:async()=>null,fileUrl:()=>""};}\n`,
+    `export function defaultClient(){return{` +
+        `graph:async()=>({nodes:[],links:[],themes:[]}),` +
+        `documents:async()=>[],chat:async function*(){},` +
+        `knowledge:async()=>null,fileUrl:()=>""};}\n`,
 );
 const out = path.join(work, "dist");
 await build({
@@ -48,7 +50,8 @@ await build({
     build: { outDir: out, emptyOutDir: true },
 });
 // The fixtures live next to index.html and also under /fixtures: the client
-// requests them relatively, and the directory is already named that in exe/public/.
+// requests them relatively, and the directory is already named that in
+// exe/public/.
 if (!fs.existsSync(path.join(out, "fixtures"))) {
     console.error("build zonder fixtures");
     process.exit(2);
@@ -181,7 +184,8 @@ async function newPage(
     await ctx.close();
 }
 
-// ── 1. laptop: drag copy onto the map, tap on the rim vs. tap in the viewing hole ──
+// ── 1. laptop: drag copy onto the map, tap on the rim vs. tap in the viewing
+// hole ──
 {
     const { page, ctx, errs } = await newPage("laptop");
     ok("opnameknop is aanwezig", await page.locator("#btnCapA").isVisible());
@@ -222,7 +226,8 @@ async function newPage(
             );
         });
 
-    // click in the black rim (outside the viewing hole, inside the puck): should not capture anything
+    // click in the black rim (outside the viewing hole, inside the puck):
+    // should not capture anything
     await page.mouse.click(cx + (HOLE + R) / 2, cy);
     await page.waitForTimeout(250);
     ok("tik op de band legt niets vast", (await pinsNow()) === base);
@@ -690,8 +695,8 @@ async function newPage(
     );
     const x = rect.x + rect.width / 2,
         y0 = rect.y + rect.height * 0.7;
-    // `extra` is a second contact point on the map — a puck lying on the table.
-    // That exact thing made the browser blind to the swipe gesture.
+    // `extra` is a second contact point on the map — a puck lying on the
+    // table. That exact thing made the browser blind to the swipe gesture.
     const veeg = async (extra: boolean) => {
         await page.evaluate(
             () => (document.getElementById("menu").scrollTop = 0),
@@ -834,8 +839,9 @@ async function newPage(
     });
     ok("het gesprek wordt bij de markering bewaard", bewaard);
 
-    // Pressing record: without a microphone there should be an explanation, not
-    // silence and not an error. If it does work, the button shows recording.
+    // Pressing record: without a microphone there should be an explanation,
+    // not silence and not an error. If it does work, the button shows
+    // recording.
     await page.click("#talkBtn");
     await page.waitForTimeout(1500);
     const gemeld = await page.evaluate(() => ({

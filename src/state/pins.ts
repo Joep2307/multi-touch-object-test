@@ -1,4 +1,4 @@
-import type { Pin } from "../types/Pin";
+import type { Pin } from "../types";
 
 /* The pins of the current session. `revision` counts every change, so the
    analysis only rebuilds when something actually changed; `storageFull` is

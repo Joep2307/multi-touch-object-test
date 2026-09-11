@@ -1,6 +1,6 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { ui } from "../state/ui";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { ui } from "../state";
 
 export function applyLock(): void {
     el("btnMove").classList.toggle("on", ui.mapLocked);

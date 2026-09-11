@@ -1,4 +1,4 @@
-import { Policy } from "../base/Policy";
+import { Policy } from "../base";
 import { PHYSICAL_MOVE_MIN_MM } from "./constants";
 
 /* When an object has moved enough to be worth an event.

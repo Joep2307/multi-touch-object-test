@@ -1,4 +1,4 @@
-import { tr } from "../../i18n/tr";
+import { tr } from "../../i18n";
 
 export const keyboardLabel = (key: string): string =>
     (

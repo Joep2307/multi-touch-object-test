@@ -1,4 +1,4 @@
-import { view } from "../state/view";
+import { view } from "../state";
 import { MV } from "./MV";
 
 /* Set which screen edge geographic north points to.

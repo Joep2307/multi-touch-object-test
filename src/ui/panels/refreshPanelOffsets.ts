@@ -1,4 +1,4 @@
-import { panels } from "../../state/panels";
+import { panels } from "../../state";
 import { applyPanelOffset } from "./applyPanelOffset";
 import { clampPanel } from "./clampPanel";
 

@@ -7,14 +7,10 @@
  * (`npm run wasm:test`); this file checks whether the built .wasm and the
  * TypeScript side still understand each other.
  */
-import { beforeAll, describe as suite, expect, it } from "vitest";
-import { describe } from "../../puck/geometry/describe";
-import { dist } from "../../puck/geometry/dist";
-import { padsFor } from "../../puck/geometry/padsFor";
-import { wrapAngle } from "../../puck/geometry/wrapAngle";
-import type { Point } from "../../types/Point";
-import type { Template } from "../../types/Template";
+import { describe, dist, padsFor, wrapAngle } from "../../puck/geometry";
 import { loadWasmForTest } from "./loadWasmForTest";
+import { beforeAll, describe as suite, expect, it } from "vitest";
+import type { Point, Template } from "../../types";
 
 /** The four pucks from the blueprint, as they appear in TPL_FACTORY. */
 const TEMPLATES: Template[] = [
@@ -24,7 +20,8 @@ const TEMPLATES: Template[] = [
     { id: "puck-04", ratios: [0.85, 0.9], verdict: "idea" },
 ];
 
-/** Rotate a point around the origin — a puck on the table rarely lies straight. */
+/* Rotate a point around the origin — a puck on the table rarely lies straight.
+ */
 const rotate = (p: Point, a: number): Point => ({
     x: p.x * Math.cos(a) - p.y * Math.sin(a),
     y: p.x * Math.sin(a) + p.y * Math.cos(a),

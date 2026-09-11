@@ -1,11 +1,9 @@
-import type { ActionId } from "../behaviour/ActionId";
-import type { EffectDefinition } from "../behaviour/EffectDefinition";
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
-import type { KindId } from "../physical/KindId";
+import type { ActionId, EffectDefinition, StateId } from "../behaviour";
+import type { KindId } from "../physical";
+import type { PresentationId } from "../presentation";
+import type { ExtensionProperties } from "../programme";
 import type { ModeId } from "./ModeId";
-import type { PresentationId } from "../presentation/PresentationId";
 import type { RoleId } from "./RoleId";
-import type { StateId } from "../behaviour/StateId";
 
 /* What the table is doing right now.
  *

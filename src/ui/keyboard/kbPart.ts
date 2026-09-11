@@ -1,4 +1,4 @@
-import type { KeyboardView } from "../../types/KeyboardView";
+import type { KeyboardView } from "../../types";
 
 export const kbPart = <T extends HTMLElement = HTMLElement>(
     kb: KeyboardView,

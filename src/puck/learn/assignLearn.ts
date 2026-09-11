@@ -1,10 +1,9 @@
-import { el } from "../../dom/el";
-import { learn } from "../../state/learn";
-import { templates } from "../../state/templates";
+import { el } from "../../dom";
+import { learn, templates } from "../../state";
 import { applyShape } from "../applyShape";
 import { saveTemplates } from "../saveTemplates";
 import { tplName } from "../tplName";
-import { renderTray } from "../tray/renderTray";
+import { renderTray } from "../tray";
 import { buildSheet } from "./buildSheet";
 import { learnShape } from "./learnShape";
 import { renderLearn } from "./renderLearn";

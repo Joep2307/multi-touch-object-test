@@ -1,4 +1,4 @@
-import { notes } from "../state/notes";
+import { notes } from "../state";
 import { closeNote } from "./closeNote";
 
 /* Close everything: when switching orientation, dragging markers, or

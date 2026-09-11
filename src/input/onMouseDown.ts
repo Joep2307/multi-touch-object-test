@@ -1,9 +1,7 @@
-import { closeNotes } from "../notes/closeNotes";
-import { pinAt } from "../pins/pinAt";
-import { simPuckAt } from "../puck/sim/simPuckAt";
-import { touches } from "../state/touches";
-import { tracks } from "../state/tracks";
-import { ui } from "../state/ui";
+import { closeNotes } from "../notes";
+import { pinAt } from "../pins";
+import { simPuckAt } from "../puck/sim";
+import { touches, tracks, ui } from "../state";
 
 export function onMouseDown(e: MouseEvent): void {
     const t = e.target as Element | null;

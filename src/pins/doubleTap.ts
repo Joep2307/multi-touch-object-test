@@ -1,4 +1,4 @@
-import { touches } from "../state/touches";
+import { touches } from "../state";
 
 /* Two taps in quick succession on the same marker. After a double tap, the
    count restarts, so three taps don't count as two double taps. */

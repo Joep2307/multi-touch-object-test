@@ -1,6 +1,6 @@
-import type { NearbyHit } from "../types/NearbyHit";
 import { kg } from "./kg";
 import { metersBetween } from "./metersBetween";
+import type { NearbyHit } from "../types";
 
 /* Nodes around a placement, closest first. A matching theme counts as a
    250 m bonus — it puts matching documents at the top without filtering

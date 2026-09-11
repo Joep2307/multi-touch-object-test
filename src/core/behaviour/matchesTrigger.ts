@@ -1,5 +1,5 @@
-import type { InteractionEvent } from "../events/InteractionEvent";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
+import type { InteractionEvent } from "../events";
+import type { PhysicalInstance } from "../physical";
 import type { RuleContext } from "./RuleContext";
 import type { TriggerDefinition } from "./TriggerDefinition";
 

@@ -1,6 +1,7 @@
 import { CONFIDENCE_MIN } from "./constants";
-import type { CentreFit } from "./CentreFit";
 import type { FootprintSpec } from "../FootprintSpec";
+import type { CentreFit } from "./CentreFit";
+import type { FootprintScore } from "./FootprintScore";
 import type { PositionPolicy } from "./PositionPolicy";
 
 /* How well does this reading fit this footprint?
@@ -26,11 +27,6 @@ import type { PositionPolicy } from "./PositionPolicy";
  * and a matcher scoring differently from the trait it feeds would pick
  * a signature the trait then reads badly.
  */
-export type FootprintScore = {
-    readonly confidence: number;
-    readonly shapeConfidence: number;
-};
-
 export function scoreFootprint(
     fit: CentreFit,
     contactCount: number,

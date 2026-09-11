@@ -1,16 +1,13 @@
-import { el } from "../dom/el";
-import { closeNote } from "../notes/closeNote";
-import { openNotes } from "../notes/openNotes";
-import { closeLearn } from "../puck/learn/closeLearn";
-import { closeSheet } from "../puck/learn/closeSheet";
-import { learn } from "../state/learn";
-import { menu } from "../state/menu";
-import { closeAnalytics } from "../ui/analytics/closeAnalytics";
-import { closeDocumentViewer } from "../ui/kgInfo/closeDocumentViewer";
-import { closeKgInfo } from "../ui/kgInfo/closeKgInfo";
-import { closeMenu } from "../ui/menu/closeMenu";
+import { el } from "../dom";
+import { closeNote, openNotes } from "../notes";
+import { closeLearn, closeSheet } from "../puck/learn";
+import { learn, menu } from "../state";
+import { closeAnalytics } from "../ui/analytics";
+import { closeDocumentViewer, closeKgInfo } from "../ui/kgInfo";
+import { closeMenu } from "../ui/menu";
 
-/* Escape closes the topmost window: with two open, only one should disappear at a time. */
+/* Escape closes the topmost window: with two open, only one should disappear
+   at a time. */
 export function onEscape(e: KeyboardEvent): void {
     if (e.key !== "Escape") return;
     if (el("documentViewer").classList.contains("open")) {

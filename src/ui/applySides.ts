@@ -1,5 +1,5 @@
-import { el } from "../dom/el";
-import { ui } from "../state/ui";
+import { el } from "../dom";
+import { ui } from "../state";
 import { sidesActive } from "./sidesActive";
 
 /* ── Two sides ─────────────────────────────────────────────────────────

@@ -1,11 +1,7 @@
-import { el } from "../../dom/el";
-import { escapeHtml } from "../../dom/escapeHtml";
-import { topicLabel } from "../../i18n/topicLabel";
-import { tr } from "../../i18n/tr";
-import { vColor } from "../../i18n/vColor";
-import { vName } from "../../i18n/vName";
-import { save } from "../../pins/save";
-import { pins } from "../../state/pins";
+import { el, escapeHtml } from "../../dom";
+import { topicLabel, tr, vColor, vName } from "../../i18n";
+import { save } from "../../pins";
+import { pins } from "../../state";
 import { renderAnalytics } from "./renderAnalytics";
 
 /* The most recent markers, with a cross per row to remove one. Lives in the
@@ -20,10 +16,19 @@ export function renderRecent(): void {
               .reverse()
               .map(
                   (p) =>
-                      `<div class="pin"><i style="background:${vColor(p.verdict)}"></i>
-     <div><b>${safe(p.title) || tr("untitled")} - ${safe(topicLabel(p.topic))}</b>
-     ${p.description || p.note ? `<div class="description">${safe(p.description || p.note)}</div>` : ""}
-     <div class="meta">${vName(p.verdict)} · ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)} · ${p.t.slice(11, 16)}</div></div>
+                      `<div class="pin">` +
+                      `<i style="background:${vColor(p.verdict)}"></i>
+     <div><b>${safe(p.title) || tr("untitled")} - ` +
+                      `${safe(topicLabel(p.topic))}</b>
+     ${
+         p.description || p.note
+             ? `<div class="description">` +
+               `${safe(p.description || p.note)}</div>`
+             : ""
+     }
+     <div class="meta">${vName(p.verdict)} · ` +
+                      `${p.lat.toFixed(4)}, ${p.lng.toFixed(4)} · ` +
+                      `${p.t.slice(11, 16)}</div></div>
      <span class="del" data-id="${p.id}">✕</span></div>`,
               )
               .join("")

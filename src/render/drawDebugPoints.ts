@@ -1,6 +1,7 @@
-import type { TouchPoint } from "../types/TouchPoint";
+import type { TouchPoint } from "../types";
 
-/* Touch debug: each contact point with its number, green if it's part of a puck. */
+/* Touch debug: each contact point with its number, green if it's part of a
+   puck. */
 export function drawDebugPoints(
     ctx: CanvasRenderingContext2D,
     points: TouchPoint[],

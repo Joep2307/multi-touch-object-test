@@ -1,14 +1,12 @@
-import { el } from "../../dom/el";
-import { learn } from "../../state/learn";
-import { templates } from "../../state/templates";
-import { view } from "../../state/view";
-import type { TriMeasure } from "../../types/TriMeasure";
+import { el } from "../../dom";
+import { learn, templates, view } from "../../state";
 import { applyShape } from "../applyShape";
 import { isToolPuck } from "../isToolPuck";
 import { saveTemplates } from "../saveTemplates";
-import { renderTray } from "../tray/renderTray";
+import { renderTray } from "../tray";
 import { buildSheet } from "./buildSheet";
 import { renderLearn } from "./renderLearn";
+import type { TriMeasure } from "../../types";
 
 /* The duo is saved in one go: two triangles from the same measurement, with
    the same date. Learning them separately is possible too -- put one half

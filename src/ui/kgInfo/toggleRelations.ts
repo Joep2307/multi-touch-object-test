@@ -1,9 +1,7 @@
-import { kgUrl } from "../../config/kgUrl";
-import { el } from "../../dom/el";
-import { kg } from "../../kg/kg";
-import { kgStatusText } from "../../kg/kgStatusText";
-import { loadKG } from "../../kg/loadKG";
-import { markLayerMenu } from "../menu/markLayerMenu";
+import { kgUrl } from "../../config";
+import { el } from "../../dom";
+import { kg, kgStatusText, loadKG } from "../../kg";
+import { markLayerMenu } from "../menu";
 
 /* Lines without points say nothing, so this toggle also turns on the graph
    layer when needed. The reverse too: if the graph goes off, the lines go

@@ -1,4 +1,4 @@
-import { Policy } from "../base/Policy";
+import { Policy } from "../base";
 
 /* The two windows that decide whether an object is still here.
  *

@@ -1,5 +1,5 @@
-import { CFG } from "../../config/CFG";
-import type { Track } from "../../types/Track";
+import { CFG } from "../../config";
+import type { Track } from "../../types";
 
 export function puckTapGlow(t: Track, now: number): number {
     if (!t.tapT0) return 0;

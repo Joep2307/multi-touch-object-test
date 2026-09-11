@@ -272,11 +272,28 @@ describe("FootprintCompletion", () => {
         expect(done.points).toHaveLength(2);
     });
 
-    it("does not reconstruct across a gap", () => {
+    it("holds for as long as the two feet stay down", () => {
+        /* No time limit, on purpose. How old the reference is decides
+           nothing: two feet that have been on the glass without
+           interruption since it was taken are still those two feet a
+           minute later, and the motion between the two frames is still
+           the motion the puck made. */
         const completion = watching();
-        const late = whole(500);
-        const two = { at: 500, points: late.points.slice(0, 2) };
-        expect(completion.complete(two, SPEC).points).toHaveLength(2);
+        const late = whole(60000);
+        const two = { at: 60000, points: late.points.slice(0, 2) };
+        expect(completion.complete(two, SPEC).points).toHaveLength(3);
+    });
+
+    it("refuses a contact id the driver handed out again", () => {
+        /* The one thing a time limit was standing in for. A foot that
+           lifted and a new touch that inherited its id look identical
+           by id alone; `firstSeen` tells them apart exactly. */
+        const completion = watching();
+        const points = whole(16).points.slice(0, 2);
+        const recycled = points.map((p) => ({ ...p, firstSeen: 16 }));
+        expect(
+            completion.complete({ at: 16, points: recycled }, SPEC).points,
+        ).toHaveLength(2);
     });
 
     it("leaves a whole frame exactly as it found it", () => {
@@ -331,7 +348,12 @@ describe("FootprintCompletion", () => {
             pxPerMM: 4,
         });
         const heldConfidence = position.snapshot().confidence;
-        position.update({ at: 32, contacts: whole(32), spec: SPEC, pxPerMM: 4 });
+        position.update({
+            at: 32,
+            contacts: whole(32),
+            spec: SPEC,
+            pxPerMM: 4,
+        });
         expect(heldConfidence).toBeLessThan(position.snapshot().confidence);
         expect(heldConfidence).toBeGreaterThan(0);
     });
@@ -410,6 +432,78 @@ describe("ApexHeadingSource", () => {
             y: 300,
         });
         expect(found).toBeNull();
+    });
+
+    /* Three feet at explicit places, so which one is the apex can be
+       worked out by hand: the vertex opposite the odd side. */
+    const at = (places: readonly (readonly [number, number])[]) =>
+        places.map(([x, y], i) => ({
+            id: i,
+            x,
+            y,
+            radiusPX: 9,
+            firstSeen: 0,
+            lastSeen: 0,
+        }));
+    const centroid = (points: readonly { x: number; y: number }[]) => ({
+        x: points.reduce((s, p) => s + p.x, 0) / points.length,
+        y: points.reduce((s, p) => s + p.y, 0) / points.length,
+    });
+
+    it("keeps its nose through a frame too even to read", () => {
+        /* The bug this replaces: one frame whose asymmetry dipped
+           under the threshold forgot the choice, and the next frame
+           picked again from scratch. The real pucks sit at 6% against
+           a 0.06 threshold, so such a frame is the ordinary case — and
+           the nose hopped to another foot in the middle of a session.
+
+           Frames one and three are the same triangle with the labels
+           moved round, so a fresh pick names foot 1 and a held one
+           still names foot 0. */
+        const source = new ApexHeadingSource(new DirectionPolicy());
+        const first = at([
+            [0, 100],
+            [-80, -60],
+            [80, -60],
+        ]);
+        expect(source.heading(first, centroid(first))?.reference).toEqual({
+            x: 0,
+            y: 100,
+        });
+
+        expect(
+            source.heading(feet(400, 300, 160, [0, 120, 240]), {
+                x: 400,
+                y: 300,
+            }),
+        ).toBeNull();
+
+        const third = at([
+            [-80, -60],
+            [0, 100],
+            [80, -60],
+        ]);
+        expect(source.heading(third, centroid(third))?.reference).toEqual({
+            x: -80,
+            y: -60,
+        });
+    });
+
+    it("forgets its nose once that foot leaves the glass", () => {
+        /* The one thing that does end a choice. A foot that comes back
+           has a new contact id and is a different foot as far as
+           anything here is concerned. */
+        const source = new ApexHeadingSource(new DirectionPolicy());
+        const first = at([
+            [0, 100],
+            [-80, -60],
+            [80, -60],
+        ]);
+        source.heading(first, centroid(first));
+        const renumbered = first.map((p, i) => ({ ...p, id: i + 10 }));
+        expect(
+            source.heading(renumbered, centroid(renumbered))?.reference,
+        ).toEqual({ x: 0, y: 100 });
     });
 });
 

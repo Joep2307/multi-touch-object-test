@@ -12,7 +12,8 @@ export function wireAccordions(): void {
                 if (!collapsed) {
                     document
                         .querySelectorAll(
-                            `#menu .menu-sec[data-view="${section.dataset.view}"]`,
+                            "#menu .menu-sec" +
+                                `[data-view="${section.dataset.view}"]`,
                         )
                         .forEach((other) => {
                             if (other === section) return;

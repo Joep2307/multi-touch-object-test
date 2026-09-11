@@ -1,5 +1,5 @@
-import { CFG } from "../config/CFG";
-import type { Template } from "../types/Template";
+import { CFG } from "../config";
+import type { Template } from "../types";
 
 /* The longest side belongs to the puck, not to the table: cut tape is never
    exactly 60 mm, and two pucks are allowed to differ. `CFG.longestSideMM` is

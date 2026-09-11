@@ -1,10 +1,8 @@
-import { CFG } from "../config/CFG";
-import { tracks } from "../state/tracks";
-import type { Detection } from "../types/Detection";
-import type { Track } from "../types/Track";
+import { CFG } from "../config";
+import { tracks } from "../state";
 import { puckSepPX } from "./puckSepPX";
-import { ringIndexOf } from "./ring/ringIndexOf";
-import { ringItems } from "./ring/ringItems";
+import { ringIndexOf, ringItems } from "./ring";
+import type { Detection, Track } from "../types";
 
 export function startTrack(d: Detection, now: number): Track {
     const t: Track = {
@@ -20,7 +18,9 @@ export function startTrack(d: Detection, now: number): Track {
         rawOrigin: d.angle,
         frames: 0,
         state: "candidate",
+        held: d.held === true,
         buf: [],
+        feet: [...d.feet],
         conf: d.conf,
         anchorX: d.x,
         anchorY: d.y,

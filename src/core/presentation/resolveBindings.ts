@@ -1,6 +1,6 @@
 import { resolveBindingSource } from "./resolveBindingSource";
+import type { PhysicalInstance } from "../physical";
 import type { Binding } from "./Binding";
-import type { PhysicalInstance } from "../physical/PhysicalInstance";
 import type { PresentationView } from "./PresentationView";
 import type { RenderProps } from "./RenderProps";
 

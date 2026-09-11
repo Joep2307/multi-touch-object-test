@@ -1,7 +1,7 @@
 import { Trait } from "../Trait";
 import type { BaseSample } from "../BaseSample";
-import type { Move } from "../move/Move";
 import type { Vec2 } from "../Vec2";
+import type { Move } from "../move";
 import type { AccelerationPolicy } from "./AccelerationPolicy";
 import type { AccelerationSnapshot } from "./AccelerationSnapshot";
 

@@ -1,6 +1,6 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { wipe } from "../state/wipe";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { wipe } from "../state";
 
 export function resetWipeButton(): void {
     wipe.armedAt = 0;

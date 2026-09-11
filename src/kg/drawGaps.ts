@@ -1,5 +1,5 @@
-import { MV } from "../map/MV";
-import { view } from "../state/view";
+import { MV } from "../map";
+import { view } from "../state";
 import { CELL } from "./CELL";
 import { buildHeat } from "./buildHeat";
 import { kg } from "./kg";

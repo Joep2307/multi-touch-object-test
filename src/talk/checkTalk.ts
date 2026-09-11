@@ -1,9 +1,8 @@
-import { sttUrl } from "../config/sttUrl";
-import { probeSTT } from "../speech/probeSTT";
-import { stt } from "../speech/stt";
-import type { NoteView } from "../types/NoteView";
+import { sttUrl } from "../config";
+import { probeSTT, stt } from "../speech";
 import { setTalkMsg } from "./setTalkMsg";
 import { talkReady } from "./talkReady";
+import type { NoteView } from "../types";
 
 /* What can this table do? Probe once, and show the answer right away:
    "transcription isn't available here" should become clear before someone

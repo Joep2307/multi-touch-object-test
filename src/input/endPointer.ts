@@ -1,8 +1,6 @@
-import { movePinTo } from "../pins/movePinTo";
-import { save } from "../pins/save";
-import { tryConfirmPuck } from "../puck/tryConfirmPuck";
-import { wasTap } from "../puck/wasTap";
-import { touches } from "../state/touches";
+import { movePinTo, save } from "../pins";
+import { tryConfirmPuck, wasTap } from "../puck";
+import { touches } from "../state";
 import { basePuckTouch } from "./basePuckTouch";
 import { endPanelScroll } from "./endPanelScroll";
 import { puckTouchByPtr } from "./puckTouchByPtr";

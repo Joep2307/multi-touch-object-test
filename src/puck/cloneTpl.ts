@@ -1,4 +1,4 @@
-import type { Template } from "../types/Template";
+import type { Template } from "../types";
 /* A copy that doesn't share its shape array with the original. Only the
    arrays that are really there are copied: a grid puck has neither, and
    handing it an empty triangle would make it look like one. */

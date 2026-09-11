@@ -1,6 +1,6 @@
-import type { ExtensionProperties } from "../programme/ExtensionProperties";
-import type { RoleId } from "../session/RoleId";
-import type { StateId } from "../behaviour/StateId";
+import type { StateId } from "../behaviour";
+import type { ExtensionProperties } from "../programme";
+import type { RoleId } from "../session";
 
 /* A change to what an object *is* rather than to where it is.
  *

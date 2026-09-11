@@ -1,6 +1,6 @@
 import { EffectExecutor } from "../EffectExecutor";
+import type { ModeId } from "../../session";
 import type { EffectDefinition } from "../EffectDefinition";
-import type { ModeId } from "../../session/ModeId";
 import type { RuleContext } from "../RuleContext";
 
 /* Move the whole session into another mode.

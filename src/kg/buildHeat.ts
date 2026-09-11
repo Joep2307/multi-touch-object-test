@@ -1,6 +1,6 @@
-import type { Heat } from "../types/Heat";
 import { CELL } from "./CELL";
 import { kg } from "./kg";
+import type { Heat } from "../types";
 
 /* ── Blank spots as a heat map ────────────────────────────────────────
    Where the city has written a lot about itself, and where nothing. Only

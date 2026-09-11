@@ -1,5 +1,5 @@
+import { ui } from "../state";
 import { L } from "./L";
-import { ui } from "../state/ui";
 
 /* Translate. Not `t` — elsewhere that is the name of a touch and of a puck
    template. If a key is missing in the chosen language it falls back to

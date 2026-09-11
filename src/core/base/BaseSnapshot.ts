@@ -1,10 +1,10 @@
 import type { AccelerationSnapshot } from "./acceleration";
-import type { DirectionSnapshot } from "./direction/DirectionSnapshot";
-import type { MoveSnapshot } from "./move/MoveSnapshot";
-import type { PositionSnapshot } from "./position/PositionSnapshot";
-import type { RotateSnapshot } from "./rotate/RotateSnapshot";
+import type { DirectionSnapshot } from "./direction";
 import type { MotionHistorySnapshot } from "./motion";
-import type { TapSnapshot } from "./tap/TapSnapshot";
+import type { MoveSnapshot } from "./move";
+import type { PositionSnapshot } from "./position";
+import type { RotateSnapshot } from "./rotate";
+import type { TapSnapshot } from "./tap";
 
 /* Everything the base knows about one object at one moment.
  *

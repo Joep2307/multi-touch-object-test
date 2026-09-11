@@ -1,5 +1,4 @@
-import type { MenuView } from "../types/MenuView";
-import type { Side } from "../types/Side";
+import type { MenuView, Side } from "../types";
 
 /* There is one menu. It moves to whichever button was pressed, shows the
    content belonging to that button, and rotates to match the reading

@@ -1,4 +1,4 @@
-import { capture } from "../state/capture";
+import { capture } from "../state";
 import {
     JPEG_Q,
     LAPSE_MAX_BYTES,

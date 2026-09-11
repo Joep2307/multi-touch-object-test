@@ -1,4 +1,4 @@
-import { el } from "../../dom/el";
+import { el } from "../../dom";
 
 /* Four ways to close the overview: the button at the bottom, the cross at the
    top, a tap next to the sheet, and Escape. The bottom button alone wasn't

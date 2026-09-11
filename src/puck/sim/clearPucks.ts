@@ -1,7 +1,5 @@
-import { sim } from "../../state/sim";
-import { touches } from "../../state/touches";
-import { tracks } from "../../state/tracks";
-import { markTray } from "../tray/markTray";
+import { sim, touches, tracks } from "../../state";
+import { markTray } from "../tray";
 
 /* Deselecting: take every puck off the table and forget the live tracks.
    Marks that were already dropped stay on the map — only the selection goes.

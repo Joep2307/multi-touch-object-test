@@ -1,10 +1,8 @@
-import type { SlotMatch } from "../../types/SlotMatch";
-import type { SlotShape } from "../../types/SlotShape";
-import type { Template } from "../../types/Template";
 import { popCount } from "./popCount";
 import { rotateCode } from "./rotateCode";
 import { slotWidth } from "./slotWidth";
 import { tplSlots } from "./tplSlots";
+import type { SlotMatch, SlotShape, Template } from "../../types";
 
 /* Does this measurement fit this template? Which slot is "the first" only
    depends on how the puck happens to lie, so all turns are tried and the

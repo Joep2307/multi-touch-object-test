@@ -1,11 +1,10 @@
-import { tiles } from "../state/tiles";
-import { ui } from "../state/ui";
-import { view } from "../state/view";
+import { tiles, ui, view } from "../state";
 import { MV } from "./MV";
 import { drawMap } from "./drawMap";
 
 /* The map is drawn onto its own layer, and only redrawn when something about
-   the map has actually changed; every frame just copies that layer to the screen. */
+   the map has actually changed; every frame just copies that layer to the
+   screen. */
 export function paintMapLayer(): void {
     const bg = tiles.bgImage;
     const bgKey = bg

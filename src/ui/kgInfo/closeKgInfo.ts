@@ -1,5 +1,5 @@
-import { el } from "../../dom/el";
-import { kg } from "../../kg/kg";
+import { el } from "../../dom";
+import { kg } from "../../kg";
 
 export function closeKgInfo(): void {
     kg.selected = null;

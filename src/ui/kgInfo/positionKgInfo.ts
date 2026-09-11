@@ -1,5 +1,5 @@
-import { el } from "../../dom/el";
-import { ui } from "../../state/ui";
+import { el } from "../../dom";
+import { ui } from "../../state";
 
 export function positionKgInfo(): void {
     const n = el("kgInfo");

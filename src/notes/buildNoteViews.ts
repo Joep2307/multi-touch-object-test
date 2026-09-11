@@ -1,9 +1,7 @@
-import { cloneWithSuffix } from "../dom/cloneWithSuffix";
-import { el } from "../dom/el";
-import { notes } from "../state/notes";
-import type { NoteView } from "../types/NoteView";
-import type { Side } from "../types/Side";
+import { cloneWithSuffix, el } from "../dom";
+import { notes } from "../state";
 import { wireNote } from "./wireNote";
+import type { NoteView, Side } from "../types";
 
 /* ── Two windows, one per side of the table ──────────────────────────────
    At a table with two sides, two groups work at once. With a single window,

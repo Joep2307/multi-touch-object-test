@@ -1,11 +1,10 @@
 import { Physical } from "./Physical";
-import type { Base } from "../base/Base";
-import type { ContactSet } from "../contact/ContactSet";
+import type { Base, Vec2 } from "../base";
+import type { ContactSet } from "../contact";
 import type { PhysicalId } from "./PhysicalId";
 import type { PhysicalKindDefinition } from "./PhysicalKindDefinition";
 import type { PhysicalSignature } from "./PhysicalSignature";
 import type { Presence } from "./Presence";
-import type { Vec2 } from "../base/Vec2";
 
 /* A physical that is actually on the glass, and therefore has a
    `Base` measuring it.

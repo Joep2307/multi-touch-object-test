@@ -1,6 +1,6 @@
-import { el } from "../dom/el";
-import { tr } from "../i18n/tr";
-import { ui } from "../state/ui";
+import { el } from "../dom";
+import { tr } from "../i18n";
+import { ui } from "../state";
 import { puckMode } from "./puckMode";
 
 /* Two lines of text are about the bar at the bottom, and that bar isn't
