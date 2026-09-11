@@ -2,7 +2,7 @@ import { CFG } from "../config/CFG";
 import type { ColorTheme } from "../types/ColorTheme";
 import type { Lang } from "../types/Lang";
 import type { UiMode } from "../types/UiMode";
-import { storedUiScale } from "../ui/storedUiScale";
+import { storedUiScale } from "./storedUiScale";
 
 /* The state of the controls. What's here is read from localStorage on load,
    so a table that was set to English, or to 115%, stays that way after a
@@ -16,6 +16,12 @@ const read = (key: string): string | null => {
     }
 };
 
+/* `matchMedia` is a browser thing. Under Node — a unit test importing
+   something that imports this — it does not exist, and this module may
+   not need a page just to load. Without it, the answer is "no". */
+const media = (query: string): boolean =>
+    typeof matchMedia === "function" && matchMedia(query).matches;
+
 const lang = ((): Lang => {
     const v = read("pucktable-lang");
     return v === "nl" || v === "en" ? v : "en";
@@ -24,7 +30,7 @@ const lang = ((): Lang => {
 const mode = ((): UiMode => {
     const v = read("pucktable-ui-mode");
     if (v === "touch" || v === "laptop" || v === "puck") return v;
-    return matchMedia("(pointer:coarse)").matches ? "touch" : "laptop";
+    return media("(pointer:coarse)") ? "touch" : "laptop";
 })();
 
 /* Color mode is a deliberate table setting and therefore no longer silently
@@ -34,9 +40,7 @@ const mode = ((): UiMode => {
 const colorTheme = ((): ColorTheme => {
     const v = read("pucktable-color-theme");
     if (v === "light" || v === "dark") return v;
-    return matchMedia("(prefers-color-scheme:light)").matches
-        ? "light"
-        : "dark";
+    return media("(prefers-color-scheme:light)") ? "light" : "dark";
 })();
 
 export const ui = {

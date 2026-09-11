@@ -19,7 +19,7 @@ import { applyMode } from "./ui/applyMode";
 import { applyPinMoveMode } from "./ui/applyPinMoveMode";
 import { applyScale } from "./ui/applyScale";
 import { buildKeyboards } from "./ui/keyboard/buildKeyboards";
-import { installTestHooks } from "./test/installTestHooks";
+import { installTestHooks } from "./boot/installTestHooks";
 
 /* ═══════════════════════════════════════════════════════════════
    PUCK TABLE — the participation table

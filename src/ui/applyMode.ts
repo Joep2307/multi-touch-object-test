@@ -10,7 +10,7 @@ import { applySides } from "./applySides";
 import { hideKeyboards } from "./keyboard/hideKeyboards";
 import { refreshKeyboardFields } from "./keyboard/refreshKeyboardFields";
 import { refreshModeTexts } from "./refreshModeTexts";
-import { storedUiScale } from "./storedUiScale";
+import { storedUiScale } from "../state/storedUiScale";
 
 export function applyMode(mode: UiMode): void {
     ui.mode = mode;

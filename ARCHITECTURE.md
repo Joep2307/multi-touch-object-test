@@ -2,8 +2,10 @@
 
 How this table is put together, as it was actually built rather than
 as it was planned. Written in English because it is derived from the
-two plans in [`todo/`](todo/) and shares their vocabulary; the code
-comments stay Dutch, as the [README](README.md) says.
+two plans that built it (finished, and kept in git history at commit
+`d6f21d2`) and shares their vocabulary; the code comments stay Dutch,
+as the [README](README.md) says. What is still to do is in
+[`todo/`](todo/).
 
 There are **two pipelines in this repository**, and that is deliberate
 and temporary. The one that runs the table is in `src/puck/`,
@@ -137,10 +139,11 @@ all built on.
 
 ## What the table taught us
 
-The measurements that changed the design are in
-[`todo/TODO.md`](todo/TODO.md), against the seven recordings made on
-9 September 2026. Two are worth repeating here because they shaped the
-code.
+The measurements that changed the design were taken against the
+seven recordings made on 9 September 2026, which live in
+`src/test/unit/core/fixtures/`; the full account is in the finished
+Base plan in git history (`d6f21d2`, `todo/TODO.md`). Two are worth
+repeating here because they shaped the code.
 
 **A puck has no reliable nose.** The three-foot footprint's two
 candidate apexes differ by about four per cent, against a measurement
@@ -159,10 +162,10 @@ it.
 
 ## Where to read next
 
-- [`todo/TODO.md`](todo/TODO.md) — the Base: contacts, traits,
-  physicals, and what the real table said.
-- [`todo/TODO-interaction-model.md`](todo/TODO-interaction-model.md) —
-  the layers above it, and what building each one cost.
+- [`todo/TODO.md`](todo/TODO.md) — what is next: holding a puck on
+  two feet, and the serious bugs found on 11 September 2026.
+- The two finished plans, the Base and the interaction model, are in
+  git history at `d6f21d2` under `todo/`.
 - [`resources/physical-interaction-model.html`](resources/physical-interaction-model.html)
   — the abstract model the second plan implements. Open it in a
   browser.

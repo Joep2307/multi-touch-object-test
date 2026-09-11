@@ -27,10 +27,11 @@ export default defineConfig({
     },
     test: {
         include: ["src/test/unit/**/*.test.ts"],
-        // Most of this is computation without a DOM. The state objects in
-        // src/state/ read from localStorage and the window on load,
-        // so whatever drags those in adds its own `// @vitest-environment jsdom`
-        // at the top.
+        // Most of this is computation without a DOM, and nothing in the
+        // tree does work at import time that needs one: the state objects
+        // in src/state/ read localStorage inside a try and look the
+        // canvas up on first use. A test that actually drives the DOM
+        // adds its own `// @vitest-environment jsdom` at the top.
         environment: "node",
         globals: false,
         restoreMocks: true,
