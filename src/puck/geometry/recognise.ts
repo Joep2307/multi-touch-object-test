@@ -10,6 +10,7 @@ import type { Template } from "../../types/Template";
 import type { TouchPoint } from "../../types/TouchPoint";
 import { activeTemplates } from "../activeTemplates";
 import { puckSepPX } from "../puckSepPX";
+import { readScale } from "../scale/readScale";
 import { tplLongest } from "../tplLongest";
 import { describe } from "./describe";
 import { describeRing } from "./describeRing";
@@ -433,7 +434,7 @@ export function recognise(
         )
             continue;
         c.idx.forEach((i) => used.add(i));
-        out.push({
+        const det: Detection = {
             tpl: c.tpl,
             conf: c.conf,
             x: c.d.cx,
@@ -442,7 +443,19 @@ export function recognise(
             angle: c.d.ring
                 ? (c.d.angle ?? 0)
                 : Math.atan2(c.d.anchor.y - c.d.cy, c.d.anchor.x - c.d.cx),
-        });
+        };
+        /* Shape agreement only. `conf` above also carries the size check,
+         and the size check is computed from the very scale this reading
+         calibrates: a screen a few per cent off would score every puck too
+         low to be trusted and the scale would stay wrong forever. A
+         calibrator may not be gated by the thing it calibrates. */
+        const reading = readScale(
+            c.tpl,
+            c.d,
+            Math.max(0, 1 - (c.errN ?? 0) * 0.7),
+        );
+        if (reading) det.scale = reading;
+        out.push(det);
     }
     /* ── Holding on with four feet ────────────────────────────────
      A puck already on the table doesn't have to be proven again every

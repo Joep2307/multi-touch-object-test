@@ -5,6 +5,7 @@ import type { Track } from "../types/Track";
 import type { TrackAssignment } from "../types/TrackAssignment";
 import type { TrackResult } from "../types/TrackResult";
 import { wrapAngle } from "./geometry/wrapAngle";
+import { observeScale } from "./scale/observeScale";
 import { puckSepPX } from "./puckSepPX";
 import { applyPuckControls } from "./applyPuckControls";
 import { startTrack } from "./startTrack";
@@ -67,6 +68,10 @@ export function track(dets: Detection[], now: number): TrackResult {
         // against a segment boundary.
         t.angle = t.angleOrigin + (t.filteredAngle - t.rawOrigin);
         t.state = t.frames >= CFG.stableFrames ? "recognised" : "candidate";
+        /* A puck of a known size is a ruler lying on the glass, and this is
+         where the table reads it: once it is a puck rather than a guess,
+         and only from a detection that brought a reading with it. */
+        if (t.state === "recognised" && d.scale) observeScale(d.scale);
         assignments.push({
             detection: d,
             trackId: t.id,
@@ -119,7 +124,13 @@ export function track(dets: Detection[], now: number): TrackResult {
             });
             tracks.map.delete(id);
         } else if (t.state === "recognised") t.state = "incomplete";
-        else tracks.map.delete(id);
+        /* Only a candidate is dropped on the spot. An `incomplete`
+           puck is one already holding on, and deleting it here undid
+           the hold above after a single frame: recognised on frame N,
+           incomplete on N+1, gone on N+2 — 32 ms instead of
+           `CFG.dropoutMS`, and gone without reaching `tracks.memory`,
+           so it came back a fresh puck with no marker and no topic. */
+        else if (t.state === "candidate") tracks.map.delete(id);
     }
     return {
         pucks: [...tracks.map.values()].filter((t) => t.state !== "candidate"),

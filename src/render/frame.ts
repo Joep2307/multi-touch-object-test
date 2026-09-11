@@ -115,16 +115,7 @@ export function frame(): void {
         if (plan !== null) drawRenderPlan(ctx, plan);
     }
     if (baseBridge !== null && parityCheck !== null) {
-        drawBaseOverlay(
-            ctx,
-            baseBridge,
-            parityCheck,
-            view.W,
-            view.H,
-            now,
-            baseRecorder,
-            baseRuntime,
-        );
+        drawBaseOverlay(ctx, baseBridge, view.W, view.H, now);
     }
 
     drawNoteTether(ctx, pucks);

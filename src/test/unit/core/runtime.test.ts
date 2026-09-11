@@ -68,16 +68,23 @@ const POLICIES: BasePolicies = {
  * the session started make every press a hold — which reaches the
  * rules as `physical.tapped` all the same, and quietly turns a test
  * about tapping into a test about something else. */
+const FOOT_ANGLES_DEG = [0, 132, 228];
+
 const feet = (
     cxMM: number,
     cyMM: number,
     firstSeen: number,
     at: number,
+    /* Where this puck's contact ids start. Two pucks sharing ids
+       would be one hand as far as `ContactStatusTracker` is
+       concerned, and the second one's feet would read as the first
+       one's having teleported. */
+    idBase: number,
 ): readonly SensedContact[] =>
-    [0, 132, 228].map((deg, i) => {
+    FOOT_ANGLES_DEG.map((deg, i) => {
         const rad = (deg * Math.PI) / 180;
         return {
-            id: i,
+            id: idBase + i,
             x: (cxMM + 34.6 * Math.cos(rad)) * PX_PER_MM,
             y: (cyMM + 34.6 * Math.sin(rad)) * PX_PER_MM,
             radiusPX: 9,
@@ -86,14 +93,19 @@ const feet = (
         };
     });
 
-type Table = {
+/* One puck and the pressing of it. */
+type Hand = {
+    put: (cxMM: number, cyMM: number, at: number, down?: boolean) => void;
+    press: (cxMM: number, cyMM: number, at: number) => void;
+};
+
+type Table = Hand & {
     readonly runtime: Runtime;
     readonly session: Session;
     readonly bus: EventBus;
     readonly trace: RuleTrace;
-    readonly puck: OpenPuck;
-    put: (cxMM: number, cyMM: number, at: number, down?: boolean) => void;
-    press: (cxMM: number, cyMM: number, at: number) => void;
+    /* A second puck on the same glass, with its own feet. */
+    hand: (id: string) => Hand;
 };
 
 const table = (): Table => {
@@ -140,41 +152,63 @@ const table = (): Table => {
         POLICIES,
     );
     const contacts = new ContactStatusTracker();
-    let pressStartedAt: number | null = null;
     const signature = kind.signatures[0];
-    const puck = new OpenPuck(
-        "p1" as PhysicalId,
-        kind,
-        signature,
-        new Presence(new PresencePolicy()),
-        factory.create(signature),
-    );
-    registry.add(puck);
+    const hands: {
+        readonly puck: OpenPuck;
+        points: readonly SensedContact[];
+    }[] = [];
 
-    return {
-        runtime,
-        session,
-        bus,
-        trace,
-        puck,
-        put(cxMM, cyMM, at, down = true) {
+    /* Every puck is advanced on every frame, each with whatever its
+       own feet are doing, and the glass is told about all of them at
+       once. A puck left standing while another moved would have its
+       presence frozen a frame behind the table it is lying on. */
+    const advance = (at: number): void => {
+        const all = hands.flatMap((h) => h.points);
+        for (const h of hands) h.puck.update(at, { at, points: h.points });
+        /* Through the tracker, so the frame says what is new and what
+           has gone exactly as the glass would. */
+        runtime.frame(at, contacts.apply(at, all), PX_PER_MM);
+    };
+
+    const hand = (id: string): Hand => {
+        const puck = new OpenPuck(
+            id as PhysicalId,
+            kind,
+            signature,
+            new Presence(new PresencePolicy()),
+            factory.create(signature),
+        );
+        registry.add(puck);
+        const idBase = hands.length * FOOT_ANGLES_DEG.length;
+        const slot = { puck, points: [] as readonly SensedContact[] };
+        hands.push(slot);
+        let pressStartedAt: number | null = null;
+        const put = (
+            cxMM: number,
+            cyMM: number,
+            at: number,
+            down = true,
+        ): void => {
             if (!down) pressStartedAt = null;
             else pressStartedAt ??= at;
-            const points = down
-                ? feet(cxMM, cyMM, pressStartedAt ?? at, at)
+            slot.points = down
+                ? feet(cxMM, cyMM, pressStartedAt ?? at, at, idBase)
                 : [];
-            puck.update(at, { at, points });
-            /* Through the tracker, so the frame says what is new and
-               what has gone exactly as the glass would. */
-            runtime.frame(at, contacts.apply(at, points), PX_PER_MM);
-        },
-        /* Down and up again inside the tap window: a real press,
-           rather than a hold that happens to reach the same event. */
-        press(cxMM, cyMM, at) {
-            this.put(cxMM, cyMM, at);
-            this.put(cxMM, cyMM, at + 100, false);
-        },
+            advance(at);
+        };
+        return {
+            put,
+            /* Down and up again inside the tap window: a real press,
+               rather than a hold that happens to reach the same
+               event. */
+            press(cxMM, cyMM, at) {
+                put(cxMM, cyMM, at);
+                put(cxMM, cyMM, at + 100, false);
+            },
+        };
     };
+
+    return { runtime, session, bus, trace, hand, ...hand("p1") };
 };
 
 describe("the participation programme", () => {
@@ -252,14 +286,23 @@ describe("Runtime", () => {
     });
 
     it("never arms a puck that was never in the voting area", () => {
-        /* The region is 150 mm around (400, 250); this is well outside
+        /* The region is 150 mm around (400, 250); this is well
+           outside it, so the puck never enters `Voting` and the tap
+           has no state to spend. */
         const t = table();
         t.runtime.start();
         t.put(50, 50, 0);
         t.session.changeMode("Voting" as never);
         t.press(50, 50, 1000);
         expect(t.session.variable("votes")).toBe(0);
-        expect(t.trace.lastRefusal("cast_vote")?.reason?.type).toBe("state");
+        /* `notEnabled` rather than a failed condition, and that is the
+           right answer: the puck never left `Ready`, and `Ready` does
+           not list `cast_vote`, so there was no condition to fail. An
+           action a state does not offer is refused before its
+           conditions are ever read. */
+        const refusal = t.trace.lastRefusal("cast_vote");
+        expect(refusal?.outcome).toBe("notEnabled");
+        expect(refusal?.stateId).toBe("Ready");
     });
 
     it("refuses an armed puck carried out of the area", () => {
@@ -351,13 +394,22 @@ describe("Runtime", () => {
 
     it("counts votes from two pucks separately", () => {
         const t = table();
+        const other = t.hand("p2");
         t.runtime.start();
         t.put(400, 250, 0);
+        other.put(430, 280, 0);
         t.session.changeMode("Voting" as never);
         t.press(400, 250, 1000);
-        /* One puck, one vote — the cap that matters is the state
-           machine, not a counter anybody had to write. */
-        expect(t.session.variable("votes")).toBe(1);
-        expect(t.session.roles.active("Participant" as never)).toHaveLength(1);
+        other.press(430, 280, 1000);
+        /* Two pucks, two votes, and each one capped at its own. The
+           cap is the state machine — `cast_vote` needs `Ready` and
+           leaves the token in `Voted` — not a counter anybody had to
+           write, so a second puck is not a second chance for the
+           first. */
+        expect(t.session.variable("votes")).toBe(2);
+        t.press(400, 250, 3000);
+        other.press(430, 280, 3000);
+        expect(t.session.variable("votes")).toBe(2);
+        expect(t.session.roles.active("Participant" as never)).toHaveLength(2);
     });
 });

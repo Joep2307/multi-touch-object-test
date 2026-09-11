@@ -116,7 +116,11 @@ export const CFG = {
      a setting that remembers nothing isn't a setting. They belong to the
      table, so they live here, with the URL as an override for whoever is
      running a second setup (?diag=55&tol=0.08&kg=…). */
-    screenDiagIn: 43, // screen diagonal in inches; determines pxPerMM and thus recognition
+    /* Screen diagonal in inches. The seed for the millimetre scale, not
+     the last word on it: a puck of a known size is a ruler, and `SCALE`
+     lets the table correct this by up to twelve per cent from what it
+     measures. Close enough is close enough. */
+    screenDiagIn: 43,
     /* Contact areas are not measured by the touchscreen at exactly the same
      centre point across different rotation angles. 0.10 absorbs that
      directional error; the four default shapes still lie further apart

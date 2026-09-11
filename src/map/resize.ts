@@ -1,4 +1,6 @@
 import { CFG } from "../config/CFG";
+import { syncPxPerMM } from "../puck/scale/syncPxPerMM";
+import { scale } from "../state/scale";
 import { view } from "../state/view";
 
 /* Measure the screen: size the canvases to screen size times pixel density,
@@ -16,5 +18,9 @@ export function resize(): void {
     view.mapRenderKey = "";
     view.ctx.imageSmoothingQuality = "high";
     view.mapCtx.imageSmoothingQuality = "high";
-    view.pxPerMM = Math.hypot(view.W, view.H) / (CFG.screenDiagIn * 25.4);
+    /* The declared screen size is the seed, not the answer: the pucks
+       correct it from here. A window on half the screen halves the seed and
+       leaves that correction standing -- see `scale`. */
+    scale.seed = Math.hypot(view.W, view.H) / (CFG.screenDiagIn * 25.4);
+    syncPxPerMM();
 }

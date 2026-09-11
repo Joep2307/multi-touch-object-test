@@ -193,30 +193,31 @@ From `TODO.md`, restated so this file stands alone:
 ## Phase 1 — No work at import time
 
 The enabling phase. Small, and it must land before any barrel does.
+**Done 11 September 2026.**
 
-- [ ] `src/state/view.ts`: `cv`, `ctx`, `mapLayer`, `mapCtx` stop
-      being computed at evaluation. Keep the exported `view` object
-      and its type; the four fields start as `null`-free placeholders
-      set by a new `src/state/initView.ts` (`initView(): void`) that
-      does the `el("c")` and `createElement` work. Five files read
-      those fields and none at evaluation time, so no consumer
-      changes.
-- [ ] `src/main.ts`: call `initView()` first, before anything that
-      might draw.
-- [ ] `src/state/ui.ts`: guard `matchMedia` with
-      `typeof matchMedia === "function"` inside the existing IIFEs so
+- [x] `src/state/view.ts`: `cv`, `ctx`, `mapLayer`, `mapCtx` stop
+      being computed at evaluation. The plan said an `initView()`
+      called from `main.ts`; the build chose lazy getters instead —
+      each field is looked up and memoised on first read. That needs
+      no placeholder value (an `initView()` would have meant a
+      `null as unknown as HTMLCanvasElement` cast, which this tree has
+      been retiring), no new call in `main.ts`, and no consumer
+      change: nothing assigns to or destructures those four fields,
+      all fifteen uses are reads.
+- [x] `src/state/ui.ts`: `matchMedia` goes through a `media()`
+      helper that answers "no" when the function does not exist, so
       the module evaluates under Node without a stored value.
-- [ ] Move `src/ui/storedUiScale.ts` and `src/ui/defaultUiScale.ts`
-      to `src/state/`; `src/state/ui.ts` imports `./storedUiScale`,
-      `src/ui/applyMode.ts` imports `../state/storedUiScale` (deep for
-      now; phase 4 turns it into `../state`).
-- [ ] Move `src/test/installTestHooks.ts` to `src/boot/`; `main.ts`
+- [x] `src/ui/storedUiScale.ts` and `src/ui/defaultUiScale.ts` moved
+      to `src/state/` (`git mv`); `src/state/ui.ts` imports
+      `./storedUiScale`, `src/ui/applyMode.ts` imports
+      `../state/storedUiScale` (deep for now; phase 4 turns it into
+      `../state`).
+- [x] `src/test/installTestHooks.ts` moved to `src/boot/`; `main.ts`
       imports `./boot/installTestHooks`.
-- [ ] `vitest.config.js`: reword the comment about `src/state/`
-      reading from the window on load — it no longer does.
-- [ ] Check: `npm run check`, `npm run build`, `npm run smoke`. The
-      smoke test is the one that proves `initView()` runs before the
-      first frame.
+- [x] `vitest.config.js`: the comment about `src/state/` reading from
+      the window on load reworded.
+- [x] Check: `npm run check` (460 tests), `npm run build`,
+      `npm run smoke` all green.
 
 ## Phase 2 — Code out of the root
 
@@ -362,7 +363,7 @@ A barrel lists every file's symbol except the folder-private helpers
 ## Phase 6 — Documentation and configuration
 
 - [ ] `README.md`: the directory tree gains `capture/`, `legacy/`,
-      `boot/installTestHooks`, `state/initView`; the line "Eén symbool
+      `boot/installTestHooks`; the line "Eén symbool
       per bestand" under `src/` gains "en elke map een index.ts".
 - [ ] `ARCHITECTURE.md`: where it describes imports, say that the
       whole tree — not only `src/core/` — imports through barrels and

@@ -9,6 +9,7 @@ import { restore } from "./pins/restore";
 import { loadPuckGeometry } from "./puck/geometry/loadPuckGeometry";
 import { restoreOwnPucks } from "./puck/restoreOwnPucks";
 import { restoreTemplates } from "./puck/restoreTemplates";
+import { restoreScale } from "./puck/scale/restoreScale";
 import { renderTray } from "./puck/tray/renderTray";
 import { frame } from "./render/frame";
 import { ui } from "./state/ui";
@@ -36,6 +37,7 @@ buildKeyboards();
 wireEvents();
 
 restoreTemplates();
+restoreScale();
 restoreOwnPucks();
 applyColorTheme(ui.colorTheme);
 resize();
