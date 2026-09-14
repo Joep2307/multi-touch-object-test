@@ -11,7 +11,7 @@ export { ringCornersMM } from "./ringCornersMM";
 export { triadCornersMM } from "./triadCornersMM";
 export {
     DEFAULT_OUTER_DIAMETER_MM,
-    MAX_RETURN_PX,
+    MAX_RETURN_MM,
     PARITY_ANGLE_DEG,
     PARITY_CENTRE_PX,
     TEMPLATE_TOLERANCE_MM,

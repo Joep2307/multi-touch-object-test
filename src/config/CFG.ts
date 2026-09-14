@@ -100,8 +100,12 @@ export const CFG = {
     holdRigidTol: 0.15,
     dropoutMS: 900,
     smoothing: 4,
-    jitterPX: 22,
-    rearmPX: 70,
+    /* Millimetres on the glass, not pixels: these are distances a hand
+     moves a puck, and they must not change meaning when the screen does.
+     Converted from the 22 px and 70 px that were tuned on the 43 in
+     table at 2.02 px/mm. */
+    jitterMM: 11,
+    rearmMM: 35,
     ringPX: 110,
     rotationGain: 1,
     /* Turning always zooms and sliding always travels. Options are selected
@@ -111,14 +115,14 @@ export const CFG = {
     puckRotDeadRAD: 0.02,
     puckZoomEaseMS: 70,
     puckRotMaxDegS: 540,
-    puckPanDeadPX: 14,
+    puckPanDeadMM: 7,
     puckPanGain: 2.8,
     puckPanMaxPXS: 900,
     puckPanEaseMS: 700,
     puckDwellMS: 600,
     puckTopicDwellMS: 2000,
-    puckZoomPX: 150,
-    puckZoomDeadPX: 2,
+    puckZoomMM: 74,
+    puckZoomDeadMM: 1,
     /* How long a puck's state is retained if it comes off the table. A bad
      contact or a bump against the table drops a puck for less than this
      duration; it comes back as it was, not as a new puck. */
@@ -135,11 +139,19 @@ export const CFG = {
      a setting that remembers nothing isn't a setting. They belong to the
      table, so they live here, with the URL as an override for whoever is
      running a second setup (?diag=55&tol=0.08&kg=…). */
-    /* Screen diagonal in inches. The seed for the millimetre scale, not
-     the last word on it: a puck of a known size is a ruler, and `SCALE`
-     lets the table correct this by up to twelve per cent from what it
-     measures. Close enough is close enough. */
-    screenDiagIn: 43,
+    /* Screen diagonal in inches, of the **active area**, not the number on
+     the box. The seed for the millimetre scale, not the last word on it: a
+     puck of a known size is a ruler, and `SCALE` lets the table correct
+     this by up to twelve per cent from what it measures.
+
+     The table runs on an iiyama ProLite TF5537MSC: 1920 x 1080 over
+     1209.6 x 680.4 mm, so 54.64 in corner to corner and 1.5873 px/mm. The
+     "55 inch" on the box would seed 1.5769 and leave `k` 0.7 % of work it
+     does not need to do. The 43 in panel before it seeded 2.0169 and
+     measured 2.0621, so **every threshold below that was typed in pixels
+     now means 30 % more millimetres** -- which is why the ones that are
+     really about distance on the glass are in millimetres from here on. */
+    screenDiagIn: 54.64,
     /* Contact areas are not measured by the touchscreen at exactly the same
      centre point across different rotation angles. 0.10 absorbs that
      directional error; the four default shapes still lie further apart

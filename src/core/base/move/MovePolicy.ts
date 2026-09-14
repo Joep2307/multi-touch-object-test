@@ -10,7 +10,7 @@ import { Policy } from "../Policy";
  *
  * `deadZonePX` is how far the smoothed centre must shift in one frame
  * before the object counts as moving. It is deliberately small and is
- * *not* `CFG.jitterPX` (22), which is a different threshold doing a
+ * *not* `CFG.jitterMM` (11 mm), which is a different threshold doing a
  * different job in the old code — separating one puck's feet from
  * another's, not deciding whether a puck is still.
  */

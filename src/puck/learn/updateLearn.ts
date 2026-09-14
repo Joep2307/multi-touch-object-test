@@ -1,7 +1,7 @@
 import { CFG, LEARN } from "../../config";
 import { el } from "../../dom";
 import { tr } from "../../i18n";
-import { learn } from "../../state";
+import { learn, view } from "../../state";
 import {
     codeOf,
     describe,
@@ -67,8 +67,9 @@ export function updateLearn(now: number): void {
             last &&
             (!last.slot ||
                 Math.hypot(grid.cx - last.cx, grid.cy - last.cy) >
-                    LEARN.STILL_PX ||
-                Math.abs(grid.radius - last.size) > LEARN.STILL_PX)
+                    LEARN.STILL_MM * view.pxPerMM ||
+                Math.abs(grid.radius - last.size) >
+                    LEARN.STILL_MM * view.pxPerMM)
         ) {
             learn.samples = [];
             learn.moved = true;
@@ -126,8 +127,8 @@ export function updateLearn(now: number): void {
             last &&
             (!last.duo ||
                 Math.hypot(duo.big.cx - last.cx, duo.big.cy - last.cy) >
-                    LEARN.STILL_PX ||
-                Math.abs(size - last.size) > LEARN.STILL_PX)
+                    LEARN.STILL_MM * view.pxPerMM ||
+                Math.abs(size - last.size) > LEARN.STILL_MM * view.pxPerMM)
         ) {
             learn.samples = [];
             learn.moved = true;
@@ -191,8 +192,9 @@ export function updateLearn(now: number): void {
     if (
         last &&
         (!!last.ring !== ring ||
-            Math.hypot(d.cx - last.cx, d.cy - last.cy) > LEARN.STILL_PX ||
-            Math.abs(size - last.size) > LEARN.STILL_PX)
+            Math.hypot(d.cx - last.cx, d.cy - last.cy) >
+                LEARN.STILL_MM * view.pxPerMM ||
+            Math.abs(size - last.size) > LEARN.STILL_MM * view.pxPerMM)
     ) {
         learn.samples = [];
         learn.moved = true;

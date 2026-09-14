@@ -1,6 +1,6 @@
 import { CFG } from "../config";
 import { MV } from "../map";
-import { ui } from "../state";
+import { ui, view } from "../state";
 import type { Track } from "../types";
 
 /* A puck's two physical degrees of freedom directly control the map:
@@ -31,10 +31,11 @@ export function applyPuckControls(t: Track, now: number): void {
     const ox = t.x - t.panOX;
     const oy = t.y - t.panOY;
     const offset = Math.hypot(ox, oy);
-    if (dt && offset > CFG.puckPanDeadPX) {
+    const panDeadPX = CFG.puckPanDeadMM * view.pxPerMM;
+    if (dt && offset > panDeadPX) {
         const travel =
             Math.min(
-                (offset - CFG.puckPanDeadPX) * CFG.puckPanGain,
+                (offset - panDeadPX) * CFG.puckPanGain,
                 CFG.puckPanMaxPXS,
             ) * dt;
         MV.panBy((-ox / offset) * travel, (-oy / offset) * travel);

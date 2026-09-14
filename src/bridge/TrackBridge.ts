@@ -28,7 +28,7 @@ import {
     affordanceOf,
     isTangible,
 } from "../core/physical";
-import { MAX_RETURN_PX } from "./constants";
+import { MAX_RETURN_MM } from "./constants";
 import { templateToKind } from "./templateToKind";
 import type {
     ContactFrame,
@@ -84,7 +84,7 @@ export class TrackBridge {
         seedPxPerMM: number,
         policies: BasePolicies = defaultPolicies(),
         presencePolicy: PresencePolicy = new PresencePolicy(),
-        maxReturnPX: number = MAX_RETURN_PX,
+        maxReturnPX: number = MAX_RETURN_MM * seedPxPerMM,
     ) {
         const estimator = new PxPerMMEstimator(
             seedPxPerMM,

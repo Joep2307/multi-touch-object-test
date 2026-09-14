@@ -1,5 +1,5 @@
 import { CFG } from "../config";
-import { tracks } from "../state";
+import { tracks, view } from "../state";
 import { applyPuckControls } from "./applyPuckControls";
 import { wrapAngle } from "./geometry";
 import { puckSepPX } from "./puckSepPX";
@@ -82,19 +82,19 @@ export function track(dets: Detection[], now: number): TrackResult {
             visible: t.state !== "candidate",
         });
         const moved = Math.hypot(t.x - t.anchorX, t.y - t.anchorY);
-        if (moved > CFG.jitterPX) {
+        if (moved > CFG.jitterMM * view.pxPerMM) {
             t.anchorX = t.x;
             t.anchorY = t.y;
         }
         // A puck that is clearly moved becomes a new contribution: rotate to a
         // topic again and confirm again. The previous marker stays in place.
-        if (moved > CFG.rearmPX && !t.armed) {
+        if (moved > CFG.rearmMM * view.pxPerMM && !t.armed) {
             t.armed = true;
             t.pinId = null;
         }
         // Anyone who picks the puck up and puts it down elsewhere points at a
         // new location: the zoom anchor point goes along with it.
-        if (moved > CFG.rearmPX) t.zoomAnchor = null;
+        if (moved > CFG.rearmMM * view.pxPerMM) t.zoomAnchor = null;
         // Turning zooms and sliding travels; menu options are tapped.
         applyPuckControls(t, now);
     }

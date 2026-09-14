@@ -1,5 +1,6 @@
 import { CFG } from "../../config";
 import { MV } from "../../map";
+import { view } from "../../state";
 import type { Track } from "../../types";
 
 /* Zooming with the puck itself: pushing forward (away from you, up the
@@ -27,8 +28,8 @@ export function applyPuckZoom(t: Track): void {
     if (t.zoomRefY == null) t.zoomRefY = t.y;
     const anchor = t.zoomAnchor ?? (t.zoomAnchor = MV.unproject(t.x, t.y));
     const dy = t.zoomRefY - t.y;
-    if (Math.abs(dy) < CFG.puckZoomDeadPX) return;
+    if (Math.abs(dy) < CFG.puckZoomDeadMM * view.pxPerMM) return;
     const a = MV.project(anchor.lng, anchor.lat);
-    MV.zoomBy(dy / CFG.puckZoomPX, a.x, a.y);
+    MV.zoomBy(dy / (CFG.puckZoomMM * view.pxPerMM), a.x, a.y);
     t.zoomRefY = t.y;
 }

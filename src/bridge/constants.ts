@@ -7,8 +7,12 @@ export const DEFAULT_OUTER_DIAMETER_MM = 80;
 
 /* How far a returning puck may have moved and still be the same one.
    Roughly half a puck: put it back overlapping where it was and it is
-   the same object; put it down clearly elsewhere and it is a new act. */
-export const MAX_RETURN_PX = 120;
+   the same object; put it down clearly elsewhere and it is a new act.
+
+   In millimetres, converted from the 120 px this was on the 43 in table
+   at 2.02 px/mm. `TrackBridge` turns it into pixels with the scale it is
+   seeded with, so a new screen moves it without anyone editing it. */
+export const MAX_RETURN_MM = 60;
 
 /* Above this the old and new pipelines disagree enough to be worth
    reporting. Two millimetres at four pixels per millimetre — about the
